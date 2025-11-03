@@ -1,0 +1,334 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  USER
+}
+
+enum ProjectStatus {
+  ACTIVE
+  ON_HOLD
+  COMPLETED
+  ARCHIVED
+}
+
+enum EventType {
+  MEETING
+  APPOINTMENT
+  DEADLINE
+  OTHER
+}
+
+enum AttendeeStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  TENTATIVE
+}
+
+enum TransportationMode {
+  FLIGHT
+  TRAIN
+  CAR
+  OTHER
+}
+
+enum TravelStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+}
+
+enum NotificationType {
+  EVENT_REMINDER
+  SYSTEM
+  INFO
+}
+
+enum CalendarProvider {
+  GOOGLE
+  OUTLOOK
+}
+
+model User {
+  id                  String   @id @default(uuid())
+  email               String   @unique
+  passwordHash        String   @map("password_hash")
+  firstName           String   @map("first_name")
+  lastName            String   @map("last_name")
+  role                UserRole @default(USER)
+  avatarUrl           String?  @map("avatar_url")
+  defaultHourlyRate   Decimal? @map("default_hourly_rate")
+  isActive            Boolean  @default(true) @map("is_active")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  clientsCreated        Client[]              @relation("ClientCreatedBy")
+  projectsCreated       Project[]             @relation("ProjectCreatedBy")
+  projectMemberships    ProjectMember[]
+  timeEntries           TimeEntry[]
+  eventsCreated         Event[]               @relation("EventCreatedBy")
+  eventAttendances      EventAttendee[]
+  travelEntries         TravelEntry[]
+  notifications         Notification[]
+  externalCalendarSyncs ExternalCalendarSync[]
+  auditLogs             AuditLog[]
+  projectAssignments    ProjectMember[]       @relation("AssignedBy")
+  planningTasks         PlanningTask[]
+
+  @@map("users")
+}
+
+model Client {
+  id        String   @id @default(uuid())
+  name      String
+  email     String?
+  phone     String?
+  address   String?
+  company   String?
+  notes     String?
+  isActive  Boolean  @default(true) @map("is_active")
+  createdBy String   @map("created_by")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  creator       User          @relation("ClientCreatedBy", fields: [createdBy], references: [id])
+  projects      Project[]
+  events        Event[]
+  travelEntries TravelEntry[]
+
+  @@map("clients")
+}
+
+model Project {
+  id                    String        @id @default(uuid())
+  projectNumber         String?       @unique @map("project_number")
+  name                  String
+  description           String?
+  clientId              String        @map("client_id")
+  status                ProjectStatus @default(ACTIVE)
+  startDate             DateTime?     @map("start_date")
+  endDate               DateTime?     @map("end_date")
+  dueDate               DateTime?     @map("due_date")
+  budgetHours           Decimal?      @map("budget_hours")
+  budgetAmount          Decimal?      @map("budget_amount")
+  useStandardRate       Boolean       @default(true) @map("use_standard_rate")
+  standardHourlyRate    Decimal?      @map("standard_hourly_rate")
+  color                 String?
+  createdBy             String        @map("created_by")
+  createdAt             DateTime      @default(now()) @map("created_at")
+  updatedAt             DateTime      @updatedAt @map("updated_at")
+
+  // Relations
+  client        Client          @relation(fields: [clientId], references: [id])
+  creator       User            @relation("ProjectCreatedBy", fields: [createdBy], references: [id])
+  members       ProjectMember[]
+  timeEntries   TimeEntry[]
+  events        Event[]
+  travelEntries TravelEntry[]
+  planningTasks PlanningTask[]
+
+  @@map("projects")
+}
+
+model ProjectMember {
+  id              String   @id @default(uuid())
+  projectId       String   @map("project_id")
+  userId          String   @map("user_id")
+  role            String?
+  customHourlyRate Decimal? @map("custom_hourly_rate")
+  assignedAt      DateTime @default(now()) @map("assigned_at")
+  assignedBy      String   @map("assigned_by")
+
+  // Relations
+  project  Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  user     User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assigner User    @relation("AssignedBy", fields: [assignedBy], references: [id])
+
+  @@unique([projectId, userId])
+  @@map("project_members")
+}
+
+model TimeEntry {
+  id              String    @id @default(uuid())
+  userId          String    @map("user_id")
+  projectId       String    @map("project_id")
+  description     String?
+  startTime       DateTime  @map("start_time")
+  endTime         DateTime? @map("end_time")
+  durationMinutes Int?      @map("duration_minutes")
+  isBillable      Boolean   @default(true) @map("is_billable")
+  isManualEntry   Boolean   @default(false) @map("is_manual_entry")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  user    User    @relation(fields: [userId], references: [id])
+  project Project @relation(fields: [projectId], references: [id])
+
+  @@index([userId, projectId, startTime])
+  @@map("time_entries")
+}
+
+model Event {
+  id                       String      @id @default(uuid())
+  title                    String
+  description              String?
+  eventType                EventType   @default(OTHER) @map("event_type")
+  startTime                DateTime    @map("start_time")
+  endTime                  DateTime    @map("end_time")
+  location                 String?
+  isAllDay                 Boolean     @default(false) @map("is_all_day")
+  projectId                String?     @map("project_id")
+  clientId                 String?     @map("client_id")
+  createdBy                String      @map("created_by")
+  recurrenceRule           Json?       @map("recurrence_rule")
+  parentEventId            String?     @map("parent_event_id")
+  notificationMinutesBefore Int[]      @default([]) @map("notification_minutes_before")
+  color                    String?
+  createdAt                DateTime    @default(now()) @map("created_at")
+  updatedAt                DateTime    @updatedAt @map("updated_at")
+
+  // Relations
+  project        Project?        @relation(fields: [projectId], references: [id])
+  client         Client?         @relation(fields: [clientId], references: [id])
+  creator        User            @relation("EventCreatedBy", fields: [createdBy], references: [id])
+  parentEvent    Event?          @relation("RecurringEvents", fields: [parentEventId], references: [id])
+  childEvents    Event[]         @relation("RecurringEvents")
+  attendees      EventAttendee[]
+  notifications  Notification[]
+
+  @@index([startTime, endTime, createdBy])
+  @@map("events")
+}
+
+model EventAttendee {
+  id        String         @id @default(uuid())
+  eventId   String         @map("event_id")
+  userId    String         @map("user_id")
+  status    AttendeeStatus @default(PENDING)
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+
+  // Relations
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id])
+
+  @@unique([eventId, userId])
+  @@map("event_attendees")
+}
+
+model TravelEntry {
+  id                  String             @id @default(uuid())
+  userId              String             @map("user_id")
+  projectId           String?            @map("project_id")
+  clientId            String?            @map("client_id")
+  purpose             String
+  destination         String
+  startDate           DateTime           @map("start_date")
+  endDate             DateTime           @map("end_date")
+  transportationMode  TransportationMode? @map("transportation_mode")
+  accommodation       String?
+  estimatedExpenses   Decimal?           @map("estimated_expenses")
+  actualExpenses      Decimal?           @map("actual_expenses")
+  notes               String?
+  status              TravelStatus       @default(PLANNED)
+  createdAt           DateTime           @default(now()) @map("created_at")
+  updatedAt           DateTime           @updatedAt @map("updated_at")
+
+  // Relations
+  user    User     @relation(fields: [userId], references: [id])
+  project Project? @relation(fields: [projectId], references: [id])
+  client  Client?  @relation(fields: [clientId], references: [id])
+
+  @@index([userId, startDate, endDate])
+  @@map("travel_entries")
+}
+
+model Notification {
+  id             String           @id @default(uuid())
+  userId         String           @map("user_id")
+  title          String
+  message        String
+  type           NotificationType @default(INFO)
+  relatedEventId String?          @map("related_event_id")
+  isRead         Boolean          @default(false) @map("is_read")
+  scheduledFor   DateTime?        @map("scheduled_for")
+  sentAt         DateTime?        @map("sent_at")
+  createdAt      DateTime         @default(now()) @map("created_at")
+
+  // Relations
+  user         User   @relation(fields: [userId], references: [id])
+  relatedEvent Event? @relation(fields: [relatedEventId], references: [id])
+
+  @@index([userId, isRead, createdAt])
+  @@map("notifications")
+}
+
+model ExternalCalendarSync {
+  id             String           @id @default(uuid())
+  userId         String           @map("user_id")
+  provider       CalendarProvider
+  accessToken    String           @map("access_token")
+  refreshToken   String?          @map("refresh_token")
+  tokenExpiresAt DateTime?        @map("token_expires_at")
+  syncEnabled    Boolean          @default(true) @map("sync_enabled")
+  lastSyncAt     DateTime?        @map("last_sync_at")
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("external_calendar_syncs")
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?  @map("user_id")
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String?  @map("entity_id")
+  details    Json?
+  ipAddress  String?  @map("ip_address")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // Relations
+  user User? @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
+}
+
+model PlanningTask {
+  id               String   @id @default(uuid())
+  userId           String   @map("user_id")
+  projectId        String?  @map("project_id")
+  date             DateTime
+  blockIndex       Int      @map("block_index") // Starting block (0-3)
+  task             String?
+  span             Int      @default(1) @map("span") // How many blocks this task spans (1-4)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user    User     @relation(fields: [userId], references: [id])
+  project Project? @relation(fields: [projectId], references: [id])
+
+  @@unique([userId, date, blockIndex])
+  @@index([userId, date])
+  @@map("planning_tasks")
+}

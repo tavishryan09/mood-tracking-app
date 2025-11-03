@@ -1,0 +1,30 @@
+import { Router } from 'express';
+import { body } from 'express-validator';
+import {
+  getAllClients,
+  getClientById,
+  createClient,
+  updateClient,
+  deleteClient,
+} from '../controllers/clientController';
+import { authenticate } from '../middleware/auth';
+
+const router = Router();
+
+// All routes require authentication
+router.use(authenticate);
+
+// Validation rules
+const clientValidation = [
+  body('name').notEmpty().withMessage('Client name is required'),
+  body('email').optional().isEmail().withMessage('Please provide a valid email'),
+];
+
+// Routes
+router.get('/', getAllClients);
+router.get('/:id', getClientById);
+router.post('/', clientValidation, createClient);
+router.put('/:id', clientValidation, updateClient);
+router.delete('/:id', deleteClient);
+
+export default router;
