@@ -1,6 +1,17 @@
 import { Resend } from 'resend';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Lazy-load Resend only when email functions are called
+let resend: Resend | null = null;
+
+const getResendClient = () => {
+  if (!process.env.RESEND_API_KEY) {
+    throw new Error('RESEND_API_KEY environment variable is not set. Email functionality is disabled.');
+  }
+  if (!resend) {
+    resend = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resend;
+};
 
 const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@yourdomain.com';
 const APP_NAME = process.env.APP_NAME || 'Time Tracking App';
@@ -14,7 +25,8 @@ interface SendEmailParams {
 
 export const sendEmail = async ({ to, subject, html }: SendEmailParams) => {
   try {
-    const data = await resend.emails.send({
+    const client = getResendClient();
+    const data = await client.emails.send({
       from: FROM_EMAIL,
       to: [to],
       subject,
