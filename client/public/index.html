@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta httpEquiv="X-UA-Compatible" content="IE=edge" />
+
+    <!-- PWA Primary Meta Tags -->
+    <title>Mood Tracker - Track Your Daily Emotions</title>
+    <meta name="title" content="Mood Tracker - Track Your Daily Emotions" />
+    <meta name="description" content="Track your daily moods and emotions with an intuitive calendar-based interface. Works offline as a Progressive Web App." />
+
+    <!-- Viewport for mobile -->
+    <meta name="viewport" content="width=device-width,initial-scale=1,minimum-scale=1,maximum-scale=1.00001,viewport-fit=cover" />
+
+    <!-- PWA Configuration -->
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#6200ee" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="application-name" content="MoodTracker" />
+
+    <!-- Apple iOS Configuration -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="MoodTracker" />
+    <link rel="apple-touch-icon" href="/icons/icon-152x152.svg" />
+    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.svg" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-192x192.svg" />
+
+    <!-- Microsoft Configuration -->
+    <meta name="msapplication-TileColor" content="#6200ee" />
+    <meta name="msapplication-TileImage" content="/icons/icon-144x144.svg" />
+    <meta name="msapplication-config" content="none" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" sizes="32x32" href="/icons/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" sizes="16x16" href="/icons/favicon.svg" />
+    <link rel="shortcut icon" href="/icons/favicon.svg" />
+
+    <!-- Google Fonts - Josefin Sans -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Josefin+Sans:wght@400;600;700&display=swap" rel="stylesheet" />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Mood Tracker - Track Your Daily Emotions" />
+    <meta property="og:description" content="Track your daily moods and emotions with an intuitive calendar-based interface. Works offline as a Progressive Web App." />
+    <meta property="og:image" content="/icons/icon-512x512.svg" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Mood Tracker - Track Your Daily Emotions" />
+    <meta name="twitter:description" content="Track your daily moods and emotions with an intuitive calendar-based interface. Works offline as a Progressive Web App." />
+    <meta name="twitter:image" content="/icons/icon-512x512.svg" />
+
+    <style>
+      /* Loading screen styles */
+      #root-loading {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        background-color: #ffffff;
+      }
+
+      .spinner {
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #6200ee;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
+      .loading-text {
+        margin-top: 20px;
+        font-family: 'Josefin Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        font-size: 16px;
+        color: #666;
+      }
+
+      /* Apply Josefin Sans globally */
+      * {
+        font-family: 'Josefin Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      }
+    </style>
+  </head>
+  <body>
+    <noscript>You need to enable JavaScript to run this app.</noscript>
+
+    <!-- Loading screen -->
+    <div id="root">
+      <div id="root-loading">
+        <div class="spinner"></div>
+        <div class="loading-text">Loading Mood Tracker...</div>
+      </div>
+    </div>
+
+    <!-- Remove loading screen when app loads -->
+    <script>
+      window.addEventListener('load', function() {
+        setTimeout(function() {
+          const loadingElement = document.getElementById('root-loading');
+          if (loadingElement) {
+            loadingElement.remove();
+          }
+        }, 1000);
+      });
+    </script>
+  </body>
+</html>

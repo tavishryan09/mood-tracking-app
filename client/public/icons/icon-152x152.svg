@@ -1,0 +1,21 @@
+<svg width="152" height="152" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="152" height="152" rx="29.6875" fill="#6200ee"/>
+
+  <!-- Smiling face -->
+  <circle cx="76" cy="76" r="47.5" fill="#ffffff"/>
+
+  <!-- Eyes -->
+  <circle cx="61.15625" cy="67.09375" r="5.9375" fill="#6200ee"/>
+  <circle cx="90.84375" cy="67.09375" r="5.9375" fill="#6200ee"/>
+
+  <!-- Smile -->
+  <path d="M 52.25 84.90625 Q 76 102.71875 99.75 84.90625"
+        stroke="#6200ee" stroke-width="5.9375" fill="none" stroke-linecap="round"/>
+
+  <!-- Calendar indicator at bottom -->
+  <rect x="58.1875" y="106.875" width="35.625" height="26.71875"
+        rx="2.96875" fill="#ffffff" opacity="0.3"/>
+  <rect x="58.1875" y="106.875" width="35.625" height="8.90625"
+        rx="2.96875" fill="#ffffff" opacity="0.5"/>
+</svg>

@@ -1,0 +1,28 @@
+/* Web-specific styles for React Native Web components */
+
+/* Ensure smooth scrolling */
+* {
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Fix for dropdown overflow in scrollable containers */
+[data-focusable="true"] {
+    overflow: visible !important;
+}
+
+/* React Native Web ScrollView fix - allow overflow for dropdowns */
+div[style*="overflow-x: scroll"],
+div[style*="overflow-y: scroll"],
+div[style*="overflow: scroll"] {
+    overflow: visible !important;
+}
+
+/* Ensure table container allows overflow */
+div[style*="minWidth"] {
+    overflow: visible !important;
+}
+
+/* Force z-index for absolutely positioned elements */
+div[style*="position: absolute"][style*="zIndex"] {
+    z-index: 9999 !important;
+}

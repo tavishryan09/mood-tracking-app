@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd client && npm install && npx expo export --platform web",
+  "buildCommand": "npm install --prefix client && npm run --prefix client export:web",
   "outputDirectory": "client/dist",
   "framework": null,
   "rewrites": [

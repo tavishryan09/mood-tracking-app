@@ -1,0 +1,429 @@
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, ScrollView, Alert } from 'react-native';
+import { TextInput, Button, Title, Card, IconButton, Divider, Paragraph, ActivityIndicator } from 'react-native-paper';
+import { HugeiconsIcon } from '@hugeicons/react-native';
+import { UserAdd02Icon } from '@hugeicons/core-free-icons';
+import { clientsAPI } from '../../services/api';
+
+interface Contact {
+  id: string;
+  name: string;
+  title: string;
+  email: string;
+  phone: string;
+  isPrimary?: boolean;
+}
+
+const EditClientScreen = ({ route, navigation }: any) => {
+  const { clientId } = route.params;
+
+  // Business/Company information
+  const [businessName, setBusinessName] = useState('');
+  const [address, setAddress] = useState('');
+  const [notes, setNotes] = useState('');
+
+  // Primary contact information
+  const [primaryContactName, setPrimaryContactName] = useState('');
+  const [primaryContactTitle, setPrimaryContactTitle] = useState('');
+  const [primaryContactEmail, setPrimaryContactEmail] = useState('');
+  const [primaryContactPhone, setPrimaryContactPhone] = useState('');
+
+  // Additional contacts
+  const [additionalContacts, setAdditionalContacts] = useState<Contact[]>([]);
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    loadClient();
+  }, [clientId]);
+
+  const loadClient = async () => {
+    try {
+      setLoading(true);
+      const timeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Request timeout')), 800)
+      );
+
+      const response = await Promise.race([clientsAPI.getById(clientId), timeout]) as any;
+      const client = response.data;
+
+      setBusinessName(client.name || '');
+      setAddress(client.address || '');
+      setNotes(client.notes || '');
+
+      // Load contacts
+      if (client.contacts && client.contacts.length > 0) {
+        const primary = client.contacts.find((c: any) => c.isPrimary);
+        if (primary) {
+          setPrimaryContactName(primary.name || '');
+          setPrimaryContactTitle(primary.title || '');
+          setPrimaryContactEmail(primary.email || '');
+          setPrimaryContactPhone(primary.phone || '');
+        }
+
+        const additional = client.contacts
+          .filter((c: any) => !c.isPrimary)
+          .map((c: any) => ({
+            id: c.id || Date.now().toString() + Math.random(),
+            name: c.name || '',
+            title: c.title || '',
+            email: c.email || '',
+            phone: c.phone || '',
+          }));
+        setAdditionalContacts(additional);
+      }
+    } catch (error) {
+      console.error('Error loading client:', error);
+      Alert.alert('Error', 'Failed to load client details');
+      navigation.goBack();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const addContact = () => {
+    const newContact: Contact = {
+      id: Date.now().toString(),
+      name: '',
+      title: '',
+      email: '',
+      phone: '',
+    };
+    setAdditionalContacts([...additionalContacts, newContact]);
+  };
+
+  const removeContact = (id: string) => {
+    setAdditionalContacts(additionalContacts.filter(contact => contact.id !== id));
+  };
+
+  const updateContact = (id: string, field: keyof Contact, value: string) => {
+    setAdditionalContacts(
+      additionalContacts.map(contact =>
+        contact.id === id ? { ...contact, [field]: value } : contact
+      )
+    );
+  };
+
+  const handleSubmit = async () => {
+    if (!businessName) {
+      Alert.alert('Error', 'Please enter a business name');
+      return;
+    }
+
+    if (!primaryContactName) {
+      Alert.alert('Error', 'Please enter a primary contact name');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      // Prepare contacts array
+      const contacts = [
+        {
+          name: primaryContactName,
+          title: primaryContactTitle || undefined,
+          email: primaryContactEmail || undefined,
+          phone: primaryContactPhone || undefined,
+          isPrimary: true,
+        },
+        ...additionalContacts
+          .filter(contact => contact.name.trim())
+          .map(contact => ({
+            name: contact.name,
+            title: contact.title || undefined,
+            email: contact.email || undefined,
+            phone: contact.phone || undefined,
+            isPrimary: false,
+          })),
+      ];
+
+      const clientData = {
+        name: businessName,
+        company: businessName,
+        address: address || undefined,
+        notes: notes || undefined,
+        email: primaryContactEmail || undefined,
+        phone: primaryContactPhone || undefined,
+        contacts: contacts,
+        primaryContactName: primaryContactName,
+        primaryContactTitle: primaryContactTitle || undefined,
+      };
+
+      const timeout = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Request timeout')), 2000)
+      );
+
+      await Promise.race([clientsAPI.update(clientId, clientData), timeout]);
+
+      Alert.alert('Success', 'Client updated successfully');
+      navigation.goBack();
+    } catch (error: any) {
+      console.error('Client update error:', error);
+
+      const errorMessage = error.message === 'Request timeout'
+        ? 'Unable to connect to server. Please check your connection and try again.'
+        : error.response?.data?.error || 'Failed to update client';
+
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator size="large" />
+      </View>
+    );
+  }
+
+  return (
+    <ScrollView style={styles.container}>
+      <View style={styles.content}>
+        <Title style={styles.mainTitle}>Edit Client</Title>
+
+        {/* Business Information Section */}
+        <Card style={styles.section}>
+          <Card.Content>
+            <Title style={styles.sectionTitle}>Business Information</Title>
+
+            <TextInput
+              label="Business Name *"
+              value={businessName}
+              onChangeText={setBusinessName}
+              mode="outlined"
+              style={styles.input}
+            />
+
+            <TextInput
+              label="Address"
+              value={address}
+              onChangeText={setAddress}
+              mode="outlined"
+              multiline
+              numberOfLines={2}
+              style={styles.input}
+            />
+
+            <TextInput
+              label="Notes"
+              value={notes}
+              onChangeText={setNotes}
+              mode="outlined"
+              multiline
+              numberOfLines={3}
+              style={styles.input}
+              placeholder="Any additional information about the business..."
+            />
+          </Card.Content>
+        </Card>
+
+        {/* Primary Contact Section */}
+        <Card style={styles.section}>
+          <Card.Content>
+            <Title style={styles.sectionTitle}>Primary Contact</Title>
+
+            <TextInput
+              label="Name *"
+              value={primaryContactName}
+              onChangeText={setPrimaryContactName}
+              mode="outlined"
+              style={styles.input}
+            />
+
+            <TextInput
+              label="Title"
+              value={primaryContactTitle}
+              onChangeText={setPrimaryContactTitle}
+              mode="outlined"
+              style={styles.input}
+              placeholder="e.g., CEO, Project Manager, etc."
+            />
+
+            <TextInput
+              label="Email"
+              value={primaryContactEmail}
+              onChangeText={setPrimaryContactEmail}
+              mode="outlined"
+              keyboardType="email-address"
+              autoCapitalize="none"
+              style={styles.input}
+            />
+
+            <TextInput
+              label="Phone"
+              value={primaryContactPhone}
+              onChangeText={setPrimaryContactPhone}
+              mode="outlined"
+              keyboardType="phone-pad"
+              style={styles.input}
+            />
+          </Card.Content>
+        </Card>
+
+        {/* Additional Contacts Section */}
+        <Card style={styles.section}>
+          <Card.Content>
+            <View style={styles.sectionHeader}>
+              <Title style={styles.sectionTitle}>Additional Contacts</Title>
+              <IconButton
+                icon={() => <HugeiconsIcon icon={UserAdd02Icon} size={24} color="#6200ee" />}
+                size={24}
+                onPress={addContact}
+              />
+            </View>
+
+            {additionalContacts.length === 0 ? (
+              <Paragraph style={styles.emptyText}>
+                No additional contacts added yet. Tap the + button to add a contact.
+              </Paragraph>
+            ) : (
+              additionalContacts.map((contact, index) => (
+                <View key={contact.id} style={styles.contactCard}>
+                  <View style={styles.contactHeader}>
+                    <Paragraph style={styles.contactNumber}>Contact {index + 2}</Paragraph>
+                    <IconButton
+                      icon="delete"
+                      size={20}
+                      onPress={() => removeContact(contact.id)}
+                      iconColor="#d32f2f"
+                    />
+                  </View>
+
+                  <TextInput
+                    label="Name"
+                    value={contact.name}
+                    onChangeText={(value) => updateContact(contact.id, 'name', value)}
+                    mode="outlined"
+                    style={styles.input}
+                  />
+
+                  <TextInput
+                    label="Title"
+                    value={contact.title}
+                    onChangeText={(value) => updateContact(contact.id, 'title', value)}
+                    mode="outlined"
+                    style={styles.input}
+                  />
+
+                  <TextInput
+                    label="Email"
+                    value={contact.email}
+                    onChangeText={(value) => updateContact(contact.id, 'email', value)}
+                    mode="outlined"
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    style={styles.input}
+                  />
+
+                  <TextInput
+                    label="Phone"
+                    value={contact.phone}
+                    onChangeText={(value) => updateContact(contact.id, 'phone', value)}
+                    mode="outlined"
+                    keyboardType="phone-pad"
+                    style={styles.input}
+                  />
+
+                  {index < additionalContacts.length - 1 && <Divider style={styles.divider} />}
+                </View>
+              ))
+            )}
+          </Card.Content>
+        </Card>
+
+        {/* Action Buttons */}
+        <Button
+          mode="contained"
+          onPress={handleSubmit}
+          loading={saving}
+          disabled={saving || !businessName || !primaryContactName}
+          style={styles.button}
+          buttonColor="#6200ee"
+        >
+          Save Changes
+        </Button>
+
+        <Button mode="outlined" onPress={() => navigation.goBack()} style={styles.button}>
+          Cancel
+        </Button>
+
+        <View style={styles.bottomSpacer} />
+      </View>
+    </ScrollView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  centered: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  content: {
+    padding: 20,
+  },
+  mainTitle: {
+    fontSize: 24,
+    marginBottom: 20,
+    color: '#333',
+  },
+  section: {
+    marginBottom: 20,
+    elevation: 2,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    marginBottom: 15,
+    color: '#6200ee',
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  input: {
+    marginBottom: 15,
+    backgroundColor: 'white',
+  },
+  button: {
+    marginTop: 10,
+    paddingVertical: 5,
+  },
+  contactCard: {
+    marginBottom: 15,
+    paddingVertical: 10,
+  },
+  contactHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  contactNumber: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#666',
+  },
+  divider: {
+    marginVertical: 15,
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: '#999',
+    fontStyle: 'italic',
+    paddingVertical: 20,
+  },
+  bottomSpacer: {
+    height: 50,
+  },
+});
+
+export default EditClientScreen;

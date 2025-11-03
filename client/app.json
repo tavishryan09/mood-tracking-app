@@ -1,0 +1,63 @@
+{
+  "expo": {
+    "name": "client",
+    "slug": "client",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "output": "single",
+      "backgroundColor": "#ffffff",
+      "themeColor": "#007AFF",
+      "name": "Time Tracker - Track Time, Manage Projects",
+      "description": "Track time, manage projects, and schedule events for your team",
+      "preferRelatedApplications": false,
+      "startUrl": "/",
+      "shortName": "TimeTracker",
+      "lang": "en",
+      "scope": "/",
+      "display": "standalone",
+      "orientation": "portrait",
+      "dir": "auto",
+      "barStyle": "default",
+      "splash": {
+        "backgroundColor": "#ffffff",
+        "resizeMode": "contain",
+        "image": "./assets/splash-icon.png"
+      },
+      "meta": {
+        "apple-mobile-web-app-capable": "yes",
+        "apple-mobile-web-app-status-bar-style": "default",
+        "apple-touch-icon": "./assets/icon.png",
+        "viewport": "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+      },
+      "build": {
+        "babel": {
+          "include": [
+            "@react-native",
+            "react-native"
+          ]
+        }
+      }
+    }
+  }
+}
