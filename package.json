@@ -4,7 +4,7 @@
   "description": "Mood Tracking Application",
   "private": true,
   "scripts": {
-    "postinstall": "npm install && npx prisma generate --schema=./server/prisma/schema.prisma && cd server && npm install"
+    "postinstall": "npx prisma generate --schema=./server/prisma/schema.prisma && cd server && npm install && npx prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^6.18.0",
