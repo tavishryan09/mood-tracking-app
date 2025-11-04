@@ -60,7 +60,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setToken(authToken);
       setUser(userData);
     } catch (error: any) {
-      throw new Error(error.response?.data?.error || 'Login failed');
+      console.error('[AuthContext] Login error:', error);
+
+      // Extract error message properly
+      let errorMessage = 'Login failed';
+
+      if (error.response?.data?.error) {
+        errorMessage = typeof error.response.data.error === 'string'
+          ? error.response.data.error
+          : JSON.stringify(error.response.data.error);
+      } else if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.message) {
+        errorMessage = error.message;
+      } else if (!error.response) {
+        errorMessage = 'Network error. Please check your connection.';
+      }
+
+      throw new Error(errorMessage);
     }
   }, []);
 
