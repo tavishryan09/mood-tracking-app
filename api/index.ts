@@ -38,7 +38,6 @@ const allowedOrigins = [
   'http://localhost:8081',
   'http://localhost:19006',
   process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : '',
-  'https://*.vercel.app'
 ].filter(Boolean);
 
 app.use(cors({
@@ -47,17 +46,13 @@ app.use(cors({
     if (!origin) return callback(null, true);
 
     // Check if origin is allowed
-    const isAllowed = allowedOrigins.some(allowed => {
-      if (allowed.includes('*')) {
-        const pattern = allowed.replace('*.', '');
-        return origin.endsWith(pattern);
-      }
-      return origin === allowed;
-    });
+    const isAllowed = allowedOrigins.some(allowed => origin === allowed) ||
+      (origin && origin.endsWith('.vercel.app'));
 
     if (isAllowed) {
       callback(null, true);
     } else {
+      console.log('[CORS] Blocked origin:', origin);
       callback(new Error('Not allowed by CORS'));
     }
   },
