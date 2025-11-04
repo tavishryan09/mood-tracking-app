@@ -32,3 +32,4 @@ Thumbs.db
 prisma/migrations/
 *.db
 *.db-journal
+.vercel
