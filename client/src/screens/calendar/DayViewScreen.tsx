@@ -3,8 +3,10 @@ import { View, StyleSheet, ScrollView, Alert, Platform, ViewStyle, TouchableOpac
 import { Title, Paragraph, Card, FAB, ActivityIndicator, Chip, IconButton, SegmentedButtons, Button } from 'react-native-paper';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { eventsAPI } from '../../services/api';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const DayViewScreen = ({ route, navigation, onPreviousDay, onNextDay }: any) => {
+  const { currentColors } = useTheme();
   const { selectedDate } = route.params;
   // Added previous/next day navigation arrows
   const [events, setEvents] = useState<any[]>([]);
@@ -603,9 +605,14 @@ const DayViewScreen = ({ route, navigation, onPreviousDay, onNextDay }: any) => 
                 styles.eventBlockOverlay,
                 {
                   top: topPosition,
-                  height: blockHeight
+                  height: blockHeight,
+                  backgroundColor: currentColors.primary
                 },
-                isBeingEdited && styles.eventBeingEdited
+                isBeingEdited && {
+                  borderWidth: 2,
+                  borderColor: currentColors.success,
+                  borderStyle: 'dashed',
+                }
               ]}
               pointerEvents="box-none"
             >
@@ -664,7 +671,7 @@ const DayViewScreen = ({ route, navigation, onPreviousDay, onNextDay }: any) => 
                 <IconButton
                   icon="pencil"
                   size={16}
-                  style={styles.eventEditIcon}
+                  style={[styles.eventEditIcon, { backgroundColor: currentColors.white }]}
                   onPress={(e) => {
                     e.stopPropagation();
                     handleEventPress(event.id);
@@ -673,7 +680,7 @@ const DayViewScreen = ({ route, navigation, onPreviousDay, onNextDay }: any) => 
                   {...Platform.OS === 'web' && { style: { cursor: 'pointer' } }}
                 />
 
-                <Paragraph style={styles.eventTitle}>{event.title}</Paragraph>
+                <Paragraph style={[styles.eventTitle, { color: currentColors.white }]}>{event.title}</Paragraph>
                 <Paragraph style={styles.eventTime}>{formatEventDuration(event)}</Paragraph>
                 {event.location && (
                   <Paragraph style={styles.eventLocation} numberOfLines={1}>
@@ -725,7 +732,7 @@ const DayViewScreen = ({ route, navigation, onPreviousDay, onNextDay }: any) => 
             <View key={time}>
               <TouchableOpacity
                 ref={(ref) => (timeSlotRefs.current[time] = ref)}
-                style={styles.timeSlotContainer}
+                style={[styles.timeSlotContainer, { borderBottomColor: currentColors.border }]}
                 onMouseDown={Platform.OS === 'web' ? (e: any) => handleSlotMouseDown(time, e) : undefined}
                 onMouseEnter={Platform.OS === 'web' ? () => handleSlotMouseEnter(time) : undefined}
                 onClick={Platform.OS === 'web' ? () => !isDragging && handleTimeSlotClick(time) : undefined}
@@ -734,8 +741,8 @@ const DayViewScreen = ({ route, navigation, onPreviousDay, onNextDay }: any) => 
                 delayLongPress={500}
                 activeOpacity={0.7}
               >
-                <View style={styles.timeLabel}>
-                  <Paragraph style={[styles.timeText, isHourMark && styles.hourText]}>
+                <View style={[styles.timeLabel, { backgroundColor: currentColors.background.bg500 }]}>
+                  <Paragraph style={[styles.timeText, isHourMark && styles.hourText, { color: currentColors.text }]}>
                     {time}
                   </Paragraph>
                 </View>
@@ -743,23 +750,24 @@ const DayViewScreen = ({ route, navigation, onPreviousDay, onNextDay }: any) => 
                 <View
                   style={[
                     styles.timeSlot,
-                    hasEvents && styles.timeSlotOccupied,
-                    isHourMark && styles.hourSlot,
-                    isInDragRange && styles.timeSlotDragging,
+                    { backgroundColor: currentColors.white },
+                    hasEvents && [styles.timeSlotOccupied, { backgroundColor: currentColors.background.bg300 }],
+                    isHourMark && [styles.hourSlot, { borderTopColor: currentColors.border }],
+                    isInDragRange && [styles.timeSlotDragging, { backgroundColor: currentColors.background.bg300, borderLeftColor: currentColors.primary }],
                     // @ts-ignore - web only styles
                     Platform.OS === 'web' && { cursor: 'pointer', userSelect: 'none', WebkitUserSelect: 'none', WebkitTouchCallout: 'none' }
                   ]}
                 >
                   {!hasEvents && !isInDragRange && (
-                    <Paragraph style={styles.emptySlot}>Tap to schedule</Paragraph>
+                    <Paragraph style={[styles.emptySlot, { color: currentColors.textSecondary }]}>Tap to schedule</Paragraph>
                   )}
                   {isInDragRange && (
-                    <Paragraph style={styles.selectedSlot}>Selected</Paragraph>
+                    <Paragraph style={[styles.selectedSlot, { color: currentColors.primary }]}>Selected</Paragraph>
                   )}
                 </View>
               </TouchableOpacity>
               {isHourMark && index !== timeSlots.length - 1 && (
-                <View style={styles.hourDivider} />
+                <View style={[styles.hourDivider, { backgroundColor: currentColors.border }]} />
               )}
             </View>
           );
@@ -769,16 +777,16 @@ const DayViewScreen = ({ route, navigation, onPreviousDay, onNextDay }: any) => 
   );
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
+    <View style={[styles.container, { backgroundColor: currentColors.background.bg700 }]}>
+      <View style={[styles.header, { backgroundColor: currentColors.background.bg300 }]}>
         <View style={styles.headerNav}>
           <IconButton
             icon="chevron-left"
             size={24}
             onPress={goToPreviousDay}
-            iconColor="#007AFF"
+            iconColor={currentColors.primary}
           />
-          <Title style={styles.headerTitle}>
+          <Title style={[styles.headerTitle, { color: currentColors.text }]}>
             {(() => {
               const [year, month, day] = selectedDate.split('-').map(Number);
               const date = new Date(year, month - 1, day);
@@ -794,16 +802,16 @@ const DayViewScreen = ({ route, navigation, onPreviousDay, onNextDay }: any) => 
             icon="chevron-right"
             size={24}
             onPress={goToNextDay}
-            iconColor="#007AFF"
+            iconColor={currentColors.primary}
           />
         </View>
-        <Paragraph style={styles.headerSubtitle}>
+        <Paragraph style={[styles.headerSubtitle, { color: currentColors.textSecondary }]}>
           {isDragging ? 'Drag to select time range' : 'Click and drag to schedule'}
         </Paragraph>
       </View>
 
       <View
-        style={styles.scrollView}
+        style={[styles.scrollView, { backgroundColor: currentColors.background.bg700 }]}
         {...(Platform.OS !== 'web' ? panResponder.panHandlers : {})}
       >
         <ScrollView
@@ -826,8 +834,8 @@ const DayViewScreen = ({ route, navigation, onPreviousDay, onNextDay }: any) => 
       </View>
 
       {isDragging && dragStart && dragEnd && Platform.OS !== 'web' && (
-        <View style={styles.selectionControls}>
-          <Paragraph style={styles.selectionText}>
+        <View style={[styles.selectionControls, { backgroundColor: currentColors.background.bg300, borderTopColor: currentColors.border }]}>
+          <Paragraph style={[styles.selectionText, { color: currentColors.primary }]}>
             Selected: {dragStart} ({formatTimeAMPM(dragStart)}) - {dragEnd} ({formatTimeAMPM(dragEnd)})
           </Paragraph>
           <View style={styles.selectionButtons}>
@@ -850,8 +858,8 @@ const DayViewScreen = ({ route, navigation, onPreviousDay, onNextDay }: any) => 
       )}
 
       {isDragging && dragStart && dragEnd && Platform.OS === 'web' && (
-        <View style={styles.dragInfo}>
-          <Paragraph style={styles.dragInfoText}>
+        <View style={[styles.dragInfo, { backgroundColor: currentColors.primary }]}>
+          <Paragraph style={[styles.dragInfoText, { color: currentColors.white }]}>
             {dragStart} - {calculateDisplayEndTime(dragEnd)}
           </Paragraph>
         </View>
@@ -859,7 +867,7 @@ const DayViewScreen = ({ route, navigation, onPreviousDay, onNextDay }: any) => 
 
       {!isDragging && (
         <FAB
-          style={styles.fab}
+          style={[styles.fab, { backgroundColor: currentColors.secondary }]}
           icon="plus"
           label="Add Event"
           onPress={() => {
@@ -874,7 +882,6 @@ const DayViewScreen = ({ route, navigation, onPreviousDay, onNextDay }: any) => 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   centered: {
     flex: 1,
@@ -883,10 +890,8 @@ const styles = StyleSheet.create({
   },
   viewSwitcher: {
     padding: 10,
-    backgroundColor: 'white',
   },
   header: {
-    backgroundColor: 'white',
     padding: 15,
     zIndex: 10,
   },
@@ -897,19 +902,16 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 18,
-    color: '#333',
     flex: 1,
     textAlign: 'center',
   },
   headerSubtitle: {
-    color: '#666',
     fontSize: 12,
     marginTop: 4,
     textAlign: 'center',
   },
   scrollView: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   scrollContent: {
     paddingBottom: 100,
@@ -917,51 +919,40 @@ const styles = StyleSheet.create({
   timeSlotContainer: {
     flexDirection: 'row',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
   },
   timeLabel: {
     width: 70,
     padding: 10,
     justifyContent: 'center',
-    backgroundColor: '#fafafa',
   },
   timeText: {
     fontSize: 12,
-    color: '#666',
   },
   hourText: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#333',
   },
   timeSlot: {
     flex: 1,
     minHeight: 50,
     padding: 8,
     justifyContent: 'flex-start',
-    backgroundColor: 'white',
     position: 'relative',
   },
   hourSlot: {
     borderTopWidth: 2,
-    borderTopColor: '#bdbdbd',
   },
   timeSlotOccupied: {
-    backgroundColor: '#e3f2fd',
   },
   timeSlotDragging: {
-    backgroundColor: '#c5e1a5',
     borderLeftWidth: 3,
-    borderLeftColor: '#6200ee',
   },
   emptySlot: {
     fontSize: 11,
-    color: '#999',
     fontStyle: 'italic',
   },
   selectedSlot: {
     fontSize: 11,
-    color: '#6200ee',
     fontWeight: 'bold',
   },
   eventsOverlay: {
@@ -976,7 +967,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     right: 0,
-    backgroundColor: '#6200ee',
     borderRadius: 8,
     padding: 10,
     elevation: 4,
@@ -998,7 +988,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -8,
     right: -8,
-    backgroundColor: 'white',
     borderRadius: 12,
     margin: 0,
     zIndex: 1000,
@@ -1026,7 +1015,6 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 8,
   },
   eventTitle: {
-    color: 'white',
     fontSize: 14,
     fontWeight: 'bold',
     marginBottom: 4,
@@ -1051,7 +1039,6 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   chip: {
-    backgroundColor: '#6200ee',
     height: 32,
   },
   chipText: {
@@ -1060,7 +1047,6 @@ const styles = StyleSheet.create({
   },
   hourDivider: {
     height: 2,
-    backgroundColor: '#e0e0e0',
   },
   bottomSpacer: {
     height: 100,
@@ -1069,7 +1055,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 90,
     alignSelf: 'center',
-    backgroundColor: '#6200ee',
     padding: 12,
     paddingHorizontal: 20,
     borderRadius: 8,
@@ -1081,7 +1066,6 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   dragInfoText: {
-    color: 'white',
     fontWeight: 'bold',
     fontSize: 16,
   },
@@ -1090,17 +1074,14 @@ const styles = StyleSheet.create({
     margin: 16,
     right: 0,
     bottom: 0,
-    backgroundColor: '#6200ee',
   },
   selectionControls: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    backgroundColor: 'white',
     padding: 16,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
     elevation: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -2 },
@@ -1110,7 +1091,6 @@ const styles = StyleSheet.create({
   selectionText: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#6200ee',
     marginBottom: 12,
     textAlign: 'center',
   },

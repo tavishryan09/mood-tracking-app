@@ -7,6 +7,7 @@ import {
   updateProject,
   deleteProject,
   addProjectMember,
+  updateProjectMember,
   removeProjectMember,
 } from '../controllers/projectController';
 import { authenticate } from '../middleware/auth';
@@ -33,6 +34,7 @@ router.post('/', projectValidation, createProject);
 router.put('/:id', updateProject);
 router.delete('/:id', deleteProject);
 router.post('/:id/members', projectMemberValidation, addProjectMember);
+router.put('/:id/members/:memberId', updateProjectMember);
 router.delete('/:id/members/:memberId', removeProjectMember);
 
 export default router;

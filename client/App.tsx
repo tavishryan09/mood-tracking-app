@@ -4,12 +4,39 @@ import { StatusBar } from 'expo-status-bar';
 import { Platform, View, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Provider as PaperProvider } from 'react-native-paper';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './src/contexts/AuthContext';
+import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
+import { PlanningColorsProvider } from './src/contexts/PlanningColorsContext';
 import AppNavigator from './src/navigation/AppNavigator';
-import { iOSTheme } from './src/theme/iosTheme';
+import { createThemedIOSTheme } from './src/theme/iosTheme';
 import InstallPrompt from './src/components/InstallPrompt';
 import OfflineIndicator from './src/components/OfflineIndicator';
 import * as serviceWorkerRegistration from './src/utils/serviceWorkerRegistration';
+import { queryClient } from './src/config/queryClient';
+
+// Inner component that uses the theme context
+const ThemedApp = () => {
+  const { currentColors } = useTheme();
+  const theme = createThemedIOSTheme(currentColors);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <PaperProvider theme={theme}>
+        <View style={{ flex: 1, height: '100%', width: '100%', position: 'relative' }}>
+          <OfflineIndicator />
+          <AuthProvider>
+            <PlanningColorsProvider>
+              <AppNavigator />
+              <StatusBar style="dark" />
+            </PlanningColorsProvider>
+          </AuthProvider>
+          <InstallPrompt />
+        </View>
+      </PaperProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default function App() {
   // On web, fonts are loaded via Google Fonts link in HTML - no need to wait
@@ -91,16 +118,9 @@ export default function App() {
 
   return (
     <SafeAreaProvider style={{ flex: 1, height: '100%', width: '100%' }}>
-      <PaperProvider theme={iOSTheme}>
-        <View style={{ flex: 1, height: '100%', width: '100%', position: 'relative' }}>
-          <OfflineIndicator />
-          <AuthProvider>
-            <AppNavigator />
-            <StatusBar style="dark" />
-          </AuthProvider>
-          <InstallPrompt />
-        </View>
-      </PaperProvider>
+      <ThemeProvider>
+        <ThemedApp />
+      </ThemeProvider>
     </SafeAreaProvider>
   );
 }

@@ -29,7 +29,10 @@ export const authorizeRoles = (...allowedRoles: string[]) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
+    console.log('[Auth] User role:', req.user.role, 'Required roles:', allowedRoles);
+
     if (!allowedRoles.includes(req.user.role)) {
+      console.log('[Auth] 403 Forbidden - User role not authorized');
       return res.status(403).json({ error: 'Forbidden: Insufficient permissions' });
     }
 

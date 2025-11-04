@@ -1,18 +1,26 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Dimensions, Text, TouchableOpacity, Alert, TextInput, FlatList } from 'react-native';
-import { ActivityIndicator, FAB, IconButton } from 'react-native-paper';
+import { View, StyleSheet, ScrollView, Dimensions, Text, TouchableOpacity, Alert, TextInput, FlatList, Modal } from 'react-native';
+import { ActivityIndicator, FAB, IconButton, Switch, Button } from 'react-native-paper';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
-import { projectsAPI, clientsAPI } from '../../services/api';
+import { projectsAPI, clientsAPI, settingsAPI } from '../../services/api';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-import { Delete02Icon, AddCircleIcon, Edit02Icon, Tick02Icon, Cancel01Icon } from '@hugeicons/core-free-icons';
+import { Delete02Icon, AddCircleIcon, Edit02Icon, Tick02Icon, Cancel01Icon, Settings02Icon } from '@hugeicons/core-free-icons';
+import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
+import EditProjectModal from '../../components/EditProjectModal';
 
 const { width } = Dimensions.get('window');
-const TABLE_WIDTH = width > 1400 ? 1400 : width - 40;
+const TABLE_WIDTH = width > 1800 ? 1800 : width - 40;
 const PROJECT_NUM_WIDTH = 100;
 const PROJECT_NAME_WIDTH = 250;
 const CLIENT_WIDTH = 200;
 const COMMON_NAME_WIDTH = 200;
 const HOURS_WIDTH = 100;
+const HOURS_MONTH_WIDTH = 120;
+const HOURS_QUARTER_WIDTH = 120;
+const PROJECT_VALUE_WIDTH = 150;
+const BILLABLE_AMOUNT_WIDTH = 150;
+const PROGRESS_WIDTH = 120;
 const ACTIONS_WIDTH = 100;
 
 interface Project {
@@ -23,8 +31,21 @@ interface Project {
   clientId: string;
   client?: { id: string; name: string };
   budgetHours?: number;
+  projectValue?: number;
   timeEntries?: any[];
-  planningTasks?: { span: number }[];
+  planningTasks?: { span: number; date: string; userId: string }[];
+  useStandardRate?: boolean;
+  standardHourlyRate?: number;
+  members?: {
+    userId: string;
+    customHourlyRate?: number;
+    user: {
+      id: string;
+      firstName: string;
+      lastName: string;
+      defaultHourlyRate?: number;
+    };
+  }[];
 }
 
 interface Client {
@@ -32,8 +53,24 @@ interface Client {
   name: string;
 }
 
+interface ColumnVisibility {
+  projectNumber: boolean;
+  name: boolean;
+  client: boolean;
+  description: boolean;
+  hours: boolean;
+  hoursMonth: boolean;
+  hoursQuarter: boolean;
+  projectValue: boolean;
+  billableAmount: boolean;
+  progress: boolean;
+}
+
 const ProjectTableViewScreen = () => {
+  const { currentColors } = useTheme();
+  const { user } = useAuth();
   const navigation = useNavigation();
+  const styles = getStyles(currentColors);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingCell, setEditingCell] = useState<{ projectId: string; field: string } | null>(null);
@@ -51,13 +88,95 @@ const ProjectTableViewScreen = () => {
   const [newProjectClientInput, setNewProjectClientInput] = useState('');
   const [sortColumn, setSortColumn] = useState<string>('projectNumber');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
+  const [deletingProjectId, setDeletingProjectId] = useState<string | null>(null);
+  const [columnVisibility, setColumnVisibility] = useState<ColumnVisibility>({
+    projectNumber: true,
+    name: true,
+    client: true,
+    description: true,
+    hours: true,
+    hoursMonth: true,
+    hoursQuarter: true,
+    projectValue: true,
+    billableAmount: true,
+    progress: true,
+  });
 
   useFocusEffect(
     React.useCallback(() => {
       loadProjects();
       loadClients();
+      loadColumnVisibility();
     }, [])
   );
+
+  const loadColumnVisibility = async () => {
+    try {
+      // Try to load user-specific settings first from database
+      try {
+        const userResponse = await settingsAPI.user.get('project_table_columns');
+        if (userResponse.data?.value) {
+          console.log('[ProjectTableView] Loaded user column visibility from database');
+          setColumnVisibility(userResponse.data.value);
+          return;
+        }
+      } catch (error: any) {
+        // 404 means no user setting exists, continue to check app-wide default
+        if (error.response?.status !== 404) {
+          throw error;
+        }
+      }
+
+      // Fall back to app-wide default settings
+      try {
+        const defaultResponse = await settingsAPI.app.get('project_table_columns_default');
+        if (defaultResponse.data?.value) {
+          console.log('[ProjectTableView] Loaded default column visibility from database');
+          setColumnVisibility(defaultResponse.data.value);
+        }
+      } catch (error: any) {
+        // 404 means no default setting exists, use hardcoded defaults
+        if (error.response?.status !== 404) {
+          throw error;
+        }
+        console.log('[ProjectTableView] Using hardcoded default column visibility');
+      }
+    } catch (error) {
+      console.error('[ProjectTableView] Error loading column visibility:', error);
+    }
+  };
+
+  const saveToProfile = async () => {
+    try {
+      await settingsAPI.user.set('project_table_columns', columnVisibility);
+      console.log('[ProjectTableView] Saved user column visibility to database');
+      Alert.alert('Success', 'Column visibility saved to your profile');
+      setShowSettingsModal(false);
+    } catch (error) {
+      console.error('[ProjectTableView] Error saving to profile:', error);
+      Alert.alert('Error', 'Failed to save column visibility');
+    }
+  };
+
+  const saveAsDefault = async () => {
+    try {
+      if (user?.role !== 'ADMIN') {
+        Alert.alert('Permission Denied', 'Only administrators can set default column visibility for all users');
+        return;
+      }
+
+      await settingsAPI.app.set('project_table_columns_default', columnVisibility);
+      console.log('[ProjectTableView] Saved default column visibility to database');
+      Alert.alert('Success', 'Column visibility saved as default for all users');
+      setShowSettingsModal(false);
+    } catch (error) {
+      console.error('[ProjectTableView] Error saving as default:', error);
+      Alert.alert('Error', 'Failed to save default column visibility');
+    }
+  };
 
   const loadProjects = async () => {
     try {
@@ -91,6 +210,84 @@ const ProjectTableViewScreen = () => {
     return project.planningTasks.reduce((total, task) => {
       return total + (task.span * 2); // Each cell = 2 hours, span = number of cells
     }, 0);
+  };
+
+  const calculateHoursThisMonth = (project: Project): number => {
+    if (!project.planningTasks || project.planningTasks.length === 0) return 0;
+
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    return project.planningTasks.reduce((total, task) => {
+      const taskDate = new Date(task.date);
+      if (taskDate >= startOfMonth && taskDate <= endOfMonth) {
+        return total + (task.span * 2);
+      }
+      return total;
+    }, 0);
+  };
+
+  const calculateHoursThisQuarter = (project: Project): number => {
+    if (!project.planningTasks || project.planningTasks.length === 0) return 0;
+
+    const now = new Date();
+    const currentQuarter = Math.floor(now.getMonth() / 3);
+    const startOfQuarter = new Date(now.getFullYear(), currentQuarter * 3, 1);
+    const endOfQuarter = new Date(now.getFullYear(), (currentQuarter + 1) * 3, 0);
+
+    return project.planningTasks.reduce((total, task) => {
+      const taskDate = new Date(task.date);
+      if (taskDate >= startOfQuarter && taskDate <= endOfQuarter) {
+        return total + (task.span * 2);
+      }
+      return total;
+    }, 0);
+  };
+
+  const calculateEstimatedBillableAmount = (project: Project): number => {
+    if (!project.planningTasks || project.planningTasks.length === 0) return 0;
+
+    // If using standard rate, calculate total hours * standard rate
+    if (project.useStandardRate && project.standardHourlyRate) {
+      const totalHours = calculateTotalHours(project);
+      return totalHours * project.standardHourlyRate;
+    }
+
+    // If not using standard rate, calculate per team member based on their tasks
+    if (!project.useStandardRate && project.members) {
+      let totalAmount = 0;
+
+      // Group tasks by userId
+      const tasksByUser: { [userId: string]: number } = {};
+
+      project.planningTasks.forEach((task) => {
+        const hours = task.span * 2;
+        tasksByUser[task.userId] = (tasksByUser[task.userId] || 0) + hours;
+      });
+
+      // Calculate billable amount for each user
+      Object.entries(tasksByUser).forEach(([userId, hours]) => {
+        const member = project.members?.find(m => m.userId === userId);
+        if (member) {
+          // Use custom rate, or fall back to user's default rate
+          const rate = member.customHourlyRate || member.user.defaultHourlyRate || 0;
+          totalAmount += hours * rate;
+        }
+      });
+
+      return totalAmount;
+    }
+
+    return 0;
+  };
+
+  const calculateProgressPercentage = (project: Project): number => {
+    const projectValue = Number(project.projectValue) || 0;
+    if (projectValue === 0) return 0;
+
+    const estimatedBillable = calculateEstimatedBillableAmount(project);
+    return (estimatedBillable / projectValue) * 100;
   };
 
   const getProjectNumber = (project: Project, index: number): string => {
@@ -188,31 +385,29 @@ const ProjectTableViewScreen = () => {
   };
 
   const handleProjectClick = (projectId: string) => {
-    (navigation as any).navigate('EditProject', { projectId });
+    setEditingProjectId(projectId);
+    setShowEditModal(true);
   };
 
-  const handleDeleteProject = (projectId: string, projectName: string) => {
-    Alert.alert(
-      'Delete Project',
-      `Are you sure you want to delete "${projectName}"? This action cannot be undone.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await projectsAPI.delete(projectId);
-              // Reload projects after deletion
-              loadProjects();
-            } catch (error) {
-              console.error('[ProjectTableView] Error deleting project:', error);
-              Alert.alert('Error', 'Failed to delete project. Please try again.');
-            }
-          },
-        },
-      ]
-    );
+  const handleDeleteClick = (projectId: string) => {
+    setDeletingProjectId(projectId);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingProjectId) return;
+
+    try {
+      await projectsAPI.delete(deletingProjectId);
+      setDeletingProjectId(null);
+      loadProjects();
+    } catch (error) {
+      console.error('[ProjectTableView] Error deleting project:', error);
+      setDeletingProjectId(null);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeletingProjectId(null);
   };
 
   const handleAddProject = () => {
@@ -331,6 +526,26 @@ const ProjectTableViewScreen = () => {
           valueA = calculateTotalHours(a);
           valueB = calculateTotalHours(b);
           break;
+        case 'hoursMonth':
+          valueA = calculateHoursThisMonth(a);
+          valueB = calculateHoursThisMonth(b);
+          break;
+        case 'hoursQuarter':
+          valueA = calculateHoursThisQuarter(a);
+          valueB = calculateHoursThisQuarter(b);
+          break;
+        case 'projectValue':
+          valueA = Number(a.projectValue) || 0;
+          valueB = Number(b.projectValue) || 0;
+          break;
+        case 'billableAmount':
+          valueA = calculateEstimatedBillableAmount(a);
+          valueB = calculateEstimatedBillableAmount(b);
+          break;
+        case 'progress':
+          valueA = calculateProgressPercentage(a);
+          valueB = calculateProgressPercentage(b);
+          break;
         default:
           return 0;
       }
@@ -346,7 +561,7 @@ const ProjectTableViewScreen = () => {
   const renderSortIndicator = (column: string) => {
     if (sortColumn !== column) return null;
     return (
-      <Text style={styles.sortIndicator}>
+      <Text style={[styles.sortIndicator, { color: currentColors.white }]}>
         {sortDirection === 'asc' ? ' ▲' : ' ▼'}
       </Text>
     );
@@ -361,7 +576,7 @@ const ProjectTableViewScreen = () => {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: currentColors.background.bg700 }]}>
       {/* Main content area - vertical and horizontal scrolling table */}
       <ScrollView
         style={styles.verticalScrollView}
@@ -375,65 +590,139 @@ const ProjectTableViewScreen = () => {
         >
           <View style={styles.tableContainer}>
           {/* Header Row */}
-          <View style={styles.headerRow}>
-            <TouchableOpacity
-              style={[styles.headerCell, { width: PROJECT_NUM_WIDTH }]}
-              onPress={() => handleHeaderClick('projectNumber')}
-              activeOpacity={0.7}
-            >
-              <View style={styles.headerContent}>
-                <Text style={styles.headerText}>Project #</Text>
-                {renderSortIndicator('projectNumber')}
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.headerCell, { width: PROJECT_NAME_WIDTH }]}
-              onPress={() => handleHeaderClick('name')}
-              activeOpacity={0.7}
-            >
-              <View style={styles.headerContent}>
-                <Text style={styles.headerText}>Project Name</Text>
-                {renderSortIndicator('name')}
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.headerCell, { width: CLIENT_WIDTH }]}
-              onPress={() => handleHeaderClick('client')}
-              activeOpacity={0.7}
-            >
-              <View style={styles.headerContent}>
-                <Text style={styles.headerText}>Client</Text>
-                {renderSortIndicator('client')}
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.headerCell, { width: COMMON_NAME_WIDTH }]}
-              onPress={() => handleHeaderClick('description')}
-              activeOpacity={0.7}
-            >
-              <View style={styles.headerContent}>
-                <Text style={styles.headerText}>Common Name</Text>
-                {renderSortIndicator('description')}
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.headerCell, { width: HOURS_WIDTH }]}
-              onPress={() => handleHeaderClick('hours')}
-              activeOpacity={0.7}
-            >
-              <View style={styles.headerContent}>
-                <Text style={styles.headerText}>Hours</Text>
-                {renderSortIndicator('hours')}
-              </View>
-            </TouchableOpacity>
+          <View style={[styles.headerRow, { backgroundColor: currentColors.primary }]}>
+            {columnVisibility.projectNumber && (
+              <TouchableOpacity
+                style={[styles.headerCell, { width: PROJECT_NUM_WIDTH }]}
+                onPress={() => handleHeaderClick('projectNumber')}
+                activeOpacity={0.7}
+              >
+                <View style={styles.headerContent}>
+                  <Text style={[styles.headerText, { color: currentColors.white }]}>Project #</Text>
+                  {renderSortIndicator('projectNumber')}
+                </View>
+              </TouchableOpacity>
+            )}
+            {columnVisibility.name && (
+              <TouchableOpacity
+                style={[styles.headerCell, { width: PROJECT_NAME_WIDTH }]}
+                onPress={() => handleHeaderClick('name')}
+                activeOpacity={0.7}
+              >
+                <View style={styles.headerContent}>
+                  <Text style={[styles.headerText, { color: currentColors.white }]}>Project Name</Text>
+                  {renderSortIndicator('name')}
+                </View>
+              </TouchableOpacity>
+            )}
+            {columnVisibility.client && (
+              <TouchableOpacity
+                style={[styles.headerCell, { width: CLIENT_WIDTH }]}
+                onPress={() => handleHeaderClick('client')}
+                activeOpacity={0.7}
+              >
+                <View style={styles.headerContent}>
+                  <Text style={[styles.headerText, { color: currentColors.white }]}>Client</Text>
+                  {renderSortIndicator('client')}
+                </View>
+              </TouchableOpacity>
+            )}
+            {columnVisibility.description && (
+              <TouchableOpacity
+                style={[styles.headerCell, { width: COMMON_NAME_WIDTH }]}
+                onPress={() => handleHeaderClick('description')}
+                activeOpacity={0.7}
+              >
+                <View style={styles.headerContent}>
+                  <Text style={[styles.headerText, { color: currentColors.white }]}>Common Name</Text>
+                  {renderSortIndicator('description')}
+                </View>
+              </TouchableOpacity>
+            )}
+            {columnVisibility.hours && (
+              <TouchableOpacity
+                style={[styles.headerCell, { width: HOURS_WIDTH }]}
+                onPress={() => handleHeaderClick('hours')}
+                activeOpacity={0.7}
+              >
+                <View style={styles.headerContent}>
+                  <Text style={[styles.headerText, { color: currentColors.white }]}>Hours</Text>
+                  {renderSortIndicator('hours')}
+                </View>
+              </TouchableOpacity>
+            )}
+            {columnVisibility.hoursMonth && (
+              <TouchableOpacity
+                style={[styles.headerCell, { width: HOURS_MONTH_WIDTH }]}
+                onPress={() => handleHeaderClick('hoursMonth')}
+                activeOpacity={0.7}
+              >
+                <View style={styles.headerContent}>
+                  <Text style={[styles.headerText, { color: currentColors.white }]}>This Month</Text>
+                  {renderSortIndicator('hoursMonth')}
+                </View>
+              </TouchableOpacity>
+            )}
+            {columnVisibility.hoursQuarter && (
+              <TouchableOpacity
+                style={[styles.headerCell, { width: HOURS_QUARTER_WIDTH }]}
+                onPress={() => handleHeaderClick('hoursQuarter')}
+                activeOpacity={0.7}
+              >
+                <View style={styles.headerContent}>
+                  <Text style={[styles.headerText, { color: currentColors.white }]}>This Quarter</Text>
+                  {renderSortIndicator('hoursQuarter')}
+                </View>
+              </TouchableOpacity>
+            )}
+            {columnVisibility.projectValue && (
+              <TouchableOpacity
+                style={[styles.headerCell, { width: PROJECT_VALUE_WIDTH }]}
+                onPress={() => handleHeaderClick('projectValue')}
+                activeOpacity={0.7}
+              >
+                <View style={styles.headerContent}>
+                  <Text style={[styles.headerText, { color: currentColors.white }]}>Project Value</Text>
+                  {renderSortIndicator('projectValue')}
+                </View>
+              </TouchableOpacity>
+            )}
+            {columnVisibility.billableAmount && (
+              <TouchableOpacity
+                style={[styles.headerCell, { width: BILLABLE_AMOUNT_WIDTH }]}
+                onPress={() => handleHeaderClick('billableAmount')}
+                activeOpacity={0.7}
+              >
+                <View style={styles.headerContent}>
+                  <Text style={[styles.headerText, { color: currentColors.white }]}>Est. Billable</Text>
+                  {renderSortIndicator('billableAmount')}
+                </View>
+              </TouchableOpacity>
+            )}
+            {columnVisibility.progress && (
+              <TouchableOpacity
+                style={[styles.headerCell, { width: PROGRESS_WIDTH }]}
+                onPress={() => handleHeaderClick('progress')}
+                activeOpacity={0.7}
+              >
+                <View style={styles.headerContent}>
+                  <Text style={[styles.headerText, { color: currentColors.white }]}>Progress %</Text>
+                  {renderSortIndicator('progress')}
+                </View>
+              </TouchableOpacity>
+            )}
             <View style={[styles.headerCell, { width: ACTIONS_WIDTH }]}>
-              <Text style={styles.headerText}>Actions</Text>
+              <Text style={[styles.headerText, { color: currentColors.white }]}>Actions</Text>
             </View>
           </View>
 
           {/* Data Rows */}
           {getSortedProjects().map((project, index) => {
             const totalHours = calculateTotalHours(project);
+            const hoursThisMonth = calculateHoursThisMonth(project);
+            const hoursThisQuarter = calculateHoursThisQuarter(project);
+            const estimatedBillableAmount = calculateEstimatedBillableAmount(project);
+            const progressPercentage = calculateProgressPercentage(project);
             const projectNumber = getProjectNumber(project, index);
 
             const isEditingProjectNum = editingCell?.projectId === project.id && editingCell?.field === 'projectNumber';
@@ -442,142 +731,204 @@ const ProjectTableViewScreen = () => {
             const isEditingDescription = editingCell?.projectId === project.id && editingCell?.field === 'description';
 
             return (
-              <View key={project.id} style={[styles.dataRow, isEditingClient && { zIndex: 999, overflow: 'visible' }]}>
-                <TouchableOpacity
-                  style={[styles.dataCell, { width: PROJECT_NUM_WIDTH }]}
-                  onPress={() => handleCellEdit(project.id, 'projectNumber', projectNumber)}
-                  activeOpacity={0.7}
-                >
-                  {isEditingProjectNum ? (
-                    <TextInput
-                      style={styles.cellInput}
-                      value={editValues[`${project.id}-projectNumber`] || projectNumber}
-                      onChangeText={(text) => handleCellChange(project.id, 'projectNumber', text)}
-                      onBlur={() => handleCellBlur(project.id, 'projectNumber')}
-                      autoFocus
-                    />
-                  ) : (
-                    <Text style={styles.cellText}>{projectNumber}</Text>
-                  )}
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.dataCell, { width: PROJECT_NAME_WIDTH }]}
-                  onPress={() => handleCellEdit(project.id, 'name', project.name)}
-                  activeOpacity={0.7}
-                >
-                  {isEditingName ? (
-                    <TextInput
-                      style={styles.cellInput}
-                      value={editValues[`${project.id}-name`] || project.name}
-                      onChangeText={(text) => handleCellChange(project.id, 'name', text)}
-                      onBlur={() => handleCellBlur(project.id, 'name')}
-                      autoFocus
-                      multiline
-                    />
-                  ) : (
-                    <Text style={styles.cellText} numberOfLines={2}>
-                      {project.name}
-                    </Text>
-                  )}
-                </TouchableOpacity>
-                <View style={[styles.dataCell, { width: CLIENT_WIDTH, zIndex: isEditingClient ? 1000 : 1, overflow: 'visible' }]}>
+              <View key={project.id} style={[styles.dataRow, { backgroundColor: currentColors.background.bg300 }, isEditingClient && { zIndex: 999, overflow: 'visible' }]}>
+                {columnVisibility.projectNumber && (
                   <TouchableOpacity
-                    style={{ width: '100%' }}
-                    onPress={() => handleCellEdit(project.id, 'client', project.client?.name || '')}
+                    style={[styles.dataCell, { width: PROJECT_NUM_WIDTH }]}
+                    onPress={() => handleCellEdit(project.id, 'projectNumber', projectNumber)}
                     activeOpacity={0.7}
                   >
-                    {isEditingClient ? (
-                      <View style={{ position: 'relative', zIndex: 1000 }}>
-                        <TextInput
-                          style={styles.cellInput}
-                          value={editValues[`${project.id}-client`] || project.client?.name || ''}
-                          onChangeText={(text) => handleCellChange(project.id, 'client', text)}
-                          onBlur={() => {
-                            // Delay blur to allow click events to fire first
-                            setTimeout(() => handleCellBlur(project.id, 'client'), 200);
-                          }}
-                          autoFocus
-                        />
-                        {showClientSuggestions && (
-                          <View style={styles.suggestionsContainer}>
-                            <FlatList
-                              data={filteredClients}
-                              keyExtractor={(item) => item.id}
-                              renderItem={({ item }) => (
-                                <TouchableOpacity
-                                  style={styles.suggestionItem}
-                                  onPress={() => handleSelectClient(project.id, item)}
-                                  activeOpacity={0.7}
-                                >
-                                  <Text style={styles.suggestionText}>{item.name}</Text>
-                                </TouchableOpacity>
-                              )}
-                              ListEmptyComponent={
-                                editValues[`${project.id}-client`]?.trim() ? (
-                                  <TouchableOpacity
-                                    style={styles.suggestionItem}
-                                    onPress={() => {
-                                      const clientName = editValues[`${project.id}-client`] || '';
-                                      if (clientName.trim()) {
-                                        handleCreateClient(project.id, clientName.trim());
-                                      }
-                                    }}
-                                    activeOpacity={0.7}
-                                  >
-                                    <Text style={styles.createClientText}>
-                                      + Create "{editValues[`${project.id}-client`]?.trim() || ''}"
-                                    </Text>
-                                  </TouchableOpacity>
-                                ) : null
-                              }
-                            />
-                          </View>
-                        )}
-                      </View>
+                    {isEditingProjectNum ? (
+                      <TextInput
+                        style={[styles.cellInput, { borderColor: currentColors.primary, backgroundColor: currentColors.background.bg500, color: currentColors.text }]}
+                        value={editValues[`${project.id}-projectNumber`] || projectNumber}
+                        onChangeText={(text) => handleCellChange(project.id, 'projectNumber', text)}
+                        onBlur={() => handleCellBlur(project.id, 'projectNumber')}
+                        autoFocus
+                      />
                     ) : (
-                      <Text style={styles.cellText} numberOfLines={1}>
-                        {project.client?.name || 'N/A'}
+                      <Text style={[styles.cellText, { color: currentColors.text }]}>{projectNumber}</Text>
+                    )}
+                  </TouchableOpacity>
+                )}
+                {columnVisibility.name && (
+                  <TouchableOpacity
+                    style={[styles.dataCell, { width: PROJECT_NAME_WIDTH }]}
+                    onPress={() => handleCellEdit(project.id, 'name', project.name)}
+                    activeOpacity={0.7}
+                  >
+                    {isEditingName ? (
+                      <TextInput
+                        style={[styles.cellInput, { borderColor: currentColors.primary, backgroundColor: currentColors.background.bg500, color: currentColors.text }]}
+                        value={editValues[`${project.id}-name`] || project.name}
+                        onChangeText={(text) => handleCellChange(project.id, 'name', text)}
+                        onBlur={() => handleCellBlur(project.id, 'name')}
+                        autoFocus
+                        multiline
+                      />
+                    ) : (
+                      <Text style={[styles.cellText, { color: currentColors.text }]} numberOfLines={2}>
+                        {project.name}
                       </Text>
                     )}
                   </TouchableOpacity>
-                </View>
-                <TouchableOpacity
-                  style={[styles.dataCell, { width: COMMON_NAME_WIDTH }]}
-                  onPress={() => handleCellEdit(project.id, 'description', project.description || '')}
-                  activeOpacity={0.7}
-                >
-                  {isEditingDescription ? (
-                    <TextInput
-                      style={styles.cellInput}
-                      value={editValues[`${project.id}-description`] || project.description || ''}
-                      onChangeText={(text) => handleCellChange(project.id, 'description', text)}
-                      onBlur={() => handleCellBlur(project.id, 'description')}
-                      autoFocus
-                      multiline
-                    />
-                  ) : (
-                    <Text style={styles.cellText} numberOfLines={2}>
-                      {project.description || '-'}
+                )}
+                {columnVisibility.client && (
+                  <View style={[styles.dataCell, { width: CLIENT_WIDTH, zIndex: isEditingClient ? 1000 : 1, overflow: 'visible' }]}>
+                    <TouchableOpacity
+                      style={{ width: '100%' }}
+                      onPress={() => handleCellEdit(project.id, 'client', project.client?.name || '')}
+                      activeOpacity={0.7}
+                    >
+                      {isEditingClient ? (
+                        <View style={{ position: 'relative', zIndex: 1000 }}>
+                          <TextInput
+                            style={[styles.cellInput, { borderColor: currentColors.primary, backgroundColor: currentColors.background.bg500, color: currentColors.text }]}
+                            value={editValues[`${project.id}-client`] || project.client?.name || ''}
+                            onChangeText={(text) => handleCellChange(project.id, 'client', text)}
+                            onBlur={() => {
+                              // Delay blur to allow click events to fire first
+                              setTimeout(() => handleCellBlur(project.id, 'client'), 200);
+                            }}
+                            autoFocus
+                          />
+                          {showClientSuggestions && (
+                            <View style={[styles.suggestionsContainer, { backgroundColor: currentColors.background.bg300, borderColor: currentColors.primary }]}>
+                              <FlatList
+                                data={filteredClients}
+                                keyExtractor={(item) => item.id}
+                                renderItem={({ item }) => (
+                                  <TouchableOpacity
+                                    style={[styles.suggestionItem, { backgroundColor: currentColors.background.bg300 }]}
+                                    onPress={() => handleSelectClient(project.id, item)}
+                                    activeOpacity={0.7}
+                                  >
+                                    <Text style={[styles.suggestionText, { color: currentColors.text }]}>{item.name}</Text>
+                                  </TouchableOpacity>
+                                )}
+                                ListEmptyComponent={
+                                  editValues[`${project.id}-client`]?.trim() ? (
+                                    <TouchableOpacity
+                                      style={[styles.suggestionItem, { backgroundColor: currentColors.background.bg300 }]}
+                                      onPress={() => {
+                                        const clientName = editValues[`${project.id}-client`] || '';
+                                        if (clientName.trim()) {
+                                          handleCreateClient(project.id, clientName.trim());
+                                        }
+                                      }}
+                                      activeOpacity={0.7}
+                                    >
+                                      <Text style={[styles.createClientText, { color: currentColors.primary }]}>
+                                        + Create "{editValues[`${project.id}-client`]?.trim() || ''}"
+                                      </Text>
+                                    </TouchableOpacity>
+                                  ) : null
+                                }
+                              />
+                            </View>
+                          )}
+                        </View>
+                      ) : (
+                        <Text style={[styles.cellText, { color: currentColors.text }]} numberOfLines={1}>
+                          {project.client?.name || 'N/A'}
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                )}
+                {columnVisibility.description && (
+                  <TouchableOpacity
+                    style={[styles.dataCell, { width: COMMON_NAME_WIDTH }]}
+                    onPress={() => handleCellEdit(project.id, 'description', project.description || '')}
+                    activeOpacity={0.7}
+                  >
+                    {isEditingDescription ? (
+                      <TextInput
+                        style={[styles.cellInput, { borderColor: currentColors.primary, backgroundColor: currentColors.background.bg500, color: currentColors.text }]}
+                        value={editValues[`${project.id}-description`] || project.description || ''}
+                        onChangeText={(text) => handleCellChange(project.id, 'description', text)}
+                        onBlur={() => handleCellBlur(project.id, 'description')}
+                        autoFocus
+                        multiline
+                      />
+                    ) : (
+                      <Text style={[styles.cellText, { color: currentColors.text }]} numberOfLines={2}>
+                        {project.description || '-'}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                )}
+                {columnVisibility.hours && (
+                  <View style={[styles.dataCell, { width: HOURS_WIDTH }]}>
+                    <Text style={[styles.cellText, { color: currentColors.text }]}>
+                      {totalHours.toFixed(2)}h
                     </Text>
-                  )}
-                </TouchableOpacity>
-                <View style={[styles.dataCell, { width: HOURS_WIDTH }]}>
-                  <Text style={styles.cellText}>
-                    {totalHours.toFixed(2)}h
-                  </Text>
-                </View>
+                  </View>
+                )}
+                {columnVisibility.hoursMonth && (
+                  <View style={[styles.dataCell, { width: HOURS_MONTH_WIDTH }]}>
+                    <Text style={[styles.cellText, { color: currentColors.text }]}>
+                      {hoursThisMonth.toFixed(2)}h
+                    </Text>
+                  </View>
+                )}
+                {columnVisibility.hoursQuarter && (
+                  <View style={[styles.dataCell, { width: HOURS_QUARTER_WIDTH }]}>
+                    <Text style={[styles.cellText, { color: currentColors.text }]}>
+                      {hoursThisQuarter.toFixed(2)}h
+                    </Text>
+                  </View>
+                )}
+                {columnVisibility.projectValue && (
+                  <View style={[styles.dataCell, { width: PROJECT_VALUE_WIDTH }]}>
+                    <Text style={[styles.cellText, { color: currentColors.text }]}>
+                      {project.projectValue ? `$${Number(project.projectValue).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '-'}
+                    </Text>
+                  </View>
+                )}
+                {columnVisibility.billableAmount && (
+                  <View style={[styles.dataCell, { width: BILLABLE_AMOUNT_WIDTH }]}>
+                    <Text style={[styles.cellText, { color: currentColors.text }]}>
+                      ${estimatedBillableAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </Text>
+                  </View>
+                )}
+                {columnVisibility.progress && (
+                  <View style={[styles.dataCell, { width: PROGRESS_WIDTH }]}>
+                    {project.projectValue ? (
+                      <View style={styles.progressContainer}>
+                        <View style={[styles.progressBar, { backgroundColor: currentColors.background.bg500 }]}>
+                          <View
+                            style={[
+                              styles.progressFill,
+                              {
+                                width: `${Math.min(progressPercentage, 100)}%`,
+                                backgroundColor: progressPercentage > 100 ? currentColors.error : progressPercentage >= 75 ? currentColors.warning : currentColors.success
+                              }
+                            ]}
+                          />
+                        </View>
+                        <Text style={[styles.progressText, { color: currentColors.text }]}>
+                          {progressPercentage.toFixed(1)}%
+                        </Text>
+                      </View>
+                    ) : (
+                      <Text style={[styles.cellText, { color: currentColors.text }]}>-</Text>
+                    )}
+                  </View>
+                )}
                 <View style={[styles.dataCell, styles.actionsCell, { width: ACTIONS_WIDTH }]}>
                   <TouchableOpacity
                     onPress={() => handleProjectClick(project.id)}
                     style={styles.actionButton}
                   >
-                    <HugeiconsIcon icon={Edit02Icon} size={20} color="#666" />
+                    <HugeiconsIcon icon={Edit02Icon} size={20} color={currentColors.icon} />
                   </TouchableOpacity>
                   <TouchableOpacity
-                    onPress={() => handleDeleteProject(project.id, project.name)}
+                    onPress={() => handleDeleteClick(project.id)}
                     style={styles.actionButton}
                   >
-                    <HugeiconsIcon icon={Delete02Icon} size={20} color="#d32f2f" />
+                    <HugeiconsIcon icon={Delete02Icon} size={20} color={currentColors.error} />
                   </TouchableOpacity>
                 </View>
               </View>
@@ -586,124 +937,184 @@ const ProjectTableViewScreen = () => {
 
           {/* Add New Project Row */}
           {!isAddingNewProject ? (
-            <View style={styles.addProjectRow}>
+            <View style={[styles.addProjectRow, { backgroundColor: currentColors.background.bg500 }]}>
               <TouchableOpacity
                 style={styles.addProjectButton}
                 onPress={handleAddProject}
                 activeOpacity={0.7}
               >
-                <View style={[styles.dataCell, { width: PROJECT_NUM_WIDTH }]}>
-                  <HugeiconsIcon icon={AddCircleIcon} size={24} color="#666" />
-                </View>
-                <View style={[styles.dataCell, { width: PROJECT_NAME_WIDTH }]}>
-                  <Text style={styles.addProjectText}>Add New Project</Text>
-                </View>
-                <View style={[styles.dataCell, { width: CLIENT_WIDTH }]} />
-                <View style={[styles.dataCell, { width: COMMON_NAME_WIDTH }]} />
-                <View style={[styles.dataCell, { width: HOURS_WIDTH }]} />
+                {columnVisibility.projectNumber && (
+                  <View style={[styles.dataCell, { width: PROJECT_NUM_WIDTH }]}>
+                    <HugeiconsIcon icon={AddCircleIcon} size={24} color={currentColors.primary} />
+                  </View>
+                )}
+                {columnVisibility.name && (
+                  <View style={[styles.dataCell, { width: PROJECT_NAME_WIDTH }]}>
+                    <Text style={[styles.addProjectText, { color: currentColors.primary }]}>Add New Project</Text>
+                  </View>
+                )}
+                {columnVisibility.client && (
+                  <View style={[styles.dataCell, { width: CLIENT_WIDTH }]} />
+                )}
+                {columnVisibility.description && (
+                  <View style={[styles.dataCell, { width: COMMON_NAME_WIDTH }]} />
+                )}
+                {columnVisibility.hours && (
+                  <View style={[styles.dataCell, { width: HOURS_WIDTH }]} />
+                )}
+                {columnVisibility.hoursMonth && (
+                  <View style={[styles.dataCell, { width: HOURS_MONTH_WIDTH }]} />
+                )}
+                {columnVisibility.hoursQuarter && (
+                  <View style={[styles.dataCell, { width: HOURS_QUARTER_WIDTH }]} />
+                )}
+                {columnVisibility.projectValue && (
+                  <View style={[styles.dataCell, { width: PROJECT_VALUE_WIDTH }]} />
+                )}
+                {columnVisibility.billableAmount && (
+                  <View style={[styles.dataCell, { width: BILLABLE_AMOUNT_WIDTH }]} />
+                )}
+                {columnVisibility.progress && (
+                  <View style={[styles.dataCell, { width: PROGRESS_WIDTH }]} />
+                )}
               </TouchableOpacity>
               <View style={[styles.dataCell, { width: ACTIONS_WIDTH }]} />
             </View>
           ) : (
-            <View style={[styles.dataRow, { zIndex: 999, overflow: 'visible' }]}>
-              <View style={[styles.dataCell, { width: PROJECT_NUM_WIDTH }]}>
-                <TextInput
-                  style={styles.cellInput}
-                  value={newProjectData.projectNumber}
-                  onChangeText={(text) => setNewProjectData({ ...newProjectData, projectNumber: text })}
-                  placeholder="P-0001"
-                />
-              </View>
-              <View style={[styles.dataCell, { width: PROJECT_NAME_WIDTH }]}>
-                <TextInput
-                  style={styles.cellInput}
-                  value={newProjectData.name}
-                  onChangeText={(text) => setNewProjectData({ ...newProjectData, name: text })}
-                  placeholder="Project Name *"
-                  autoFocus
-                />
-              </View>
-              <View style={[styles.dataCell, { width: CLIENT_WIDTH, zIndex: 1000, overflow: 'visible' }]}>
-                <View style={{ position: 'relative', zIndex: 1000 }}>
+            <View style={[styles.dataRow, { backgroundColor: currentColors.background.bg300, zIndex: 999, overflow: 'visible' }]}>
+              {columnVisibility.projectNumber && (
+                <View style={[styles.dataCell, { width: PROJECT_NUM_WIDTH }]}>
                   <TextInput
-                    style={styles.cellInput}
-                    value={newProjectClientInput}
-                    onChangeText={(text) => {
-                      setNewProjectClientInput(text);
-                      const filtered = clients.filter(client =>
-                        client.name.toLowerCase().includes(text.toLowerCase())
-                      );
-                      setFilteredClients(filtered);
-                      setShowClientSuggestions(true);
-                    }}
-                    placeholder="Client *"
-                    onFocus={() => {
-                      setFilteredClients(clients);
-                      setShowClientSuggestions(true);
-                    }}
-                    onBlur={() => {
-                      setTimeout(() => setShowClientSuggestions(false), 200);
-                    }}
+                    style={[styles.cellInput, { borderColor: currentColors.primary, backgroundColor: currentColors.background.bg500, color: currentColors.text }]}
+                    value={newProjectData.projectNumber}
+                    onChangeText={(text) => setNewProjectData({ ...newProjectData, projectNumber: text })}
+                    placeholder="P-0001"
                   />
-                  {showClientSuggestions && (
-                    <View style={styles.suggestionsContainer}>
-                      <FlatList
-                        data={filteredClients}
-                        keyExtractor={(item) => item.id}
-                        renderItem={({ item }) => (
-                          <TouchableOpacity
-                            style={styles.suggestionItem}
-                            onPress={() => handleNewProjectClientSelect(item)}
-                            activeOpacity={0.7}
-                          >
-                            <Text style={styles.suggestionText}>{item.name}</Text>
-                          </TouchableOpacity>
-                        )}
-                        ListEmptyComponent={
-                          newProjectClientInput.trim() ? (
+                </View>
+              )}
+              {columnVisibility.name && (
+                <View style={[styles.dataCell, { width: PROJECT_NAME_WIDTH }]}>
+                  <TextInput
+                    style={[styles.cellInput, { borderColor: currentColors.primary, backgroundColor: currentColors.background.bg500, color: currentColors.text }]}
+                    value={newProjectData.name}
+                    onChangeText={(text) => setNewProjectData({ ...newProjectData, name: text })}
+                    placeholder="Project Name *"
+                    autoFocus
+                  />
+                </View>
+              )}
+              {columnVisibility.client && (
+                <View style={[styles.dataCell, { width: CLIENT_WIDTH, zIndex: 1000, overflow: 'visible' }]}>
+                  <View style={{ position: 'relative', zIndex: 1000 }}>
+                    <TextInput
+                      style={[styles.cellInput, { borderColor: currentColors.primary, backgroundColor: currentColors.background.bg500, color: currentColors.text }]}
+                      value={newProjectClientInput}
+                      onChangeText={(text) => {
+                        setNewProjectClientInput(text);
+                        const filtered = clients.filter(client =>
+                          client.name.toLowerCase().includes(text.toLowerCase())
+                        );
+                        setFilteredClients(filtered);
+                        setShowClientSuggestions(true);
+                      }}
+                      placeholder="Client *"
+                      onFocus={() => {
+                        setFilteredClients(clients);
+                        setShowClientSuggestions(true);
+                      }}
+                      onBlur={() => {
+                        setTimeout(() => setShowClientSuggestions(false), 200);
+                      }}
+                    />
+                    {showClientSuggestions && (
+                      <View style={[styles.suggestionsContainer, { backgroundColor: currentColors.background.bg300, borderColor: currentColors.primary }]}>
+                        <FlatList
+                          data={filteredClients}
+                          keyExtractor={(item) => item.id}
+                          renderItem={({ item }) => (
                             <TouchableOpacity
-                              style={styles.suggestionItem}
-                              onPress={() => {
-                                if (newProjectClientInput.trim()) {
-                                  handleNewProjectCreateClient(newProjectClientInput.trim());
-                                }
-                              }}
+                              style={[styles.suggestionItem, { backgroundColor: currentColors.background.bg300 }]}
+                              onPress={() => handleNewProjectClientSelect(item)}
                               activeOpacity={0.7}
                             >
-                              <Text style={styles.createClientText}>
-                                + Create "{newProjectClientInput.trim()}"
-                              </Text>
+                              <Text style={[styles.suggestionText, { color: currentColors.text }]}>{item.name}</Text>
                             </TouchableOpacity>
-                          ) : null
-                        }
-                      />
-                    </View>
-                  )}
+                          )}
+                          ListEmptyComponent={
+                            newProjectClientInput.trim() ? (
+                              <TouchableOpacity
+                                style={[styles.suggestionItem, { backgroundColor: currentColors.background.bg300 }]}
+                                onPress={() => {
+                                  if (newProjectClientInput.trim()) {
+                                    handleNewProjectCreateClient(newProjectClientInput.trim());
+                                  }
+                                }}
+                                activeOpacity={0.7}
+                              >
+                                <Text style={[styles.createClientText, { color: currentColors.primary }]}>
+                                  + Create "{newProjectClientInput.trim()}"
+                                </Text>
+                              </TouchableOpacity>
+                            ) : null
+                          }
+                        />
+                      </View>
+                    )}
+                  </View>
                 </View>
-              </View>
-              <View style={[styles.dataCell, { width: COMMON_NAME_WIDTH }]}>
-                <TextInput
-                  style={styles.cellInput}
-                  value={newProjectData.description}
-                  onChangeText={(text) => setNewProjectData({ ...newProjectData, description: text })}
-                  placeholder="Description"
-                />
-              </View>
-              <View style={[styles.dataCell, { width: HOURS_WIDTH }]}>
-                <Text style={styles.cellText}>0.00h</Text>
-              </View>
+              )}
+              {columnVisibility.description && (
+                <View style={[styles.dataCell, { width: COMMON_NAME_WIDTH }]}>
+                  <TextInput
+                    style={[styles.cellInput, { borderColor: currentColors.primary, backgroundColor: currentColors.background.bg500, color: currentColors.text }]}
+                    value={newProjectData.description}
+                    onChangeText={(text) => setNewProjectData({ ...newProjectData, description: text })}
+                    placeholder="Description"
+                  />
+                </View>
+              )}
+              {columnVisibility.hours && (
+                <View style={[styles.dataCell, { width: HOURS_WIDTH }]}>
+                  <Text style={[styles.cellText, { color: currentColors.text }]}>0.00h</Text>
+                </View>
+              )}
+              {columnVisibility.hoursMonth && (
+                <View style={[styles.dataCell, { width: HOURS_MONTH_WIDTH }]}>
+                  <Text style={[styles.cellText, { color: currentColors.text }]}>0.00h</Text>
+                </View>
+              )}
+              {columnVisibility.hoursQuarter && (
+                <View style={[styles.dataCell, { width: HOURS_QUARTER_WIDTH }]}>
+                  <Text style={[styles.cellText, { color: currentColors.text }]}>0.00h</Text>
+                </View>
+              )}
+              {columnVisibility.projectValue && (
+                <View style={[styles.dataCell, { width: PROJECT_VALUE_WIDTH }]}>
+                  <Text style={[styles.cellText, { color: currentColors.text }]}>-</Text>
+                </View>
+              )}
+              {columnVisibility.billableAmount && (
+                <View style={[styles.dataCell, { width: BILLABLE_AMOUNT_WIDTH }]}>
+                  <Text style={[styles.cellText, { color: currentColors.text }]}>$0.00</Text>
+                </View>
+              )}
+              {columnVisibility.progress && (
+                <View style={[styles.dataCell, { width: PROGRESS_WIDTH }]}>
+                  <Text style={[styles.cellText, { color: currentColors.text }]}>-</Text>
+                </View>
+              )}
               <View style={[styles.dataCell, styles.actionsCell, { width: ACTIONS_WIDTH }]}>
                 <TouchableOpacity
                   onPress={handleSaveNewProject}
                   style={styles.actionButton}
                 >
-                  <HugeiconsIcon icon={Tick02Icon} size={20} color="#4caf50" />
+                  <HugeiconsIcon icon={Tick02Icon} size={20} color={currentColors.success} />
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={handleCancelNewProject}
                   style={styles.actionButton}
                 >
-                  <HugeiconsIcon icon={Cancel01Icon} size={20} color="#d32f2f" />
+                  <HugeiconsIcon icon={Cancel01Icon} size={20} color={currentColors.error} />
                 </TouchableOpacity>
               </View>
             </View>
@@ -712,22 +1123,155 @@ const ProjectTableViewScreen = () => {
       </ScrollView>
       </ScrollView>
 
-      <FAB
-        style={styles.fab}
-        icon="plus"
-        label="New Project"
-        onPress={() => {
-          (navigation as any).navigate('CreateProject');
+      {/* Settings Icon */}
+      <TouchableOpacity
+        style={[styles.settingsButton, { backgroundColor: currentColors.primary }]}
+        onPress={() => setShowSettingsModal(true)}
+        activeOpacity={0.8}
+      >
+        <HugeiconsIcon icon={Settings02Icon} size={24} color={currentColors.white} />
+      </TouchableOpacity>
+
+      {/* Settings Modal */}
+      <Modal
+        visible={showSettingsModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowSettingsModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: currentColors.background.bg300 }]}>
+            <Text style={[styles.modalTitle, { color: currentColors.text }]}>Table Column Settings</Text>
+
+            <ScrollView style={styles.settingsScroll}>
+              {Object.entries({
+                projectNumber: 'Project #',
+                name: 'Project Name',
+                client: 'Client',
+                description: 'Common Name',
+                hours: 'Hours',
+                hoursMonth: 'This Month',
+                hoursQuarter: 'This Quarter',
+                projectValue: 'Project Value',
+                billableAmount: 'Est. Billable',
+                progress: 'Progress %',
+              }).map(([key, label]) => (
+                <View key={key} style={styles.settingRow}>
+                  <Text style={[styles.settingLabel, { color: currentColors.text }]}>{label}</Text>
+                  <Switch
+                    value={columnVisibility[key as keyof ColumnVisibility]}
+                    onValueChange={(value) =>
+                      setColumnVisibility({ ...columnVisibility, [key]: value })
+                    }
+                    trackColor={{ false: currentColors.background.bg500, true: currentColors.primary }}
+                    thumbColor={currentColors.white}
+                  />
+                </View>
+              ))}
+            </ScrollView>
+
+            <View style={styles.modalButtons}>
+              <Button
+                mode="contained"
+                onPress={saveToProfile}
+                style={[styles.modalButton, { backgroundColor: currentColors.primary }]}
+                labelStyle={{ color: currentColors.white }}
+              >
+                Save to My Profile
+              </Button>
+
+              {user?.role === 'ADMIN' && (
+                <Button
+                  mode="contained"
+                  onPress={saveAsDefault}
+                  style={[styles.modalButton, { backgroundColor: currentColors.secondary }]}
+                  labelStyle={{ color: currentColors.white }}
+                >
+                  Save as Default for All
+                </Button>
+              )}
+
+              <Button
+                mode="outlined"
+                onPress={() => setShowSettingsModal(false)}
+                style={styles.modalButton}
+                labelStyle={{ color: currentColors.text }}
+              >
+                Cancel
+              </Button>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Edit Project Modal */}
+      <EditProjectModal
+        visible={showEditModal}
+        projectId={editingProjectId}
+        onDismiss={() => {
+          setShowEditModal(false);
+          setEditingProjectId(null);
+        }}
+        onSuccess={() => {
+          loadProjects();
         }}
       />
+
+      {/* Delete Confirmation Modal */}
+      {deletingProjectId && (
+        <Modal
+          visible={!!deletingProjectId}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={handleDeleteCancel}
+        >
+          <View style={styles.confirmationOverlay}>
+            <View style={[styles.confirmationCard, { backgroundColor: currentColors.background.bg300 }]}>
+              <Text style={[styles.confirmationTitle, { color: currentColors.text }]}>
+                Delete Project
+              </Text>
+
+              {(() => {
+                const project = projects.find(p => p.id === deletingProjectId);
+                return (
+                  <Text style={[styles.confirmationMessage, { color: currentColors.text }]}>
+                    Are you sure you want to delete "{project?.name || 'this project'}"? This action cannot be undone.
+                  </Text>
+                );
+              })()}
+
+              <View style={styles.confirmationButtons}>
+                <TouchableOpacity
+                  style={[styles.confirmationButtonCancel, { borderColor: currentColors.primary }]}
+                  onPress={handleDeleteCancel}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.confirmationButtonCancelText, { color: currentColors.primary }]}>
+                    Cancel
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.confirmationButtonDelete}
+                  onPress={handleDeleteConfirm}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.confirmationButtonDeleteText}>
+                    Delete
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (currentColors: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   centered: {
     flex: 1,
@@ -738,7 +1282,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   verticalScrollContent: {
-    paddingBottom: 100,
+    paddingBottom: 20,
   },
   scrollableTable: {
     flex: 1,
@@ -749,14 +1293,13 @@ const styles = StyleSheet.create({
   },
   headerRow: {
     flexDirection: 'row',
-    backgroundColor: '#10131b',
     borderBottomWidth: 2,
-    borderBottomColor: '#0a0c12',
+    borderBottomColor: currentColors.border,
   },
   headerCell: {
     padding: 15,
     borderRightWidth: 1,
-    borderRightColor: '#0a0c12',
+    borderRightColor: currentColors.border,
     justifyContent: 'center',
   },
   headerContent: {
@@ -764,40 +1307,36 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerText: {
-    color: 'white',
+    color: currentColors.white,
     fontWeight: '700',
     fontSize: 14,
     textTransform: 'uppercase',
   },
   sortIndicator: {
-    color: 'white',
+    color: currentColors.white,
     fontSize: 12,
     marginLeft: 4,
   },
   dataRow: {
     flexDirection: 'row',
-    backgroundColor: 'white',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: currentColors.border,
   },
   dataCell: {
     padding: 15,
     borderRightWidth: 1,
-    borderRightColor: '#e0e0e0',
+    borderRightColor: currentColors.border,
     justifyContent: 'center',
   },
   cellText: {
     fontSize: 14,
-    color: '#333',
+    color: currentColors.text,
   },
   cellInput: {
     fontSize: 14,
-    color: '#333',
     padding: 5,
     borderWidth: 1,
-    borderColor: '#10131b',
     borderRadius: 4,
-    backgroundColor: '#f0f0ff',
     minHeight: 30,
   },
   actionsCell: {
@@ -805,15 +1344,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
+    borderRightWidth: 0,
   },
   actionButton: {
     padding: 5,
   },
   addProjectRow: {
     flexDirection: 'row',
-    backgroundColor: '#f9f9f9',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: currentColors.border,
   },
   addProjectButton: {
     flexDirection: 'row',
@@ -821,29 +1360,34 @@ const styles = StyleSheet.create({
   },
   addProjectText: {
     fontSize: 14,
-    color: '#10131b',
     fontWeight: '600',
   },
-  fab: {
+  settingsButton: {
     position: 'absolute',
-    margin: 16,
-    right: 0,
-    bottom: 0,
-    backgroundColor: '#10131b',
+    right: 20,
+    bottom: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 4,
+    shadowColor: currentColors.text,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
   },
   suggestionsContainer: {
     position: 'absolute',
     bottom: 45,
     left: 0,
     right: 0,
-    backgroundColor: 'white',
     borderWidth: 1,
-    borderColor: '#10131b',
     borderRadius: 4,
     maxHeight: 200,
     zIndex: 9999,
     elevation: 10,
-    shadowColor: '#000',
+    shadowColor: currentColors.text,
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 3.84,
@@ -851,16 +1395,134 @@ const styles = StyleSheet.create({
   suggestionItem: {
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: currentColors.border,
   },
   suggestionText: {
     fontSize: 14,
-    color: '#333',
+    color: currentColors.text,
   },
   createClientText: {
     fontSize: 14,
-    color: '#10131b',
     fontWeight: '600',
+  },
+  progressContainer: {
+    flex: 1,
+    flexDirection: 'column',
+    gap: 4,
+  },
+  progressBar: {
+    height: 8,
+    borderRadius: 4,
+    overflow: 'hidden',
+    width: '100%',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 4,
+  },
+  progressText: {
+    fontSize: 12,
+    textAlign: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '90%',
+    maxWidth: 500,
+    borderRadius: 12,
+    padding: 24,
+    maxHeight: '80%',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  settingsScroll: {
+    maxHeight: 400,
+  },
+  settingRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0, 0, 0, 0.1)',
+  },
+  settingLabel: {
+    fontSize: 16,
+    flex: 1,
+  },
+  modalButtons: {
+    marginTop: 20,
+    gap: 10,
+  },
+  modalButton: {
+    marginVertical: 4,
+  },
+  confirmationOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  confirmationCard: {
+    width: '85%',
+    maxWidth: 400,
+    borderRadius: 12,
+    padding: 24,
+    elevation: 8,
+    shadowColor: currentColors.text,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  confirmationTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  confirmationMessage: {
+    fontSize: 15,
+    lineHeight: 22,
+    marginBottom: 24,
+    textAlign: 'center',
+  },
+  confirmationButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'flex-end',
+  },
+  confirmationButtonCancel: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    minWidth: 100,
+    alignItems: 'center',
+  },
+  confirmationButtonCancelText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  confirmationButtonDelete: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 6,
+    backgroundColor: currentColors.error,
+    minWidth: 100,
+    alignItems: 'center',
+  },
+  confirmationButtonDeleteText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: currentColors.white,
   },
 });
 

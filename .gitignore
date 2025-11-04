@@ -60,3 +60,4 @@ prisma/migrations/
 
 # Misc
 .turbo
+.vercel

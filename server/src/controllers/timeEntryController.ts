@@ -37,8 +37,17 @@ export const getAllTimeEntries = async (req: AuthRequest, res: Response) => {
           },
         },
         project: {
-          include: {
-            client: true,
+          select: {
+            id: true,
+            name: true,
+            color: true,
+            status: true,
+            client: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
       },

@@ -7,8 +7,10 @@ import {
   isAppInstalled,
   initInstallPrompt
 } from '../utils/serviceWorkerRegistration';
+import { useTheme } from '../contexts/ThemeContext';
 
 const InstallPrompt: React.FC = () => {
+  const { currentColors } = useTheme();
   const [showPrompt, setShowPrompt] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
 
@@ -96,13 +98,16 @@ const InstallPrompt: React.FC = () => {
         },
       ]}
       icon="download"
-      style={styles.banner}
+      style={[styles.banner, {
+        backgroundColor: currentColors.background.bg500,
+        borderBottomColor: currentColors.border
+      }]}
     >
       <View style={styles.content}>
         <Text variant="titleMedium" style={styles.title}>
           Install Mood Tracker
         </Text>
-        <Text variant="bodyMedium" style={styles.description}>
+        <Text variant="bodyMedium" style={[styles.description, { color: currentColors.textSecondary }]}>
           Install this app on your device for quick and easy access to track your moods. It works offline and provides a native app experience.
         </Text>
       </View>
@@ -112,9 +117,7 @@ const InstallPrompt: React.FC = () => {
 
 const styles = StyleSheet.create({
   banner: {
-    backgroundColor: '#f5f5f5',
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
   },
   content: {
     paddingVertical: 8,
@@ -124,7 +127,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   description: {
-    color: '#666',
+    // Color applied via inline style
   },
 });
 

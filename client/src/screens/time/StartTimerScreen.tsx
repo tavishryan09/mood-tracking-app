@@ -4,8 +4,10 @@ import { TextInput, Button, Title, List, RadioButton } from 'react-native-paper'
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { StopWatchIcon } from '@hugeicons/core-free-icons';
 import { timeEntriesAPI, projectsAPI } from '../../services/api';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const StartTimerScreen = ({ navigation }: any) => {
+  const { currentColors } = useTheme();
   const [projects, setProjects] = useState<any[]>([]);
   const [selectedProject, setSelectedProject] = useState('');
   const [description, setDescription] = useState('');
@@ -57,11 +59,11 @@ const StartTimerScreen = ({ navigation }: any) => {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={[styles.container, { backgroundColor: currentColors.background.bg700 }]}>
       <View style={styles.content}>
-        <Title>Start Timer</Title>
+        <Title style={{ color: currentColors.text }}>Start Timer</Title>
 
-        <Title style={styles.sectionTitle}>Select Project *</Title>
+        <Title style={[styles.sectionTitle, { color: currentColors.text }]}>Select Project *</Title>
         <RadioButton.Group onValueChange={setSelectedProject} value={selectedProject}>
           {projects.length === 0 ? (
             <List.Item
@@ -101,7 +103,7 @@ const StartTimerScreen = ({ navigation }: any) => {
           loading={loading}
           disabled={loading || !selectedProject}
           style={styles.button}
-          icon={() => <HugeiconsIcon icon={StopWatchIcon} size={18} color="#fff" />}
+          icon={() => <HugeiconsIcon icon={StopWatchIcon} size={18} color={currentColors.white} />}
         >
           Start Timer
         </Button>
@@ -117,7 +119,6 @@ const StartTimerScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   content: {
     padding: 20,

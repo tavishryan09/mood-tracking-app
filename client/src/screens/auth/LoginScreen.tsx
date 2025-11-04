@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { TextInput, Button, Title, Text, HelperText } from 'react-native-paper';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const LoginScreen = ({ navigation }: any) => {
   const [email, setEmail] = useState('');
@@ -17,6 +18,7 @@ const LoginScreen = ({ navigation }: any) => {
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const { login } = useAuth();
+  const { currentColors } = useTheme();
 
   const handleLogin = async () => {
     setErrorMessage('');
@@ -85,18 +87,20 @@ const LoginScreen = ({ navigation }: any) => {
     );
   };
 
+  const dynamicStyles = createStyles(currentColors);
+
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
+      style={[dynamicStyles.container]}
     >
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={dynamicStyles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.content}>
-          <Title style={styles.title}>Time Tracking App</Title>
-          <Text style={styles.subtitle}>Sign in to continue</Text>
+        <View style={dynamicStyles.content}>
+          <Title style={[dynamicStyles.title]}>Time Tracking App</Title>
+          <Text style={[dynamicStyles.subtitle]}>Sign in to continue</Text>
 
           <TextInput
             label="Email"
@@ -105,7 +109,7 @@ const LoginScreen = ({ navigation }: any) => {
             mode="outlined"
             keyboardType="email-address"
             autoCapitalize="none"
-            style={styles.input}
+            style={dynamicStyles.input}
             left={<TextInput.Icon icon="email" />}
           />
 
@@ -115,7 +119,7 @@ const LoginScreen = ({ navigation }: any) => {
             onChangeText={setPassword}
             mode="outlined"
             secureTextEntry={!showPassword}
-            style={styles.input}
+            style={dynamicStyles.input}
             left={<TextInput.Icon icon="lock" />}
             right={
               <TextInput.Icon
@@ -126,7 +130,7 @@ const LoginScreen = ({ navigation }: any) => {
           />
 
           {errorMessage ? (
-            <HelperText type="error" visible={true} style={styles.errorText}>
+            <HelperText type="error" visible={true} style={dynamicStyles.errorText}>
               {errorMessage}
             </HelperText>
           ) : null}
@@ -136,7 +140,7 @@ const LoginScreen = ({ navigation }: any) => {
             onPress={handleLogin}
             loading={loading}
             disabled={loading}
-            style={styles.button}
+            style={dynamicStyles.button}
           >
             Sign In
           </Button>
@@ -145,12 +149,12 @@ const LoginScreen = ({ navigation }: any) => {
             mode="text"
             onPress={handleForgotPassword}
             disabled={loading}
-            style={styles.forgotButton}
+            style={dynamicStyles.forgotButton}
           >
             Forgot Password?
           </Button>
 
-          <HelperText type="info" style={styles.helpText}>
+          <HelperText type="info" style={dynamicStyles.helpText}>
             Access must be granted by an administrator
           </HelperText>
         </View>
@@ -159,10 +163,10 @@ const LoginScreen = ({ navigation }: any) => {
   );
 };
 
-const styles = StyleSheet.create({
+const createStyles = (currentColors: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: currentColors.background.bg500,
   },
   scrollContent: {
     flexGrow: 1,
@@ -176,13 +180,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 10,
-    color: '#6200ee',
+    color: currentColors.primary,
   },
   subtitle: {
     fontSize: 16,
     textAlign: 'center',
     marginBottom: 30,
-    color: '#666',
+    color: currentColors.textSecondary,
   },
   input: {
     marginBottom: 15,

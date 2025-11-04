@@ -3,11 +3,12 @@ import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createDrawerNavigator, DrawerContentScrollView, DrawerItem } from '@react-navigation/drawer';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-import { Home09Icon, Calendar03Icon, StopWatchIcon, Folder01Icon, UserCircleIcon } from '@hugeicons/core-free-icons';
+import { Home09Icon, Calendar03Icon, StopWatchIcon, Folder01Icon, UserCircleIcon, UserGroupIcon } from '@hugeicons/core-free-icons';
 import { Title, Paragraph } from 'react-native-paper';
 import { iOSColors } from '../theme/iosTheme';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
+import { settingsAPI } from '../services/api';
 
 // Main Screens
 import DashboardScreen from '../screens/dashboard/DashboardScreen';
@@ -30,7 +31,12 @@ import ClientsListScreen from '../screens/clients/ClientsListScreen';
 import EditClientScreen from '../screens/clients/EditClientScreen';
 import UserRatesScreen from '../screens/admin/UserRatesScreen';
 import TeamViewSettingsScreen from '../screens/admin/TeamViewSettingsScreen';
+import ManageUsersScreen from '../screens/admin/ManageUsersScreen';
+import EditUserScreen from '../screens/admin/EditUserScreen';
+import InviteUserScreen from '../screens/admin/InviteUserScreen';
 import ProjectTableViewScreen from '../screens/projects/ProjectTableViewScreen';
+import PlanningColorsScreen from '../screens/profile/PlanningColorsScreen';
+import ColorPaletteEditorScreen from '../screens/profile/ColorPaletteEditorScreen';
 
 const Drawer = createDrawerNavigator();
 const Stack = createStackNavigator();
@@ -51,14 +57,17 @@ const allMenuItems = [
   { name: 'Planning', icon: Calendar03Icon, label: 'Planning', component: PlanningScreen },
   { name: 'Time', icon: StopWatchIcon, label: 'Time Tracking', component: TimeTrackingScreen },
   { name: 'Projects', icon: Folder01Icon, label: 'Projects', component: ProjectsScreen },
+  { name: 'Clients', icon: UserGroupIcon, label: 'Clients', component: ClientsListScreen },
   { name: 'Profile', icon: UserCircleIcon, label: 'Profile', component: ProfileScreen },
 ];
 
 function CustomDrawerContent(props: any) {
   const { state, navigation } = props;
   const { user } = useAuth();
+  const { currentColors } = useTheme();
   const currentRoute = state.routes[state.index].name;
-  const [visibleMenuItems, setVisibleMenuItems] = useState(allMenuItems);
+  const [visibleMenuItems, setVisibleMenuItems] = useState<typeof allMenuItems>([]);
+  const [menuLoaded, setMenuLoaded] = useState(false);
 
   useEffect(() => {
     loadMenuSettings();
@@ -68,21 +77,26 @@ function CustomDrawerContent(props: any) {
     try {
       if (!user || !user.role) {
         setVisibleMenuItems(allMenuItems);
+        setMenuLoaded(true);
         return;
       }
 
-      // Get storage key based on role
-      let storageKey = STORAGE_KEYS.USER_PAGE_ACCESS;
+      // Get settings key based on role
+      let settingsKey = 'team_view_user_page_access';
       if (user.role === 'ADMIN') {
-        storageKey = STORAGE_KEYS.ADMIN_PAGE_ACCESS;
+        settingsKey = 'team_view_admin_page_access';
       } else if (user.role === 'MANAGER') {
-        storageKey = STORAGE_KEYS.MANAGER_PAGE_ACCESS;
+        settingsKey = 'team_view_manager_page_access';
       }
 
-      const savedAccess = await AsyncStorage.getItem(storageKey);
+      // Load settings from database
+      const response = await settingsAPI.user.getAll();
+      const settings = response.data;
 
-      if (savedAccess) {
-        const pageAccess = JSON.parse(savedAccess);
+      const pageAccessSetting = settings.find((s: any) => s.key === settingsKey);
+
+      if (pageAccessSetting) {
+        const pageAccess = pageAccessSetting.value;
         console.log('[DesktopNavigator] Loaded page access for', user.role, ':', pageAccess);
 
         // Filter menu items based on page access
@@ -97,20 +111,36 @@ function CustomDrawerContent(props: any) {
     } catch (error) {
       console.error('[DesktopNavigator] Error loading menu settings:', error);
       setVisibleMenuItems(allMenuItems);
+    } finally {
+      setMenuLoaded(true);
     }
   };
 
+  // Don't render menu until settings are loaded
+  if (!menuLoaded) {
+    return null;
+  }
+
   return (
-    <DrawerContentScrollView {...props} contentContainerStyle={styles.drawerContent}>
-      <View style={styles.sidebarHeader}>
-        <Title style={styles.appTitle}>Mood Tracker</Title>
+    <DrawerContentScrollView {...props} contentContainerStyle={[styles.drawerContent, { backgroundColor: currentColors.background.bg300 }]}>
+      <View style={[styles.sidebarHeader, { backgroundColor: currentColors.background.bg300, borderBottomColor: currentColors.background.bg500 }]}>
+        <Title style={[styles.appTitle, { color: currentColors.text }]}>Mood Tracker</Title>
       </View>
       {visibleMenuItems.map((item) => {
-        const isActive = currentRoute === item.name;
+        // Check if current route matches this item or if it's a sub-route
+        // e.g., Projects should be active when on ProjectTableView
+        const isActive = currentRoute === item.name ||
+          (item.name === 'Projects' && currentRoute === 'ProjectTableView') ||
+          (item.name === 'Planning' && currentRoute === 'PlanningColors');
         return (
           <TouchableOpacity
             key={item.name}
-            style={[styles.menuItem, isActive && styles.menuItemActive]}
+            style={[
+              styles.menuItem,
+              isActive && {
+                backgroundColor: currentColors.primary + '15',
+              }
+            ]}
             onPress={() => navigation.navigate(item.name)}
             activeOpacity={0.7}
           >
@@ -118,11 +148,18 @@ function CustomDrawerContent(props: any) {
               <HugeiconsIcon
                 icon={item.icon}
                 size={24}
-                color={isActive ? iOSColors.systemBlue : iOSColors.systemGray}
+                color={isActive ? currentColors.primary : iOSColors.systemGray}
                 strokeWidth={isActive ? 2 : 1.5}
               />
             </View>
-            <Paragraph style={[styles.menuLabel, isActive && styles.menuLabelActive]}>
+            <Paragraph style={[
+              styles.menuLabel,
+              { color: currentColors.text },
+              isActive && {
+                color: currentColors.primary,
+                fontWeight: '600',
+              }
+            ]}>
               {item.label}
             </Paragraph>
           </TouchableOpacity>
@@ -134,7 +171,10 @@ function CustomDrawerContent(props: any) {
 
 function MainDrawer() {
   const { user } = useAuth();
-  const [visibleMenuItems, setVisibleMenuItems] = useState(allMenuItems);
+  const { currentColors } = useTheme();
+  const [visibleMenuItems, setVisibleMenuItems] = useState<typeof allMenuItems>([]);
+  const [initialRoute, setInitialRoute] = useState<string>('Dashboard');
+  const [drawerLoaded, setDrawerLoaded] = useState(false);
 
   useEffect(() => {
     loadMenuSettings();
@@ -144,40 +184,69 @@ function MainDrawer() {
     try {
       if (!user || !user.role) {
         setVisibleMenuItems(allMenuItems);
+        setDrawerLoaded(true);
         return;
       }
 
-      // Get storage key based on role
-      let storageKey = STORAGE_KEYS.USER_PAGE_ACCESS;
+      // Get settings keys based on role
+      let pageAccessKey = 'team_view_user_page_access';
+      let defaultPageKey = 'team_view_user_default_page';
+
       if (user.role === 'ADMIN') {
-        storageKey = STORAGE_KEYS.ADMIN_PAGE_ACCESS;
+        pageAccessKey = 'team_view_admin_page_access';
+        defaultPageKey = 'team_view_admin_default_page';
       } else if (user.role === 'MANAGER') {
-        storageKey = STORAGE_KEYS.MANAGER_PAGE_ACCESS;
+        pageAccessKey = 'team_view_manager_page_access';
+        defaultPageKey = 'team_view_manager_default_page';
       }
 
-      const savedAccess = await AsyncStorage.getItem(storageKey);
+      // Load settings from database
+      const response = await settingsAPI.user.getAll();
+      const settings = response.data;
 
-      if (savedAccess) {
-        const pageAccess = JSON.parse(savedAccess);
+      const pageAccessSetting = settings.find((s: any) => s.key === pageAccessKey);
+      const defaultPageSetting = settings.find((s: any) => s.key === defaultPageKey);
+
+      if (pageAccessSetting) {
+        const pageAccess = pageAccessSetting.value;
+        console.log('[MainDrawer] Loaded page access for', user.role, ':', pageAccess);
+
         const filtered = allMenuItems.filter((item) => pageAccess[item.name] === true);
+        console.log('[MainDrawer] Filtered menu items:', filtered.map(i => i.name));
         setVisibleMenuItems(filtered);
       } else {
         setVisibleMenuItems(allMenuItems);
       }
+
+      // Set initial route from default page setting
+      if (defaultPageSetting) {
+        const defaultPage = defaultPageSetting.value;
+        console.log('[MainDrawer] Setting initial route to:', defaultPage);
+        setInitialRoute(defaultPage);
+      }
     } catch (error) {
       console.error('[MainDrawer] Error loading menu settings:', error);
       setVisibleMenuItems(allMenuItems);
+    } finally {
+      setDrawerLoaded(true);
     }
   };
 
+  // Don't render drawer until settings are loaded
+  if (!drawerLoaded) {
+    return null;
+  }
+
   return (
     <Drawer.Navigator
+      key={`drawer-${initialRoute}`}
+      initialRouteName={initialRoute}
       drawerContent={(props) => <CustomDrawerContent {...props} />}
       screenOptions={{
         drawerType: 'permanent',
         drawerStyle: {
           width: 250,
-          backgroundColor: iOSColors.systemGroupedBackground,
+          backgroundColor: currentColors.background.bg300,
         },
         headerStyle: {
           backgroundColor: iOSColors.systemBackground,
@@ -191,7 +260,7 @@ function MainDrawer() {
           fontWeight: '600',
           color: iOSColors.label,
         },
-        headerTintColor: iOSColors.systemBlue,
+        headerTintColor: currentColors.primary,
       }}
     >
       {visibleMenuItems.map((item) => (
@@ -201,7 +270,7 @@ function MainDrawer() {
           component={item.component}
           options={{
             title: item.label,
-            headerShown: item.name !== 'Calendar' && item.name !== 'Planning' && item.name !== 'Profile'
+            headerShown: item.name !== 'Calendar' && item.name !== 'Planning' && item.name !== 'Profile' && item.name !== 'Dashboard' && item.name !== 'Clients'
           }}
         />
       ))}
@@ -220,6 +289,8 @@ function MainDrawer() {
 }
 
 const DesktopNavigator = () => {
+  const { currentColors } = useTheme();
+
   return (
     <Stack.Navigator
       screenOptions={{
@@ -243,7 +314,7 @@ const DesktopNavigator = () => {
             fontWeight: '600',
             color: iOSColors.label,
           },
-          headerTintColor: iOSColors.systemBlue,
+          headerTintColor: currentColors.primary,
         }}
       />
       <Stack.Screen
@@ -262,7 +333,7 @@ const DesktopNavigator = () => {
             fontWeight: '600',
             color: iOSColors.label,
           },
-          headerTintColor: iOSColors.systemBlue,
+          headerTintColor: currentColors.primary,
         }}
       />
       <Stack.Screen
@@ -289,7 +360,7 @@ const DesktopNavigator = () => {
             fontWeight: '600',
             color: iOSColors.label,
           },
-          headerTintColor: iOSColors.systemBlue,
+          headerTintColor: currentColors.primary,
         }}
       />
       <Stack.Screen
@@ -308,7 +379,7 @@ const DesktopNavigator = () => {
             fontWeight: '600',
             color: iOSColors.label,
           },
-          headerTintColor: iOSColors.systemBlue,
+          headerTintColor: currentColors.primary,
         }}
       />
       <Stack.Screen
@@ -327,7 +398,7 @@ const DesktopNavigator = () => {
             fontWeight: '600',
             color: iOSColors.label,
           },
-          headerTintColor: iOSColors.systemBlue,
+          headerTintColor: currentColors.primary,
         }}
       />
       <Stack.Screen
@@ -346,7 +417,7 @@ const DesktopNavigator = () => {
             fontWeight: '600',
             color: iOSColors.label,
           },
-          headerTintColor: iOSColors.systemBlue,
+          headerTintColor: currentColors.primary,
         }}
       />
       <Stack.Screen
@@ -365,26 +436,7 @@ const DesktopNavigator = () => {
             fontWeight: '600',
             color: iOSColors.label,
           },
-          headerTintColor: iOSColors.systemBlue,
-        }}
-      />
-      <Stack.Screen
-        name="ClientsList"
-        component={ClientsListScreen}
-        options={{
-          headerShown: true,
-          title: 'Clients',
-          headerStyle: {
-            backgroundColor: iOSColors.systemBackground,
-            borderBottomColor: iOSColors.separator,
-            borderBottomWidth: 0.5,
-          },
-          headerTitleStyle: {
-            fontSize: 17,
-            fontWeight: '600',
-            color: iOSColors.label,
-          },
-          headerTintColor: iOSColors.systemBlue,
+          headerTintColor: currentColors.primary,
         }}
       />
       <Stack.Screen
@@ -403,7 +455,64 @@ const DesktopNavigator = () => {
             fontWeight: '600',
             color: iOSColors.label,
           },
-          headerTintColor: iOSColors.systemBlue,
+          headerTintColor: currentColors.primary,
+        }}
+      />
+      <Stack.Screen
+        name="ManageUsers"
+        component={ManageUsersScreen}
+        options={{
+          headerShown: true,
+          title: 'Manage Users',
+          headerStyle: {
+            backgroundColor: iOSColors.systemBackground,
+            borderBottomColor: iOSColors.separator,
+            borderBottomWidth: 0.5,
+          },
+          headerTitleStyle: {
+            fontSize: 17,
+            fontWeight: '600',
+            color: iOSColors.label,
+          },
+          headerTintColor: currentColors.primary,
+        }}
+      />
+      <Stack.Screen
+        name="EditUser"
+        component={EditUserScreen}
+        options={{
+          headerShown: true,
+          title: 'Edit User',
+          headerStyle: {
+            backgroundColor: iOSColors.systemBackground,
+            borderBottomColor: iOSColors.separator,
+            borderBottomWidth: 0.5,
+          },
+          headerTitleStyle: {
+            fontSize: 17,
+            fontWeight: '600',
+            color: iOSColors.label,
+          },
+          headerTintColor: currentColors.primary,
+        }}
+      />
+      <Stack.Screen
+        name="InviteUser"
+        component={InviteUserScreen}
+        options={{
+          headerShown: true,
+          title: 'Invite User',
+          headerStyle: {
+            backgroundColor: iOSColors.systemBackground,
+            borderBottomColor: iOSColors.separator,
+            borderBottomWidth: 0.5,
+          },
+          headerTitleStyle: {
+            fontSize: 17,
+            fontWeight: '600',
+            color: iOSColors.label,
+          },
+          headerTintColor: currentColors.primary,
         }}
       />
       <Stack.Screen
@@ -422,7 +531,7 @@ const DesktopNavigator = () => {
             fontWeight: '600',
             color: iOSColors.label,
           },
-          headerTintColor: iOSColors.systemBlue,
+          headerTintColor: currentColors.primary,
         }}
       />
       <Stack.Screen
@@ -441,7 +550,45 @@ const DesktopNavigator = () => {
             fontWeight: '600',
             color: iOSColors.label,
           },
-          headerTintColor: iOSColors.systemBlue,
+          headerTintColor: currentColors.primary,
+        }}
+      />
+      <Stack.Screen
+        name="PlanningColors"
+        component={PlanningColorsScreen}
+        options={{
+          headerShown: true,
+          title: 'Planning Page Colors',
+          headerStyle: {
+            backgroundColor: iOSColors.systemBackground,
+            borderBottomColor: iOSColors.separator,
+            borderBottomWidth: 0.5,
+          },
+          headerTitleStyle: {
+            fontSize: 17,
+            fontWeight: '600',
+            color: iOSColors.label,
+          },
+          headerTintColor: currentColors.primary,
+        }}
+      />
+      <Stack.Screen
+        name="ColorPaletteEditor"
+        component={ColorPaletteEditorScreen}
+        options={{
+          headerShown: true,
+          title: 'Color Palette Editor',
+          headerStyle: {
+            backgroundColor: iOSColors.systemBackground,
+            borderBottomColor: iOSColors.separator,
+            borderBottomWidth: 0.5,
+          },
+          headerTitleStyle: {
+            fontSize: 17,
+            fontWeight: '600',
+            color: iOSColors.label,
+          },
+          headerTintColor: currentColors.primary,
         }}
       />
     </Stack.Navigator>

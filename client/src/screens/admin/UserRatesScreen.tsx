@@ -4,8 +4,10 @@ import { List, TextInput, Button, ActivityIndicator, Card, Title, Paragraph, Ico
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { Edit02Icon } from '@hugeicons/core-free-icons';
 import { usersAPI } from '../../services/api';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const UserRatesScreen = ({ navigation }: any) => {
+  const { currentColors } = useTheme();
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
@@ -66,44 +68,44 @@ const UserRatesScreen = ({ navigation }: any) => {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
+      <View style={[styles.centered, { backgroundColor: currentColors.background.bg700 }]}>
         <ActivityIndicator size="large" />
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={[styles.container, { backgroundColor: currentColors.background.bg700 }]}>
       <View style={styles.content}>
-        <Card style={styles.infoCard}>
+        <Card style={[styles.infoCard, { backgroundColor: currentColors.background.bg300 }]}>
           <Card.Content>
-            <Title>Manage User Rates</Title>
-            <Paragraph style={styles.infoText}>
+            <Title style={{ color: currentColors.text }}>Manage User Rates</Title>
+            <Paragraph style={[styles.infoText, { color: currentColors.textSecondary }]}>
               Set default hourly billable rates for each user. These rates will be used as defaults when creating projects.
             </Paragraph>
           </Card.Content>
         </Card>
 
         {users.length === 0 ? (
-          <Card style={styles.emptyCard}>
+          <Card style={[styles.emptyCard, { backgroundColor: currentColors.background.bg300 }]}>
             <Card.Content>
-              <Paragraph style={styles.emptyText}>No users found</Paragraph>
+              <Paragraph style={[styles.emptyText, { color: currentColors.textTertiary }]}>No users found</Paragraph>
             </Card.Content>
           </Card>
         ) : (
           users.map((user) => (
-            <Card key={user.id} style={styles.userCard}>
+            <Card key={user.id} style={[styles.userCard, { backgroundColor: currentColors.background.bg300 }]}>
               <Card.Content>
                 <View style={styles.userHeader}>
                   <View style={styles.userInfo}>
-                    <Title style={styles.userName}>
+                    <Title style={[styles.userName, { color: currentColors.text }]}>
                       {user.firstName} {user.lastName}
                     </Title>
-                    <Paragraph style={styles.userEmail}>{user.email}</Paragraph>
+                    <Paragraph style={[styles.userEmail, { color: currentColors.textSecondary }]}>{user.email}</Paragraph>
                   </View>
                   {editingUserId !== user.id && (
                     <IconButton
-                      icon={() => <HugeiconsIcon icon={Edit02Icon} size={20} color="#6200ee" />}
+                      icon={() => <HugeiconsIcon icon={Edit02Icon} size={20} color={currentColors.primary} />}
                       size={20}
                       onPress={() => handleEditRate(user.id, user.defaultHourlyRate?.toString())}
                     />
@@ -140,8 +142,8 @@ const UserRatesScreen = ({ navigation }: any) => {
                   </View>
                 ) : (
                   <View style={styles.rateDisplay}>
-                    <Paragraph style={styles.rateLabel}>Current Rate:</Paragraph>
-                    <Paragraph style={styles.rateValue}>
+                    <Paragraph style={[styles.rateLabel, { color: currentColors.textSecondary }]}>Current Rate:</Paragraph>
+                    <Paragraph style={[styles.rateValue, { color: currentColors.primary }]}>
                       {user.defaultHourlyRate
                         ? `$${parseFloat(user.defaultHourlyRate).toFixed(2)}/hr`
                         : 'Not set'}
@@ -160,7 +162,6 @@ const UserRatesScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   centered: {
     flex: 1,
@@ -176,7 +177,6 @@ const styles = StyleSheet.create({
   },
   infoText: {
     marginTop: 10,
-    color: '#666',
   },
   emptyCard: {
     marginTop: 20,
@@ -184,7 +184,6 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     textAlign: 'center',
-    color: '#999',
     fontStyle: 'italic',
   },
   userCard: {
@@ -205,7 +204,6 @@ const styles = StyleSheet.create({
     marginBottom: 5,
   },
   userEmail: {
-    color: '#666',
     fontSize: 14,
   },
   rateDisplay: {
@@ -215,13 +213,11 @@ const styles = StyleSheet.create({
   },
   rateLabel: {
     fontSize: 14,
-    color: '#666',
     marginRight: 10,
   },
   rateValue: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#6200ee',
   },
   editContainer: {
     marginTop: 10,

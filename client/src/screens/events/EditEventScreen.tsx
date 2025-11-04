@@ -4,8 +4,10 @@ import { TextInput, Button, Title, SegmentedButtons, ActivityIndicator, Card, Ic
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { UserAdd02Icon, Delete02Icon } from '@hugeicons/core-free-icons';
 import { eventsAPI, usersAPI } from '../../services/api';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const EditEventScreen = ({ navigation, route }: any) => {
+  const { currentColors } = useTheme();
   const { eventId } = route.params;
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -15,11 +17,25 @@ const EditEventScreen = ({ navigation, route }: any) => {
   const [startDate, setStartDate] = useState(new Date());
   const [endDate, setEndDate] = useState(new Date());
   const [location, setLocation] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Attendees state
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [attendees, setAttendees] = useState<any[]>([]);
   const [showUserPicker, setShowUserPicker] = useState(false);
+
+  // Dynamic styles that depend on theme
+  const dynamicStyles = {
+    emptyText: {
+      color: currentColors.textTertiary,
+    },
+    userPicker: {
+      borderTopColor: currentColors.border,
+    },
+    deleteButton: {
+      color: currentColors.error,
+    },
+  };
 
   useEffect(() => {
     loadEvent();
@@ -84,41 +100,26 @@ const EditEventScreen = ({ navigation, route }: any) => {
     }
   };
 
-  const handleDelete = async () => {
-    // Use window.confirm for web, Alert.alert for native
-    if (Platform.OS === 'web') {
-      const confirmed = window.confirm('Are you sure you want to delete this event?');
-      if (confirmed) {
-        try {
-          await eventsAPI.delete(eventId);
-          alert('Event deleted successfully');
-          navigation.goBack();
-        } catch (error: any) {
-          alert('Failed to delete event. Please try again.');
-        }
-      }
-    } else {
-      Alert.alert(
-        'Delete Event',
-        'Are you sure you want to delete this event?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Delete',
-            style: 'destructive',
-            onPress: async () => {
-              try {
-                await eventsAPI.delete(eventId);
-                Alert.alert('Success', 'Event deleted');
-                navigation.goBack();
-              } catch (error: any) {
-                Alert.alert('Error', 'Failed to delete event');
-              }
-            },
-          },
-        ]
-      );
+  const handleDeleteClick = () => {
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    setShowDeleteConfirm(false);
+    setSaving(true);
+    try {
+      await eventsAPI.delete(eventId);
+      Alert.alert('Success', 'Event deleted successfully');
+      navigation.goBack();
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.error || 'Failed to delete event');
+    } finally {
+      setSaving(false);
     }
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteConfirm(false);
   };
 
   const handleAddAttendee = async (userId: string) => {
@@ -169,7 +170,7 @@ const EditEventScreen = ({ navigation, route }: any) => {
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={[styles.container, { backgroundColor: currentColors.background.bg700 }]}>
       <View style={styles.content}>
         <Title>Edit Event</Title>
 
@@ -239,14 +240,14 @@ const EditEventScreen = ({ navigation, route }: any) => {
             <View style={styles.sectionHeader}>
               <Title style={styles.sectionTitle}>Attendees</Title>
               <IconButton
-                icon={() => <HugeiconsIcon icon={UserAdd02Icon} size={24} color="#6200ee" />}
+                icon={() => <HugeiconsIcon icon={UserAdd02Icon} size={24} color={currentColors.primary} />}
                 size={24}
                 onPress={() => setShowUserPicker(!showUserPicker)}
               />
             </View>
 
             {attendees.length === 0 ? (
-              <Paragraph style={styles.emptyText}>
+              <Paragraph style={[styles.emptyText, dynamicStyles.emptyText]}>
                 No attendees added yet. Tap the + button to add attendees.
               </Paragraph>
             ) : (
@@ -257,7 +258,7 @@ const EditEventScreen = ({ navigation, route }: any) => {
                     mode="outlined"
                     style={styles.attendeeChip}
                     onClose={() => handleRemoveAttendee(attendee.userId)}
-                    closeIcon={() => <HugeiconsIcon icon={Delete02Icon} size={16} color="#666" />}
+                    closeIcon={() => <HugeiconsIcon icon={Delete02Icon} size={16} color={currentColors.icon} />}
                   >
                     {attendee.user?.firstName} {attendee.user?.lastName}
                   </Chip>
@@ -266,7 +267,7 @@ const EditEventScreen = ({ navigation, route }: any) => {
             )}
 
             {showUserPicker && availableUsers.length > 0 && (
-              <View style={styles.userPicker}>
+              <View style={[styles.userPicker, dynamicStyles.userPicker]}>
                 <Title style={styles.pickerTitle}>Add Attendee</Title>
                 {availableUsers.map((user) => (
                   <List.Item
@@ -281,12 +282,42 @@ const EditEventScreen = ({ navigation, route }: any) => {
             )}
 
             {showUserPicker && availableUsers.length === 0 && (
-              <Paragraph style={styles.emptyText}>
+              <Paragraph style={[styles.emptyText, dynamicStyles.emptyText]}>
                 All users are already attendees.
               </Paragraph>
             )}
           </Card.Content>
         </Card>
+
+        {showDeleteConfirm && (
+          <Card style={[styles.confirmationCard, { backgroundColor: currentColors.background.bg300, borderColor: currentColors.error }]}>
+            <Card.Content>
+              <Paragraph style={[styles.confirmationText, { color: currentColors.text }]}>
+                Are you sure you want to delete this event?
+              </Paragraph>
+              <View style={styles.confirmationButtons}>
+                <Button
+                  mode="outlined"
+                  onPress={handleDeleteCancel}
+                  disabled={saving}
+                  style={styles.confirmationButton}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  mode="contained"
+                  onPress={handleDeleteConfirm}
+                  loading={saving}
+                  disabled={saving}
+                  style={[styles.confirmationButton, styles.deleteConfirmButton]}
+                  buttonColor={currentColors.error}
+                >
+                  Delete
+                </Button>
+              </View>
+            </Card.Content>
+          </Card>
+        )}
 
         <Button
           mode="contained"
@@ -300,9 +331,10 @@ const EditEventScreen = ({ navigation, route }: any) => {
 
         <Button
           mode="outlined"
-          onPress={handleDelete}
+          onPress={handleDeleteClick}
+          disabled={saving || showDeleteConfirm}
           style={styles.button}
-          textColor="#d32f2f"
+          textColor={dynamicStyles.deleteButton.color}
         >
           Delete Event
         </Button>
@@ -318,7 +350,6 @@ const EditEventScreen = ({ navigation, route }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   centered: {
     flex: 1,
@@ -365,19 +396,40 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     textAlign: 'center',
-    color: '#999',
     fontStyle: 'italic',
     paddingVertical: 20,
   },
   userPicker: {
     marginTop: 15,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
     paddingTop: 15,
   },
   pickerTitle: {
     fontSize: 14,
     marginBottom: 10,
+  },
+  confirmationCard: {
+    marginTop: 20,
+    marginBottom: 20,
+    elevation: 3,
+    borderWidth: 1,
+  },
+  confirmationText: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  confirmationButtons: {
+    flexDirection: 'row',
+    gap: 10,
+    justifyContent: 'center',
+  },
+  confirmationButton: {
+    flex: 1,
+  },
+  deleteConfirmButton: {
+    marginLeft: 5,
   },
 });
 

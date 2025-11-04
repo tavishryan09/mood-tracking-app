@@ -1,7 +1,14 @@
 /* eslint-disable no-restricted-globals */
 
-const CACHE_NAME = 'mood-tracker-v1';
-const RUNTIME_CACHE = 'mood-tracker-runtime';
+// Use timestamp to force cache update on each deployment
+const CACHE_VERSION = '2025-11-03-23-21';
+const CACHE_NAME = `mood-tracker-${CACHE_VERSION}`;
+const RUNTIME_CACHE = `mood-tracker-runtime-${CACHE_VERSION}`;
+
+// Detect if running on localhost
+const isLocalhost = self.location.hostname === 'localhost' ||
+                    self.location.hostname === '127.0.0.1' ||
+                    self.location.hostname === '[::1]';
 
 // Assets to cache immediately on install
 const PRECACHE_ASSETS = [
@@ -103,22 +110,19 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Static assets - cache-first strategy
-  event.respondWith(
-    caches.match(request).then((cachedResponse) => {
-      if (cachedResponse) {
-        return cachedResponse;
-      }
-
-      return fetch(request)
+  // Static assets - use network-first on localhost, cache-first in production
+  if (isLocalhost) {
+    // Network-first for development - always get fresh content
+    event.respondWith(
+      fetch(request)
         .then((response) => {
           // Don't cache non-successful responses
           if (!response || response.status !== 200 || response.type === 'error') {
             return response;
           }
 
+          // Clone and cache for offline fallback only
           const responseClone = response.clone();
-
           caches.open(RUNTIME_CACHE).then((cache) => {
             cache.put(request, responseClone);
           });
@@ -126,17 +130,66 @@ self.addEventListener('fetch', (event) => {
           return response;
         })
         .catch(() => {
-          // Return a fallback page for navigation requests
-          if (request.mode === 'navigate') {
-            return caches.match('/index.html');
-          }
-          return new Response('Offline', {
-            status: 503,
-            statusText: 'Service Unavailable',
+          // Network failed - try cache as fallback
+          return caches.match(request).then((cachedResponse) => {
+            if (cachedResponse) {
+              return cachedResponse;
+            }
+            // Return a fallback page for navigation requests
+            if (request.mode === 'navigate') {
+              return caches.match('/index.html');
+            }
+            return new Response('Offline', {
+              status: 503,
+              statusText: 'Service Unavailable',
+            });
           });
-        });
-    })
-  );
+        })
+    );
+  } else {
+    // Cache-first for production - faster loading
+    event.respondWith(
+      caches.match(request).then((cachedResponse) => {
+        if (cachedResponse) {
+          // Return cache but update in background
+          fetch(request).then((response) => {
+            if (response && response.status === 200 && response.type !== 'error') {
+              caches.open(RUNTIME_CACHE).then((cache) => {
+                cache.put(request, response.clone());
+              });
+            }
+          }).catch(() => {});
+          return cachedResponse;
+        }
+
+        return fetch(request)
+          .then((response) => {
+            // Don't cache non-successful responses
+            if (!response || response.status !== 200 || response.type === 'error') {
+              return response;
+            }
+
+            const responseClone = response.clone();
+
+            caches.open(RUNTIME_CACHE).then((cache) => {
+              cache.put(request, responseClone);
+            });
+
+            return response;
+          })
+          .catch(() => {
+            // Return a fallback page for navigation requests
+            if (request.mode === 'navigate') {
+              return caches.match('/index.html');
+            }
+            return new Response('Offline', {
+              status: 503,
+              statusText: 'Service Unavailable',
+            });
+          });
+      })
+    );
+  }
 });
 
 // Background sync for offline actions

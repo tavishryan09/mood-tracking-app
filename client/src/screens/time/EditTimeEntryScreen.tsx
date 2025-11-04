@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Alert, Platform } from 'react-native';
+import { View, StyleSheet, ScrollView, Alert, Platform, Modal, TouchableOpacity, Text } from 'react-native';
 import { TextInput, Button, Title, ActivityIndicator, List, RadioButton } from 'react-native-paper';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { PencilEdit02Icon } from '@hugeicons/core-free-icons';
 import { timeEntriesAPI, eventsAPI, projectsAPI } from '../../services/api';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const EditTimeEntryScreen = ({ route, navigation }: any) => {
   const { entryId } = route.params;
+  const { currentColors } = useTheme();
   const [entry, setEntry] = useState<any>(null);
   const [projects, setProjects] = useState<any[]>([]);
   const [selectedProject, setSelectedProject] = useState('');
@@ -19,6 +21,7 @@ const EditTimeEntryScreen = ({ route, navigation }: any) => {
   const [showProjectPicker, setShowProjectPicker] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -107,7 +110,7 @@ const EditTimeEntryScreen = ({ route, navigation }: any) => {
         startTime: startTime.toISOString().split('T')[1].substring(0, 5),
         endTime: endTime.toISOString().split('T')[1].substring(0, 5),
         description: description || `Time tracked for ${projectName}`,
-        color: '#34C759', // Green color for billable hours
+        color: currentColors.success, // Green color for billable hours
       };
 
       await eventsAPI.create(eventData);
@@ -117,62 +120,48 @@ const EditTimeEntryScreen = ({ route, navigation }: any) => {
     }
   };
 
-  const handleDelete = async () => {
-    // Use window.confirm for web, Alert.alert for native
-    if (Platform.OS === 'web') {
-      const confirmed = window.confirm('Are you sure you want to delete this time entry?');
-      if (confirmed) {
-        try {
-          await timeEntriesAPI.delete(entryId);
-          alert('Time entry deleted successfully');
-          navigation.goBack();
-        } catch (error) {
-          alert('Failed to delete time entry. Please try again.');
-        }
-      }
-    } else {
-      Alert.alert(
-        'Delete Time Entry',
-        'Are you sure you want to delete this time entry?',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Delete',
-            style: 'destructive',
-            onPress: async () => {
-              try {
-                await timeEntriesAPI.delete(entryId);
-                Alert.alert('Success', 'Time entry deleted');
-                navigation.goBack();
-              } catch (error) {
-                Alert.alert('Error', 'Failed to delete time entry');
-              }
-            },
-          },
-        ]
-      );
+  const handleDeleteClick = () => {
+    setShowDeleteConfirm(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    setSaving(true);
+    try {
+      await timeEntriesAPI.delete(entryId);
+      Alert.alert('Success', 'Time entry deleted');
+      setShowDeleteConfirm(false);
+      navigation.goBack();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to delete time entry');
+      setShowDeleteConfirm(false);
+    } finally {
+      setSaving(false);
     }
+  };
+
+  const handleDeleteCancel = () => {
+    setShowDeleteConfirm(false);
   };
 
   if (loading) {
     return (
-      <View style={styles.centered}>
+      <View style={[styles.centered, { backgroundColor: currentColors.background.bg700 }]}>
         <ActivityIndicator size="large" />
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={[styles.container, { backgroundColor: currentColors.background.bg700 }]}>
       <View style={styles.content}>
-        <Title>Edit Time Entry</Title>
+        <Title style={{ color: currentColors.text }}>Edit Time Entry</Title>
 
-        <Title style={styles.label}>Project *</Title>
+        <Title style={[styles.label, { color: currentColors.text }]}>Project *</Title>
         <Button
           mode="outlined"
           onPress={() => setShowProjectPicker(!showProjectPicker)}
           style={styles.input}
-          icon={() => <HugeiconsIcon icon={PencilEdit02Icon} size={18} color="#6200ee" />}
+          icon={() => <HugeiconsIcon icon={PencilEdit02Icon} size={18} color={currentColors.primary} />}
         >
           {projects.find((p) => p.id === selectedProject)?.name || 'Select Project'}
         </Button>
@@ -200,7 +189,7 @@ const EditTimeEntryScreen = ({ route, navigation }: any) => {
           </RadioButton.Group>
         )}
 
-        <Title style={styles.label}>Start Time</Title>
+        <Title style={[styles.label, { color: currentColors.text }]}>Start Time</Title>
         {Platform.OS === 'web' ? (
           <View style={styles.webDateInput}>
             <input
@@ -218,7 +207,8 @@ const EditTimeEntryScreen = ({ route, navigation }: any) => {
                 fontSize: '16px',
                 border: '1px solid rgba(0, 0, 0, 0.23)',
                 borderRadius: '4px',
-                backgroundColor: '#fff',
+                backgroundColor: currentColors.background.bg300,
+                color: currentColors.text,
                 fontFamily: 'Josefin Sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                 outline: 'none',
                 boxSizing: 'border-box',
@@ -248,7 +238,7 @@ const EditTimeEntryScreen = ({ route, navigation }: any) => {
           </>
         )}
 
-        <Title style={styles.label}>End Time</Title>
+        <Title style={[styles.label, { color: currentColors.text }]}>End Time</Title>
         {Platform.OS === 'web' ? (
           <View style={styles.webDateInput}>
             <input
@@ -266,7 +256,8 @@ const EditTimeEntryScreen = ({ route, navigation }: any) => {
                 fontSize: '16px',
                 border: '1px solid rgba(0, 0, 0, 0.23)',
                 borderRadius: '4px',
-                backgroundColor: '#fff',
+                backgroundColor: currentColors.background.bg300,
+                color: currentColors.text,
                 fontFamily: 'Josefin Sans, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                 outline: 'none',
                 boxSizing: 'border-box',
@@ -296,7 +287,7 @@ const EditTimeEntryScreen = ({ route, navigation }: any) => {
           </>
         )}
 
-        <Title style={styles.label}>Duration</Title>
+        <Title style={[styles.label, { color: currentColors.text }]}>Duration</Title>
         <TextInput
           value={`${Math.floor(calculateDuration() / 60)}h ${calculateDuration() % 60}m`}
           mode="outlined"
@@ -327,17 +318,55 @@ const EditTimeEntryScreen = ({ route, navigation }: any) => {
 
         <Button
           mode="outlined"
-          onPress={handleDelete}
-          style={[styles.button, styles.deleteButton]}
-          textColor="#FF3B30"
+          onPress={handleDeleteClick}
+          style={[styles.button, styles.deleteButton, { borderColor: currentColors.error }]}
+          textColor={currentColors.error}
+          disabled={saving}
         >
           Delete Entry
         </Button>
 
-        <Button mode="text" onPress={() => navigation.goBack()} style={styles.button}>
+        <Button mode="text" onPress={() => navigation.goBack()} style={styles.button} disabled={saving}>
           Cancel
         </Button>
       </View>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        visible={showDeleteConfirm}
+        transparent
+        animationType="fade"
+        onRequestClose={handleDeleteCancel}
+      >
+        <View style={styles.confirmationOverlay}>
+          <View style={[styles.confirmationBox, { backgroundColor: currentColors.background.bg300 }]}>
+            <Title style={[styles.confirmationTitle, { color: currentColors.text }]}>Delete Time Entry</Title>
+            <Text style={[styles.confirmationMessage, { color: currentColors.text }]}>
+              Are you sure you want to delete this time entry?
+            </Text>
+            <View style={styles.confirmationButtons}>
+              <Button
+                mode="outlined"
+                onPress={handleDeleteCancel}
+                disabled={saving}
+                style={styles.confirmationButton}
+              >
+                Cancel
+              </Button>
+              <Button
+                mode="contained"
+                onPress={handleDeleteConfirm}
+                loading={saving}
+                disabled={saving}
+                style={[styles.confirmationButton, styles.deleteConfirmButton]}
+                buttonColor={currentColors.error}
+              >
+                Delete
+              </Button>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ScrollView>
   );
 };
@@ -345,7 +374,6 @@ const EditTimeEntryScreen = ({ route, navigation }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   centered: {
     flex: 1,
@@ -370,7 +398,46 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   deleteButton: {
-    borderColor: '#FF3B30',
+  },
+  confirmationOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  confirmationBox: {
+    borderRadius: 12,
+    padding: 24,
+    minWidth: '80%',
+    maxWidth: 400,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  confirmationTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  confirmationMessage: {
+    fontSize: 16,
+    marginBottom: 24,
+    lineHeight: 22,
+  },
+  confirmationButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'flex-end',
+  },
+  confirmationButton: {
+    flex: 1,
+    minWidth: 100,
+  },
+  deleteConfirmButton: {
+    marginLeft: 8,
   },
 });
 

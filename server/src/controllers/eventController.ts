@@ -43,13 +43,28 @@ export const getAllEvents = async (req: AuthRequest, res: Response) => {
           },
         },
         project: {
-          include: {
-            client: true,
+          select: {
+            id: true,
+            name: true,
+            color: true,
+            client: {
+              select: {
+                id: true,
+                name: true,
+              },
+            },
           },
         },
-        client: true,
+        client: {
+          select: {
+            id: true,
+            name: true,
+          },
+        },
         attendees: {
-          include: {
+          select: {
+            id: true,
+            status: true,
             user: {
               select: {
                 id: true,

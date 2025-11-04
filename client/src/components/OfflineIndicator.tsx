@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { Banner, Text, ActivityIndicator } from 'react-native-paper';
 import { getQueuedRequestsCount } from '../utils/serviceWorkerRegistration';
+import { useTheme } from '../contexts/ThemeContext';
 
 const OfflineIndicator: React.FC = () => {
+  const { currentColors } = useTheme();
   const [isOnline, setIsOnline] = useState(true);
   const [showBanner, setShowBanner] = useState(false);
   const [queuedCount, setQueuedCount] = useState(0);
@@ -128,16 +130,16 @@ const OfflineIndicator: React.FC = () => {
       icon={isOnline ? 'wifi' : 'wifi-off'}
       style={[
         styles.banner,
-        isOnline ? styles.onlineBanner : styles.offlineBanner,
+        { backgroundColor: isOnline ? currentColors.success : currentColors.error }
       ]}
     >
       <View style={styles.content}>
         <View style={styles.messageRow}>
-          <Text variant="bodyMedium" style={styles.text}>
+          <Text variant="bodyMedium" style={[styles.text, { color: currentColors.white }]}>
             {getMessage()}
           </Text>
           {isSyncing && (
-            <ActivityIndicator size="small" color="#fff" style={styles.spinner} />
+            <ActivityIndicator size="small" color={currentColors.white} style={styles.spinner} />
           )}
         </View>
       </View>
@@ -154,12 +156,6 @@ const styles = StyleSheet.create({
     zIndex: 1000,
     elevation: 5,
   },
-  offlineBanner: {
-    backgroundColor: '#f44336',
-  },
-  onlineBanner: {
-    backgroundColor: '#4caf50',
-  },
   content: {
     paddingVertical: 4,
   },
@@ -169,7 +165,6 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   text: {
-    color: '#fff',
     fontWeight: '500',
     flex: 1,
   },

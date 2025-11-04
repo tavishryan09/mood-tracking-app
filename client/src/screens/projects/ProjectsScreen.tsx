@@ -1,113 +1,147 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { View, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { Card, Title, Paragraph, Chip, FAB, ActivityIndicator, Searchbar, Button } from 'react-native-paper';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useQuery } from '@tanstack/react-query';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { UserGroupIcon, TaskDaily01Icon, GridTableIcon } from '@hugeicons/core-free-icons';
-import { projectsAPI } from '../../services/api';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { projectsAPI, settingsAPI } from '../../services/api';
+import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 const ProjectsScreen = () => {
+  const { currentColors } = useTheme();
+  const { user } = useAuth();
   const navigation = useNavigation();
-  const [projects, setProjects] = useState<any[]>([]);
-  const [filteredProjects, setFilteredProjects] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
 
+  // Debounce search query to reduce re-renders
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300); // 300ms debounce delay
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Use React Query to fetch projects with automatic caching
+  const { data: projects = [], isLoading: loading, refetch } = useQuery({
+    queryKey: ['projects'],
+    queryFn: async () => {
+      const response = await projectsAPI.getAll();
+      return response.data;
+    },
+    staleTime: 2 * 60 * 1000, // Consider data stale after 2 minutes
+  });
+
+  // Check default view when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
-      loadProjects();
-      checkDefaultView();
-    }, [])
+      const checkView = async () => {
+        try {
+          if (!user || !user.role) {
+            return;
+          }
+
+          // Try to load user personal preference first
+          try {
+            const userPrefResponse = await settingsAPI.user.get('projects_default_table_view');
+            if (userPrefResponse.data?.value !== undefined) {
+              console.log('[ProjectsScreen] Loaded user personal table view preference:', userPrefResponse.data.value);
+              if (userPrefResponse.data.value === true) {
+                (navigation as any).navigate('ProjectTableView');
+              }
+              return;
+            }
+          } catch (error: any) {
+            if (error.response?.status !== 404) {
+              throw error;
+            }
+          }
+
+          // Fall back to role-based Team View Setting
+          let defaultTableViewKey = 'team_view_user_default_projects_table';
+          if (user.role === 'ADMIN') {
+            defaultTableViewKey = 'team_view_admin_default_projects_table';
+          } else if (user.role === 'MANAGER') {
+            defaultTableViewKey = 'team_view_manager_default_projects_table';
+          }
+
+          try {
+            const roleDefaultResponse = await settingsAPI.user.get(defaultTableViewKey);
+            if (roleDefaultResponse.data?.value !== undefined) {
+              console.log('[ProjectsScreen] Loaded role default table view setting:', roleDefaultResponse.data.value);
+              if (roleDefaultResponse.data.value === true) {
+                (navigation as any).navigate('ProjectTableView');
+              }
+            }
+          } catch (error: any) {
+            if (error.response?.status !== 404) {
+              throw error;
+            }
+            console.log('[ProjectsScreen] No table view preference found, staying on list view');
+          }
+        } catch (error) {
+          console.error('[ProjectsScreen] Error checking default view:', error);
+        }
+      };
+
+      // Refetch projects when screen comes into focus
+      refetch();
+      checkView();
+    }, [user, navigation, refetch])
   );
 
-  const checkDefaultView = async () => {
-    try {
-      const defaultToTableView = await AsyncStorage.getItem('@projects_default_table_view');
-      if (defaultToTableView === 'true') {
-        // Auto-navigate to table view if that's the default
-        (navigation as any).navigate('ProjectTableView');
-      }
-    } catch (error) {
-      console.error('[ProjectsScreen] Error checking default view:', error);
-    }
-  };
-
-  useEffect(() => {
-    filterProjects();
-  }, [searchQuery, projects]);
-
-  const loadProjects = async () => {
-    try {
-      setLoading(true);
-      // Add timeout to prevent infinite loading
-      const timeout = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Request timeout')), 800)
-      );
-
-      const response = await Promise.race([projectsAPI.getAll(), timeout]) as any;
-      setProjects(response.data);
-      setFilteredProjects(response.data);
-    } catch (error) {
-      console.error('Error loading projects:', error);
-      // Set empty data so UI still loads
-      setProjects([]);
-      setFilteredProjects([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filterProjects = () => {
-    if (!searchQuery) {
-      setFilteredProjects(projects);
-      return;
+  // Memoize filtered projects - only recompute when debounced search query or projects change
+  const filteredProjects = useMemo(() => {
+    if (!debouncedSearchQuery) {
+      return projects;
     }
 
-    const filtered = projects.filter(
+    return projects.filter(
       (project) =>
-        project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        project.client?.name.toLowerCase().includes(searchQuery.toLowerCase())
+        project.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+        project.client?.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase())
     );
-    setFilteredProjects(filtered);
-  };
+  }, [debouncedSearchQuery, projects]);
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = useCallback((status: string) => {
     switch (status) {
       case 'ACTIVE':
-        return '#4caf50';
+        return currentColors.status.active;
       case 'ON_HOLD':
-        return '#ff9800';
+        return currentColors.status.onHold;
       case 'COMPLETED':
-        return '#2196f3';
+        return currentColors.status.completed;
       case 'ARCHIVED':
-        return '#9e9e9e';
+        return currentColors.status.archived;
       default:
-        return '#666';
+        return currentColors.textSecondary;
     }
-  };
+  }, [currentColors]);
 
   const renderProject = ({ item }: any) => (
     <TouchableOpacity
       onPress={() => (navigation as any).navigate('EditProject', { projectId: item.id })}
       activeOpacity={0.7}
     >
-      <Card style={styles.card}>
+      <Card style={[styles.card, { backgroundColor: currentColors.background.bg500 }]}>
         <Card.Content>
           <View style={styles.cardHeader}>
-            <Title>{item.name}</Title>
+            <Title style={{ color: currentColors.text }}>{item.name}</Title>
             <Chip
               style={[styles.statusChip, { backgroundColor: getStatusColor(item.status) }]}
-              textStyle={styles.chipText}
+              textStyle={[styles.chipText, { color: currentColors.white }]}
             >
               {item.status}
             </Chip>
           </View>
-          <Paragraph>Client: {item.client?.name || 'N/A'}</Paragraph>
-          {item.description && <Paragraph>{item.description}</Paragraph>}
+          <Paragraph style={{ color: currentColors.text }}>Client: {item.client?.name || 'N/A'}</Paragraph>
+          {item.description && <Paragraph style={{ color: currentColors.textSecondary }}>{item.description}</Paragraph>}
           <View style={styles.stats}>
-            <Paragraph>Team: {item.members?.length || 0} members</Paragraph>
-            <Paragraph>Events: {item._count?.events || 0}</Paragraph>
+            <Paragraph style={{ color: currentColors.textSecondary }}>Team: {item.members?.length || 0} members</Paragraph>
+            <Paragraph style={{ color: currentColors.textSecondary }}>Events: {item._count?.events || 0}</Paragraph>
           </View>
         </Card.Content>
       </Card>
@@ -116,26 +150,26 @@ const ProjectsScreen = () => {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" />
+      <View style={[styles.centered, { backgroundColor: currentColors.background.bg700 }]}>
+        <ActivityIndicator size="large" color={currentColors.primary} />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: currentColors.background.bg700 }]}>
       <Searchbar
         placeholder="Search projects..."
         onChangeText={setSearchQuery}
         value={searchQuery}
         style={styles.searchbar}
-        icon={() => <HugeiconsIcon icon={TaskDaily01Icon} size={24} color="#666" />}
+        icon={() => <HugeiconsIcon icon={TaskDaily01Icon} size={24} color={currentColors.icon} />}
       />
 
       <View style={styles.buttonsRow}>
         <Button
           mode="outlined"
-          icon={() => <HugeiconsIcon icon={UserGroupIcon} size={20} color="#6200ee" />}
+          icon={() => <HugeiconsIcon icon={UserGroupIcon} size={20} color={currentColors.primary} />}
           onPress={() => (navigation as any).navigate('ClientsList')}
           style={styles.actionButton}
         >
@@ -143,9 +177,10 @@ const ProjectsScreen = () => {
         </Button>
         <Button
           mode="contained"
-          icon={() => <HugeiconsIcon icon={GridTableIcon} size={20} color="#fff" />}
+          icon={() => <HugeiconsIcon icon={GridTableIcon} size={20} color={currentColors.white} />}
           onPress={() => (navigation as any).navigate('ProjectTableView')}
           style={styles.actionButton}
+          buttonColor={currentColors.secondary}
         >
           Table View
         </Button>
@@ -159,7 +194,7 @@ const ProjectsScreen = () => {
       />
 
       <FAB
-        style={styles.fab}
+        style={[styles.fab, { backgroundColor: currentColors.primary }]}
         icon="plus"
         label="New Project"
         onPress={() => {
@@ -173,7 +208,6 @@ const ProjectsScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   centered: {
     flex: 1,
@@ -222,7 +256,6 @@ const styles = StyleSheet.create({
     margin: 16,
     right: 0,
     bottom: 0,
-    backgroundColor: '#6200ee',
   },
 });
 

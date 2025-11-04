@@ -1,5 +1,6 @@
 import { MD3LightTheme as DefaultTheme } from 'react-native-paper';
 import { Platform } from 'react-native';
+import { ColorPalette } from './colorPalettes';
 
 // iOS native colors based on Apple's Human Interface Guidelines
 export const iOSColors = {
@@ -177,3 +178,27 @@ export const iOSShadows = {
     elevation: 4,
   },
 };
+
+// Create a theme with a specific color palette
+export const createThemedIOSTheme = (palette: ColorPalette) => ({
+  ...iOSTheme,
+  colors: {
+    ...iOSTheme.colors,
+    // Primary for icons and headers
+    primary: palette.primary,
+    // Secondary for buttons
+    secondary: palette.secondary,
+    // bg700 replaces the main background color
+    background: palette.background.bg700,
+    // bg300 is the main color for all cards
+    surface: palette.background.bg300,
+    // bg500 is secondary for cards
+    surfaceVariant: palette.background.bg500,
+    // Text colors throughout the app
+    onSurface: palette.text,
+    onSurfaceVariant: palette.text,
+    onBackground: palette.text,
+    onPrimary: '#FFFFFF', // White text on primary colored elements
+    onSecondary: '#FFFFFF', // White text on secondary colored elements
+  },
+});

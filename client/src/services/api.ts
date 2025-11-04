@@ -7,10 +7,13 @@ import { offlineManager } from '../utils/offlineManager';
 const API_URL = process.env.EXPO_PUBLIC_API_URL ||
   (typeof window !== 'undefined' && window.location.hostname !== 'localhost'
     ? '/api'
-    : 'http://localhost:5000/api');
+    : 'http://localhost:3000/api');
+
+console.log('[API] Using API URL:', API_URL);
 
 const api = axios.create({
   baseURL: API_URL,
+  timeout: 30000, // 30 second timeout - increased for better reliability
   headers: {
     'Content-Type': 'application/json',
   },
@@ -121,6 +124,7 @@ export const projectsAPI = {
   update: (id: string, data: any) => api.put(`/projects/${id}`, data),
   delete: (id: string) => api.delete(`/projects/${id}`),
   addMember: (id: string, data: any) => api.post(`/projects/${id}/members`, data),
+  updateMember: (id: string, memberId: string, data: any) => api.put(`/projects/${id}/members/${memberId}`, data),
   removeMember: (id: string, memberId: string) => api.delete(`/projects/${id}/members/${memberId}`),
 };
 
@@ -177,4 +181,32 @@ export const planningTasksAPI = {
   create: (data: any) => api.post('/planning-tasks', data),
   update: (id: string, data: any) => api.put(`/planning-tasks/${id}`, data),
   delete: (id: string) => api.delete(`/planning-tasks/${id}`),
+};
+
+// Settings API
+export const settingsAPI = {
+  // App-wide settings (admin only)
+  app: {
+    get: (key: string) => api.get(`/settings/app/${key}`),
+    set: (key: string, value: any) => api.put(`/settings/app/${key}`, { value }),
+    delete: (key: string) => api.delete(`/settings/app/${key}`),
+  },
+  // User-specific settings
+  user: {
+    getAll: () => api.get('/settings/user'),
+    get: (key: string) => api.get(`/settings/user/${key}`),
+    set: (key: string, value: any) => api.put(`/settings/user/${key}`, { value }),
+    batchSet: (settings: Array<{ key: string; value: any }>) =>
+      api.post('/settings/user/batch', { settings }),
+    delete: (key: string) => api.delete(`/settings/user/${key}`),
+  },
+};
+
+// Deadline Tasks API
+export const deadlineTasksAPI = {
+  getAll: (params?: any) => api.get('/deadline-tasks', { params }),
+  create: (data: any) => api.post('/deadline-tasks', data),
+  update: (id: string, data: any) => api.put(`/deadline-tasks/${id}`, data),
+  delete: (id: string) => api.delete(`/deadline-tasks/${id}`),
+  syncDueDates: () => api.post('/deadline-tasks/sync-due-dates'),
 };

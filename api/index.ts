@@ -1,5 +1,6 @@
 import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
+import compression from 'compression';
 import dotenv from 'dotenv';
 import authRoutes from '../server/src/routes/authRoutes';
 import clientRoutes from '../server/src/routes/clientRoutes';
@@ -10,11 +11,24 @@ import travelRoutes from '../server/src/routes/travelRoutes';
 import exportRoutes from '../server/src/routes/exportRoutes';
 import userRoutes from '../server/src/routes/userRoutes';
 import planningTaskRoutes from '../server/src/routes/planningTaskRoutes';
+import settingsRoutes from '../server/src/routes/settingsRoutes';
+import deadlineTaskRoutes from '../server/src/routes/deadlineTaskRoutes';
 
 // Load environment variables
 dotenv.config();
 
 const app: Application = express();
+
+// Compression middleware - compresses all responses
+app.use(compression({
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) {
+      return false;
+    }
+    return compression.filter(req, res);
+  },
+  level: 6, // Balance between speed and compression ratio
+}));
 
 // Middleware
 app.use(express.json());
@@ -66,6 +80,8 @@ app.use('/api/travel', travelRoutes);
 app.use('/api/export', exportRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/planning-tasks', planningTaskRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/deadline-tasks', deadlineTaskRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {

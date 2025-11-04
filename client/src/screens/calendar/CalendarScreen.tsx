@@ -1,23 +1,45 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { Calendar, CalendarList, Agenda } from 'react-native-calendars';
 import { Card, Title, Paragraph, FAB, ActivityIndicator, SegmentedButtons, IconButton } from 'react-native-paper';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { ArrowLeft01Icon, ArrowRight01Icon } from '@hugeicons/core-free-icons';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { eventsAPI } from '../../services/api';
+import { useQuery } from '@tanstack/react-query';
+import { eventsAPI, settingsAPI } from '../../services/api';
 import DayViewScreen from './DayViewScreen';
+import { useTheme } from '../../contexts/ThemeContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 const CalendarScreen = () => {
+  const { currentColors } = useTheme();
+  const { user } = useAuth();
   const navigation = useNavigation();
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-  // Updated: clicking any day navigates to Day View
-  const [events, setEvents] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [markedDates, setMarkedDates] = useState({});
   const [viewMode, setViewMode] = useState('month'); // month, week, day
   const [showWeekends, setShowWeekends] = useState(false); // Will be loaded from user preference
+
+  // Use React Query to fetch events
+  const { data: events = [], isLoading: loading, refetch } = useQuery({
+    queryKey: ['events'],
+    queryFn: async () => {
+      const response = await eventsAPI.getAll();
+      return response.data;
+    },
+    staleTime: 1 * 60 * 1000, // 1 minute
+  });
+
+  // Memoize marked dates to avoid recomputation
+  const markedDates = useMemo(() => {
+    const marks: any = {};
+    events.forEach((event: any) => {
+      const eventDate = new Date(event.startTime);
+      const date = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(eventDate.getDate()).padStart(2, '0')}`;
+      marks[date] = { marked: true, dotColor: currentColors.primary };
+    });
+    marks[selectedDate] = { ...marks[selectedDate], selected: true, selectedColor: currentColors.primary };
+    return marks;
+  }, [events, selectedDate, currentColors.primary]);
 
   useEffect(() => {
     loadUserPreferences();
@@ -25,60 +47,59 @@ const CalendarScreen = () => {
 
   useFocusEffect(
     React.useCallback(() => {
-      loadEvents();
-    }, [])
+      refetch();
+    }, [refetch])
   );
 
   const loadUserPreferences = async () => {
     try {
-      const savedPreference = await AsyncStorage.getItem('calendar_show_weekends_default');
-      if (savedPreference !== null) {
-        setShowWeekends(savedPreference === 'true');
+      if (!user || !user.role) {
+        return;
+      }
+
+      // Try to load user personal preference first
+      try {
+        const userPrefResponse = await settingsAPI.user.get('calendar_show_weekends_default');
+        if (userPrefResponse.data?.value !== undefined) {
+          console.log('[CalendarScreen] Loaded user personal weekend preference:', userPrefResponse.data.value);
+          setShowWeekends(userPrefResponse.data.value === true);
+          return;
+        }
+      } catch (error: any) {
+        // 404 means no personal preference, continue to check role default
+        if (error.response?.status !== 404) {
+          throw error;
+        }
+      }
+
+      // Fall back to role-based Team View Setting
+      let weekendSettingKey = 'team_view_user_show_weekends';
+      if (user.role === 'ADMIN') {
+        weekendSettingKey = 'team_view_admin_show_weekends';
+      } else if (user.role === 'MANAGER') {
+        weekendSettingKey = 'team_view_manager_show_weekends';
+      }
+
+      try {
+        const roleDefaultResponse = await settingsAPI.user.get(weekendSettingKey);
+        if (roleDefaultResponse.data?.value !== undefined) {
+          console.log('[CalendarScreen] Loaded role default weekend preference:', roleDefaultResponse.data.value);
+          setShowWeekends(roleDefaultResponse.data.value === true);
+        }
+      } catch (error: any) {
+        // 404 means no role default set, use hardcoded default (false)
+        if (error.response?.status !== 404) {
+          throw error;
+        }
+        console.log('[CalendarScreen] No weekend preference found, using default: false');
       }
     } catch (error) {
-      console.error('Error loading user preferences:', error);
-    }
-  };
-
-  const loadEvents = async () => {
-    try {
-      setLoading(true);
-      // Add timeout to prevent infinite loading
-      const timeout = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Request timeout')), 800)
-      );
-
-      const response = await Promise.race([eventsAPI.getAll(), timeout]) as any;
-      setEvents(response.data);
-
-      // Mark dates with events (using local timezone)
-      const marks: any = {};
-      response.data.forEach((event: any) => {
-        const eventDate = new Date(event.startTime);
-        const date = `${eventDate.getFullYear()}-${String(eventDate.getMonth() + 1).padStart(2, '0')}-${String(eventDate.getDate()).padStart(2, '0')}`;
-        marks[date] = { marked: true, dotColor: '#007AFF' };
-      });
-      marks[selectedDate] = { ...marks[selectedDate], selected: true, selectedColor: '#007AFF' };
-      setMarkedDates(marks);
-    } catch (error) {
-      console.error('Error loading events:', error);
-      // Set empty events so UI still loads
-      setEvents([]);
-      setMarkedDates({ [selectedDate]: { selected: true, selectedColor: '#007AFF' } });
-    } finally {
-      setLoading(false);
+      console.error('[CalendarScreen] Error loading user preferences:', error);
     }
   };
 
   const onDayPress = (day: any) => {
     setSelectedDate(day.dateString);
-    const marks = { ...markedDates };
-    Object.keys(marks).forEach((key) => {
-      marks[key].selected = false;
-    });
-    marks[day.dateString] = { ...marks[day.dateString], selected: true, selectedColor: '#007AFF' };
-    setMarkedDates(marks);
-
     // Switch to Day View mode when any day is clicked
     setViewMode('day');
   };
@@ -208,19 +229,19 @@ const CalendarScreen = () => {
       <View>
         <View style={styles.weekNavigation}>
           <IconButton
-            icon={() => <HugeiconsIcon icon={ArrowLeft01Icon} size={24} color="#007AFF" />}
+            icon={() => <HugeiconsIcon icon={ArrowLeft01Icon} size={24} color={currentColors.primary} />}
             size={24}
             onPress={goToPreviousWeek}
           />
           <Title style={styles.weekLabel}>{weekLabel}</Title>
           <IconButton
-            icon={() => <HugeiconsIcon icon={ArrowRight01Icon} size={24} color="#007AFF" />}
+            icon={() => <HugeiconsIcon icon={ArrowRight01Icon} size={24} color={currentColors.primary} />}
             size={24}
             onPress={goToNextWeek}
           />
         </View>
 
-        <View style={styles.viewSwitcher}>
+        <View style={[styles.viewSwitcher, { backgroundColor: currentColors.background.bg500 }]}>
           <SegmentedButtons
             value={viewMode}
             onValueChange={handleViewModeChange}
@@ -229,14 +250,15 @@ const CalendarScreen = () => {
               { value: 'week', label: 'Week' },
               { value: 'day', label: 'Day' },
             ]}
+            style={{ backgroundColor: currentColors.background.bg500 }}
           />
         </View>
 
-        <View style={styles.weekContainer}>
+        <View style={[styles.weekContainer, { backgroundColor: currentColors.background.bg500 }]}>
         <View style={styles.weekHeader}>
           {dayNames.map((name, index) => (
             <View key={index} style={styles.weekDayName}>
-              <Paragraph style={styles.weekDayNameText}>{name}</Paragraph>
+              <Paragraph style={[styles.weekDayNameText, { color: currentColors.textSecondary }]}>{name}</Paragraph>
             </View>
           ))}
         </View>
@@ -255,19 +277,20 @@ const CalendarScreen = () => {
                 style={[
                   styles.weekDay,
                   isSelected && styles.weekDaySelected,
-                  isToday && !isSelected && styles.weekDayToday,
+                  isToday && !isSelected && [styles.weekDayToday, { backgroundColor: currentColors.background.bg300 }],
                 ]}
                 onPress={() => onDayPress({ dateString })}
               >
                 <Paragraph style={[
                   styles.weekDayNumber,
-                  isSelected && styles.weekDayNumberSelected,
-                  isToday && !isSelected && styles.weekDayNumberToday,
+                  { color: currentColors.text },
+                  isSelected && [styles.weekDayNumberSelected, { color: currentColors.primary }],
+                  isToday && !isSelected && [styles.weekDayNumberToday, { color: currentColors.primary }],
                 ]}>
                   {day.getDate()}
                 </Paragraph>
                 {hasEvents && (
-                  <View style={styles.weekDayDot} />
+                  <View style={[styles.weekDayDot, { backgroundColor: currentColors.primary }]} />
                 )}
               </TouchableOpacity>
             );
@@ -309,13 +332,13 @@ const CalendarScreen = () => {
         <View>
           <View style={styles.weekNavigation}>
             <IconButton
-              icon={() => <HugeiconsIcon icon={ArrowLeft01Icon} size={24} color="#007AFF" />}
+              icon={() => <HugeiconsIcon icon={ArrowLeft01Icon} size={24} color={currentColors.primary} />}
               size={24}
               onPress={goToPreviousDay}
             />
             <Title style={styles.weekLabel}>{dayLabel}</Title>
             <IconButton
-              icon={() => <HugeiconsIcon icon={ArrowRight01Icon} size={24} color="#007AFF" />}
+              icon={() => <HugeiconsIcon icon={ArrowRight01Icon} size={24} color={currentColors.primary} />}
               size={24}
               onPress={goToNextDay}
             />
@@ -345,19 +368,19 @@ const CalendarScreen = () => {
       <View>
         <View style={styles.weekNavigation}>
           <IconButton
-            icon={() => <HugeiconsIcon icon={ArrowLeft01Icon} size={24} color="#007AFF" />}
+            icon={() => <HugeiconsIcon icon={ArrowLeft01Icon} size={24} color={currentColors.primary} />}
             size={24}
             onPress={goToPreviousMonth}
           />
           <Title style={styles.weekLabel}>{monthLabel}</Title>
           <IconButton
-            icon={() => <HugeiconsIcon icon={ArrowRight01Icon} size={24} color="#007AFF" />}
+            icon={() => <HugeiconsIcon icon={ArrowRight01Icon} size={24} color={currentColors.primary} />}
             size={24}
             onPress={goToNextMonth}
           />
         </View>
 
-        <View style={styles.viewSwitcher}>
+        <View style={[styles.viewSwitcher, { backgroundColor: currentColors.background.bg500 }]}>
           <SegmentedButtons
             value={viewMode}
             onValueChange={handleViewModeChange}
@@ -366,6 +389,7 @@ const CalendarScreen = () => {
               { value: 'week', label: 'Week' },
               { value: 'day', label: 'Day' },
             ]}
+            style={{ backgroundColor: currentColors.background.bg500 }}
           />
         </View>
 
@@ -377,12 +401,17 @@ const CalendarScreen = () => {
           hideArrows={true}
           disableMonthChange={true}
           hideExtraDays={true}
+          style={{ backgroundColor: currentColors.background.bg500 }}
           theme={{
+            calendarBackground: currentColors.background.bg500,
             selectedDayBackgroundColor: 'transparent',
-            selectedDayTextColor: '#007AFF',
-            todayBackgroundColor: '#E3F2FD',
-            todayTextColor: '#007AFF',
-            dayTextColor: '#333',
+            selectedDayTextColor: currentColors.primary,
+            todayBackgroundColor: currentColors.background.bg300,
+            todayTextColor: currentColors.primary,
+            dayTextColor: currentColors.text,
+            textDisabledColor: currentColors.textTertiary,
+            monthTextColor: currentColors.text,
+            textDayHeaderFontWeight: 'bold',
             textDayFontSize: 16,
             textMonthFontSize: 0,
             textDayHeaderFontSize: 12,
@@ -403,7 +432,7 @@ const CalendarScreen = () => {
   // If in day view mode, render the DayViewScreen component
   if (viewMode === 'day') {
     return (
-      <View style={styles.container}>
+      <View style={[styles.container, { backgroundColor: currentColors.background.bg700 }]}>
         {renderCalendarView()}
         <DayViewScreen
           route={{ params: { selectedDate } }}
@@ -417,7 +446,7 @@ const CalendarScreen = () => {
 
   return (
     <>
-      <ScrollView style={styles.container}>
+      <ScrollView style={[styles.container, { backgroundColor: currentColors.background.bg700 }]}>
         {renderCalendarView()}
 
         <View style={styles.eventsSection}>
@@ -447,7 +476,7 @@ const CalendarScreen = () => {
               : getDayEvents();
 
             return displayEvents.length === 0 ? (
-              <Paragraph style={styles.noEvents}>No events scheduled</Paragraph>
+              <Paragraph style={[styles.noEvents, { color: currentColors.textSecondary }]}>No events scheduled</Paragraph>
             ) : (
               displayEvents.map((event) => (
               <TouchableOpacity
@@ -461,7 +490,7 @@ const CalendarScreen = () => {
                       <View style={styles.eventHeaderLeft}>
                         <Title>{event.title}</Title>
                         {(viewMode === 'week' || viewMode === 'month') && (
-                          <Paragraph style={styles.eventDate}>
+                          <Paragraph style={[styles.eventDate, { color: currentColors.textSecondary }]}>
                             {new Date(event.startTime).toLocaleDateString('en-US', {
                               weekday: 'short',
                               month: 'short',
@@ -470,9 +499,9 @@ const CalendarScreen = () => {
                           </Paragraph>
                         )}
                       </View>
-                      <Paragraph style={styles.eventType}>{event.eventType}</Paragraph>
+                      <Paragraph style={[styles.eventType, { color: currentColors.primary }]}>{event.eventType}</Paragraph>
                     </View>
-                    <Paragraph style={styles.eventTime}>
+                    <Paragraph style={[styles.eventTime, { color: currentColors.text }]}>
                       {new Date(event.startTime).toLocaleTimeString([], {
                         hour: '2-digit',
                         minute: '2-digit',
@@ -489,7 +518,7 @@ const CalendarScreen = () => {
                     {event.location && (
                       <View style={styles.locationContainer}>
                         <IconButton icon="map-marker" size={16} style={styles.locationIcon} />
-                        <Paragraph style={styles.location}>{event.location}</Paragraph>
+                        <Paragraph style={[styles.location, { color: currentColors.textSecondary }]}>{event.location}</Paragraph>
                       </View>
                     )}
                   </Card.Content>
@@ -505,7 +534,7 @@ const CalendarScreen = () => {
       </ScrollView>
 
       <FAB
-        style={styles.fab}
+        style={[styles.fab, { backgroundColor: currentColors.primary }]}
         icon="plus"
         label="Add Event"
         onPress={() => {
@@ -519,7 +548,6 @@ const CalendarScreen = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   centered: {
     flex: 1,
@@ -528,7 +556,6 @@ const styles = StyleSheet.create({
   },
   viewSwitcher: {
     padding: 10,
-    backgroundColor: 'white',
   },
   eventsSection: {
     padding: 15,
@@ -545,7 +572,6 @@ const styles = StyleSheet.create({
   noEvents: {
     textAlign: 'center',
     marginTop: 20,
-    color: '#666',
   },
   eventCard: {
     marginBottom: 10,
@@ -562,18 +588,15 @@ const styles = StyleSheet.create({
   },
   eventDate: {
     fontSize: 12,
-    color: '#666',
     marginTop: 2,
   },
   eventType: {
     fontSize: 12,
-    color: '#6200ee',
     fontWeight: 'bold',
     marginLeft: 10,
   },
   eventTime: {
     fontWeight: 'bold',
-    color: '#333',
     marginBottom: 5,
   },
   locationContainer: {
@@ -581,7 +604,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   location: {
-    color: '#666',
     fontSize: 12,
     flex: 1,
   },
@@ -590,14 +612,12 @@ const styles = StyleSheet.create({
     padding: 0,
   },
   viewDetailsButton: {
-    backgroundColor: '#e3f2fd',
     padding: 15,
     borderRadius: 8,
     marginTop: 10,
     marginBottom: 80,
   },
   viewDetailsText: {
-    color: '#6200ee',
     textAlign: 'center',
     fontWeight: 'bold',
   },
@@ -606,13 +626,11 @@ const styles = StyleSheet.create({
     margin: 16,
     right: 0,
     bottom: 0,
-    backgroundColor: '#6200ee',
   },
   bottomSpacer: {
     height: 100,
   },
   weekContainer: {
-    backgroundColor: 'white',
     padding: 15,
   },
   weekNavigation: {
@@ -623,7 +641,6 @@ const styles = StyleSheet.create({
   },
   weekLabel: {
     fontSize: 18,
-    color: '#333',
   },
   weekHeader: {
     flexDirection: 'row',
@@ -636,7 +653,6 @@ const styles = StyleSheet.create({
   },
   weekDayNameText: {
     fontSize: 12,
-    color: '#666',
     fontWeight: 'bold',
   },
   weekDays: {
@@ -654,25 +670,20 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   weekDayToday: {
-    backgroundColor: '#E3F2FD',
   },
   weekDayNumber: {
     fontSize: 16,
-    color: '#333',
   },
   weekDayNumberSelected: {
-    color: '#007AFF',
     fontWeight: 'bold',
   },
   weekDayNumberToday: {
-    color: '#007AFF',
     fontWeight: 'bold',
   },
   weekDayDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#007AFF',
     marginTop: 4,
   },
 });

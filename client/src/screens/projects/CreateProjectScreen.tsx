@@ -4,11 +4,14 @@ import { TextInput, Button, Title, SegmentedButtons, Menu, Divider, Card, IconBu
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { UserAdd02Icon, Delete02Icon } from '@hugeicons/core-free-icons';
 import { projectsAPI, clientsAPI, usersAPI } from '../../services/api';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const CreateProjectScreen = ({ navigation }: any) => {
+  const { currentColors } = useTheme();
   const [clients, setClients] = useState<any[]>([]);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
+  const [projectValue, setProjectValue] = useState('');
   const [selectedClient, setSelectedClient] = useState('');
   const [status, setStatus] = useState('ACTIVE');
   const [loading, setLoading] = useState(false);
@@ -79,6 +82,7 @@ const CreateProjectScreen = ({ navigation }: any) => {
       const projectData = {
         name,
         description,
+        projectValue: projectValue ? parseFloat(projectValue) : undefined,
         clientId: selectedClient,
         status,
         memberIds: selectedMembers.length > 0 ? selectedMembers : undefined,
@@ -108,9 +112,9 @@ const CreateProjectScreen = ({ navigation }: any) => {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={[styles.container, { backgroundColor: currentColors.background.bg700 }]}>
       <View style={styles.content}>
-        <Title>Create New Project</Title>
+        <Title style={{ color: currentColors.text }}>Create New Project</Title>
 
         <TextInput
           label="Project Name *"
@@ -130,7 +134,17 @@ const CreateProjectScreen = ({ navigation }: any) => {
           style={styles.input}
         />
 
-        <Title style={styles.sectionTitle}>Project Status</Title>
+        <TextInput
+          label="Project Value ($)"
+          value={projectValue}
+          onChangeText={setProjectValue}
+          mode="outlined"
+          keyboardType="decimal-pad"
+          placeholder="Enter project value"
+          style={styles.input}
+        />
+
+        <Title style={[styles.sectionTitle, { color: currentColors.text }]}>Project Status</Title>
         <SegmentedButtons
           value={status}
           onValueChange={setStatus}
@@ -143,19 +157,19 @@ const CreateProjectScreen = ({ navigation }: any) => {
         />
 
         {/* Team Members Section */}
-        <Card style={styles.teamSection}>
+        <Card style={[styles.teamSection, { backgroundColor: currentColors.background.bg300 }]}>
           <Card.Content>
             <View style={styles.sectionHeader}>
-              <Title style={styles.sectionTitle}>Team Members</Title>
+              <Title style={[styles.sectionTitle, { color: currentColors.text }]}>Team Members</Title>
               <IconButton
-                icon={() => <HugeiconsIcon icon={UserAdd02Icon} size={24} color="#6200ee" />}
+                icon={() => <HugeiconsIcon icon={UserAdd02Icon} size={24} color={currentColors.primary} />}
                 size={24}
                 onPress={() => setShowUserPicker(!showUserPicker)}
               />
             </View>
 
             {selectedMemberObjects.length === 0 ? (
-              <Paragraph style={styles.emptyText}>
+              <Paragraph style={[styles.emptyText, { color: currentColors.textTertiary }]}>
                 No team members selected. Tap the + button to add team members.
               </Paragraph>
             ) : (
@@ -166,7 +180,7 @@ const CreateProjectScreen = ({ navigation }: any) => {
                     mode="outlined"
                     style={styles.memberChip}
                     onClose={() => handleRemoveMember(member.id)}
-                    closeIcon={() => <HugeiconsIcon icon={Delete02Icon} size={16} color="#666" />}
+                    closeIcon={() => <HugeiconsIcon icon={Delete02Icon} size={16} color={currentColors.icon} />}
                   >
                     {member.firstName} {member.lastName}
                   </Chip>
@@ -175,8 +189,8 @@ const CreateProjectScreen = ({ navigation }: any) => {
             )}
 
             {showUserPicker && availableUsers.length > 0 && (
-              <View style={styles.userPicker}>
-                <Title style={styles.pickerTitle}>Add Team Member</Title>
+              <View style={[styles.userPicker, { borderTopColor: currentColors.border }]}>
+                <Title style={[styles.pickerTitle, { color: currentColors.text }]}>Add Team Member</Title>
                 {availableUsers.map((user) => (
                   <List.Item
                     key={user.id}
@@ -190,14 +204,14 @@ const CreateProjectScreen = ({ navigation }: any) => {
             )}
 
             {showUserPicker && availableUsers.length === 0 && (
-              <Paragraph style={styles.emptyText}>
+              <Paragraph style={[styles.emptyText, { color: currentColors.textTertiary }]}>
                 All users have been added as team members.
               </Paragraph>
             )}
           </Card.Content>
         </Card>
 
-        <Title style={styles.sectionTitle}>Select Client *</Title>
+        <Title style={[styles.sectionTitle, { color: currentColors.text }]}>Select Client *</Title>
         {clients.length === 0 ? (
           <View>
             <Button
@@ -226,7 +240,7 @@ const CreateProjectScreen = ({ navigation }: any) => {
                   : 'Select a client'}
               </Button>
             }
-            contentStyle={styles.menuContent}
+            contentStyle={[styles.menuContent, { backgroundColor: currentColors.white }]}
           >
             {clients.map((client, index) => (
               <View key={client.id}>
@@ -265,7 +279,6 @@ const CreateProjectScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   content: {
     padding: 20,
@@ -310,14 +323,12 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     textAlign: 'center',
-    color: '#999',
     fontStyle: 'italic',
     paddingVertical: 20,
   },
   userPicker: {
     marginTop: 15,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
     paddingTop: 15,
   },
   pickerTitle: {

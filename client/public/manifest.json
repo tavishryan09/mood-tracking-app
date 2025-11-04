@@ -1,73 +1,73 @@
 {
-  "name": "Mood Tracker",
-  "short_name": "MoodTracker",
-  "description": "Track your daily moods and emotions with an intuitive calendar-based interface",
+  "name": "Time Tracker",
+  "short_name": "TimeTracker",
+  "description": "Track time, manage projects, and schedule events for your team",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#6200ee",
+  "theme_color": "#007AFF",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/icons/icon-72x72.svg",
+      "src": "/icons/icon-72x72.svg?v=3",
       "sizes": "72x72",
       "type": "image/svg+xml",
       "purpose": "any maskable"
     },
     {
-      "src": "/icons/icon-96x96.svg",
+      "src": "/icons/icon-96x96.svg?v=3",
       "sizes": "96x96",
       "type": "image/svg+xml",
       "purpose": "any maskable"
     },
     {
-      "src": "/icons/icon-128x128.svg",
+      "src": "/icons/icon-128x128.svg?v=3",
       "sizes": "128x128",
       "type": "image/svg+xml",
       "purpose": "any maskable"
     },
     {
-      "src": "/icons/icon-144x144.svg",
+      "src": "/icons/icon-144x144.svg?v=3",
       "sizes": "144x144",
       "type": "image/svg+xml",
       "purpose": "any maskable"
     },
     {
-      "src": "/icons/icon-152x152.svg",
+      "src": "/icons/icon-152x152.svg?v=3",
       "sizes": "152x152",
       "type": "image/svg+xml",
       "purpose": "any maskable"
     },
     {
-      "src": "/icons/icon-192x192.svg",
+      "src": "/icons/icon-192x192.svg?v=3",
       "sizes": "192x192",
       "type": "image/svg+xml",
       "purpose": "any maskable"
     },
     {
-      "src": "/icons/icon-384x384.svg",
+      "src": "/icons/icon-384x384.svg?v=3",
       "sizes": "384x384",
       "type": "image/svg+xml",
       "purpose": "any maskable"
     },
     {
-      "src": "/icons/icon-512x512.svg",
+      "src": "/icons/icon-512x512.svg?v=3",
       "sizes": "512x512",
       "type": "image/svg+xml",
       "purpose": "any maskable"
     }
   ],
-  "categories": ["health", "lifestyle", "productivity"],
+  "categories": ["productivity", "business", "utilities"],
   "screenshots": [],
   "shortcuts": [
     {
-      "name": "Add Mood",
-      "short_name": "Add",
-      "description": "Quickly add a mood entry",
+      "name": "Start Timer",
+      "short_name": "Timer",
+      "description": "Start tracking time",
       "url": "/",
       "icons": [
         {
-          "src": "/icons/icon-96x96.svg",
+          "src": "/icons/icon-96x96.svg?v=3",
           "sizes": "96x96"
         }
       ]
@@ -75,11 +75,11 @@
     {
       "name": "View Calendar",
       "short_name": "Calendar",
-      "description": "View your mood calendar",
+      "description": "View your calendar",
       "url": "/",
       "icons": [
         {
-          "src": "/icons/icon-96x96.svg",
+          "src": "/icons/icon-96x96.svg?v=3",
           "sizes": "96x96"
         }
       ]

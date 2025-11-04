@@ -4,6 +4,7 @@ import { TextInput, Button, Title, Card, IconButton, Divider, Paragraph, Activit
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { UserAdd02Icon } from '@hugeicons/core-free-icons';
 import { clientsAPI } from '../../services/api';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface Contact {
   id: string;
@@ -15,6 +16,7 @@ interface Contact {
 }
 
 const EditClientScreen = ({ route, navigation }: any) => {
+  const { currentColors } = useTheme();
   const { clientId } = route.params;
 
   // Business/Company information
@@ -180,14 +182,14 @@ const EditClientScreen = ({ route, navigation }: any) => {
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={[styles.container, { backgroundColor: currentColors.background.bg700 }]}>
       <View style={styles.content}>
-        <Title style={styles.mainTitle}>Edit Client</Title>
+        <Title style={[styles.mainTitle, { color: currentColors.text }]}>Edit Client</Title>
 
         {/* Business Information Section */}
         <Card style={styles.section}>
           <Card.Content>
-            <Title style={styles.sectionTitle}>Business Information</Title>
+            <Title style={[styles.sectionTitle, { color: currentColors.primary }]}>Business Information</Title>
 
             <TextInput
               label="Business Name *"
@@ -223,7 +225,7 @@ const EditClientScreen = ({ route, navigation }: any) => {
         {/* Primary Contact Section */}
         <Card style={styles.section}>
           <Card.Content>
-            <Title style={styles.sectionTitle}>Primary Contact</Title>
+            <Title style={[styles.sectionTitle, { color: currentColors.primary }]}>Primary Contact</Title>
 
             <TextInput
               label="Name *"
@@ -267,28 +269,28 @@ const EditClientScreen = ({ route, navigation }: any) => {
         <Card style={styles.section}>
           <Card.Content>
             <View style={styles.sectionHeader}>
-              <Title style={styles.sectionTitle}>Additional Contacts</Title>
+              <Title style={[styles.sectionTitle, { color: currentColors.primary }]}>Additional Contacts</Title>
               <IconButton
-                icon={() => <HugeiconsIcon icon={UserAdd02Icon} size={24} color="#6200ee" />}
+                icon={() => <HugeiconsIcon icon={UserAdd02Icon} size={24} color={currentColors.primary} />}
                 size={24}
                 onPress={addContact}
               />
             </View>
 
             {additionalContacts.length === 0 ? (
-              <Paragraph style={styles.emptyText}>
+              <Paragraph style={[styles.emptyText, { color: currentColors.textTertiary }]}>
                 No additional contacts added yet. Tap the + button to add a contact.
               </Paragraph>
             ) : (
               additionalContacts.map((contact, index) => (
                 <View key={contact.id} style={styles.contactCard}>
                   <View style={styles.contactHeader}>
-                    <Paragraph style={styles.contactNumber}>Contact {index + 2}</Paragraph>
+                    <Paragraph style={[styles.contactNumber, { color: currentColors.textSecondary }]}>Contact {index + 2}</Paragraph>
                     <IconButton
                       icon="delete"
                       size={20}
                       onPress={() => removeContact(contact.id)}
-                      iconColor="#d32f2f"
+                      iconColor={currentColors.error}
                     />
                   </View>
 
@@ -341,7 +343,7 @@ const EditClientScreen = ({ route, navigation }: any) => {
           loading={saving}
           disabled={saving || !businessName || !primaryContactName}
           style={styles.button}
-          buttonColor="#6200ee"
+          buttonColor={currentColors.secondary}
         >
           Save Changes
         </Button>
@@ -359,7 +361,6 @@ const EditClientScreen = ({ route, navigation }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   centered: {
     flex: 1,
@@ -372,7 +373,6 @@ const styles = StyleSheet.create({
   mainTitle: {
     fontSize: 24,
     marginBottom: 20,
-    color: '#333',
   },
   section: {
     marginBottom: 20,
@@ -381,7 +381,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     marginBottom: 15,
-    color: '#6200ee',
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -391,7 +390,6 @@ const styles = StyleSheet.create({
   },
   input: {
     marginBottom: 15,
-    backgroundColor: 'white',
   },
   button: {
     marginTop: 10,
@@ -410,14 +408,12 @@ const styles = StyleSheet.create({
   contactNumber: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#666',
   },
   divider: {
     marginVertical: 15,
   },
   emptyText: {
     textAlign: 'center',
-    color: '#999',
     fontStyle: 'italic',
     paddingVertical: 20,
   },

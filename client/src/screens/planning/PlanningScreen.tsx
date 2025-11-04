@@ -1,11 +1,16 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, Dimensions, Platform, Text, TouchableOpacity, Alert, Modal, PanResponder, TextInput as RNTextInput, FlatList, Pressable } from 'react-native';
-import { Title, ActivityIndicator, IconButton, Button, Checkbox, TextInput } from 'react-native-paper';
+import { Title, ActivityIndicator, IconButton, Button, Checkbox, TextInput, Menu, Divider, Portal, Switch } from 'react-native-paper';
 import { useFocusEffect } from '@react-navigation/native';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-import { AddCircleIcon, DragDropIcon, ArrowLeft01Icon, ArrowRight01Icon } from '@hugeicons/core-free-icons';
-import { usersAPI, projectsAPI, planningTasksAPI } from '../../services/api';
+import { Settings01Icon, DragDropIcon, ArrowLeft01Icon, ArrowRight01Icon, CheckmarkCircle02Icon, CircleIcon } from '@hugeicons/core-free-icons';
+import { usersAPI, projectsAPI, planningTasksAPI, settingsAPI, deadlineTasksAPI } from '../../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
+import { usePlanningColors } from '../../contexts/PlanningColorsContext';
+import { colorPalettes } from '../../theme/colorPalettes';
+import DeadlineTaskModal, { DeadlineTask, DeadlineTaskData } from '../../components/DeadlineTaskModal';
 
 const { width } = Dimensions.get('window');
 const WEEK_WIDTH = width > 1200 ? 1200 : width - 40; // Max width for week view
@@ -20,6 +25,9 @@ const STORAGE_KEYS = {
 };
 
 const PlanningScreen = () => {
+  const { currentColors, selectedPalette } = useTheme();
+  const { user } = useAuth();
+  const { planningColors } = usePlanningColors();
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentQuarter, setCurrentQuarter] = useState(() => {
@@ -48,6 +56,10 @@ const PlanningScreen = () => {
   const [showManageModal, setShowManageModal] = useState(false);
   const [draggedUserId, setDraggedUserId] = useState<string | null>(null);
   const [dragOverUserId, setDragOverUserId] = useState<string | null>(null);
+
+  // View preferences
+  const [showWeekendsDefault, setShowWeekendsDefault] = useState(false);
+  const [defaultProjectsTableView, setDefaultProjectsTableView] = useState(false);
 
   // Project assignment modal state
   const [showProjectModal, setShowProjectModal] = useState(false);
@@ -112,6 +124,37 @@ const PlanningScreen = () => {
     span: number;
   } | null>(null);
 
+  // Get planning page colors from context
+  const calendarHeaderBg = planningColors.calendarHeaderBg || currentColors.background.bg500;
+  const calendarHeaderFont = planningColors.calendarHeaderFont || currentColors.text;
+  const prevNextIconColor = planningColors.prevNextIconColor || currentColors.icon;
+  const teamMemberColBg = planningColors.teamMemberColBg || currentColors.background.bg300;
+  const teamMemberColText = planningColors.teamMemberColText || currentColors.text;
+  const weekdayHeaderBg = planningColors.weekdayHeaderBg || currentColors.background.bg500;
+  const weekdayHeaderFont = planningColors.weekdayHeaderFont || currentColors.text;
+  const weekendHeaderBg = planningColors.weekendHeaderBg || currentColors.background.bg700;
+  const weekendHeaderFont = planningColors.weekendHeaderFont || currentColors.textSecondary;
+  const weekendCellBg = planningColors.weekendCellBg || currentColors.background.bg300;
+  const projectTaskBg = planningColors.projectTaskBg || currentColors.primary;
+  const projectTaskFont = planningColors.projectTaskFont || currentColors.white;
+  const adminTaskBg = planningColors.adminTaskBg || currentColors.secondary;
+  const adminTaskFont = planningColors.adminTaskFont || currentColors.white;
+  const marketingTaskBg = planningColors.marketingTaskBg || currentColors.planning.marketingTask;
+  const marketingTaskFont = planningColors.marketingTaskFont || currentColors.white;
+  const outOfOfficeBg = planningColors.outOfOfficeBg || currentColors.planning.outOfOffice;
+  const outOfOfficeFont = planningColors.outOfOfficeFont || currentColors.planning.outOfOfficeFont;
+  const unavailableBg = planningColors.unavailableBg || currentColors.planning.unavailable;
+  const unavailableFont = planningColors.unavailableFont || currentColors.white;
+  const timeOffBg = planningColors.timeOffBg || currentColors.planning.timeOff;
+  const timeOffFont = planningColors.timeOffFont || currentColors.white;
+  const deadlineRowBg = planningColors.deadlineRowBg || currentColors.background.bg500;
+  const deadlineBg = planningColors.deadlineBg || currentColors.planning.deadline;
+  const deadlineFont = planningColors.deadlineFont || currentColors.white;
+  const internalDeadlineBg = planningColors.internalDeadlineBg || currentColors.planning.internalDeadline;
+  const internalDeadlineFont = planningColors.internalDeadlineFont || currentColors.white;
+  const milestoneBg = planningColors.milestoneBg || currentColors.planning.milestone;
+  const milestoneFont = planningColors.milestoneFont || currentColors.white;
+
   // Drag and drop state for moving tasks
   const [draggedTask, setDraggedTask] = useState<{
     id: string;
@@ -125,11 +168,72 @@ const PlanningScreen = () => {
   } | null>(null);
   const [dragOverCell, setDragOverCell] = useState<string | null>(null);
 
+  // Deadline tasks state
+  const [deadlineTasks, setDeadlineTasks] = useState<DeadlineTask[]>([]);
+  const [showDeadlineModal, setShowDeadlineModal] = useState(false);
+  const [selectedDeadlineSlot, setSelectedDeadlineSlot] = useState<{
+    date: Date;
+    slotIndex: number;
+  } | null>(null);
+  const [editingDeadlineTask, setEditingDeadlineTask] = useState<DeadlineTask | null>(null);
+
   // Ref to store the span at the start of drag (for collapse detection)
   const dragStartSpanRef = useRef<number>(1);
 
   // Ref to track if we're currently dragging an edge (to prevent cell drag)
   const isDraggingEdgeRef = useRef<boolean>(false);
+
+  // Generate color options from current palette's iOS colors only
+  const colorOptions: Array<{ label: string; value: string }> = React.useMemo(() => {
+    const palette = colorPalettes[selectedPalette];
+    if (!palette.ios) return [];
+
+    return Object.entries(palette.ios).map(([key, value]) => ({
+      label: key.charAt(0).toUpperCase() + key.slice(1).replace(/([A-Z])/g, ' $1').trim(),
+      value: value,
+    }));
+  }, [selectedPalette]);
+
+  // Helper function to render a color picker
+  const renderColorPicker = (label: string, value: string, onSelect: (color: string) => void, defaultColor: string, menuKey: string) => {
+    const displayColor = value || defaultColor;
+    const displayLabel = value ? colorOptions.find(c => c.value === value)?.label || 'Custom' : 'Select Color';
+
+    return (
+      <View style={styles.colorPickerRow}>
+        <Text style={[styles.colorLabel, { color: currentColors.textSecondary }]}>{label}:</Text>
+        <Portal>
+          <Menu
+            visible={openColorMenu === menuKey}
+            onDismiss={() => setOpenColorMenu(null)}
+            anchor={
+              <Button
+                mode="outlined"
+                onPress={() => setOpenColorMenu(menuKey)}
+                style={styles.colorButton}
+                contentStyle={{ justifyContent: 'flex-start' }}
+              >
+                <View style={[styles.colorPreview, { backgroundColor: displayColor, borderColor: currentColors.border }]} />
+                <Text style={{ color: currentColors.text }}>{displayLabel}</Text>
+              </Button>
+            }
+          >
+            {colorOptions.map((color) => (
+              <Menu.Item
+                key={color.value}
+                onPress={() => {
+                  onSelect(color.value);
+                  setOpenColorMenu(null);
+                }}
+                title={color.label}
+                leadingIcon={() => <View style={[styles.colorPreview, { backgroundColor: color.value, borderColor: currentColors.border }]} />}
+              />
+            ))}
+          </Menu>
+        </Portal>
+      </View>
+    );
+  };
 
   // Update ref whenever blockAssignments changes
   useEffect(() => {
@@ -204,6 +308,24 @@ const PlanningScreen = () => {
     };
   }, [selectedCell, blockAssignments, showProjectModal, showManageModal]);
 
+  // Debug: Log planning colors when they change
+  useEffect(() => {
+    console.log('[PlanningScreen] Planning colors loaded:', {
+      projectTaskBg,
+      projectTaskFont,
+      adminTaskBg,
+      adminTaskFont,
+      marketingTaskBg,
+      marketingTaskFont,
+      outOfOfficeBg,
+      outOfOfficeFont,
+      timeOffBg,
+      timeOffFont,
+      unavailableBg,
+      unavailableFont,
+    });
+  }, [planningColors]);
+
   useFocusEffect(
     React.useCallback(() => {
       console.log('[PlanningScreen] useFocusEffect triggered - resetting scroll state');
@@ -233,11 +355,15 @@ const PlanningScreen = () => {
         endDate: quarterEnd.toISOString(),
       });
 
-      // Load users, projects, and planning tasks for the entire quarter
-      const [usersResponse, projectsResponse, planningTasksResponse] = await Promise.all([
+      // Load users, projects, planning tasks, and deadline tasks for the entire quarter
+      const [usersResponse, projectsResponse, planningTasksResponse, deadlineTasksResponse] = await Promise.all([
         usersAPI.getAll(),
         projectsAPI.getAll(),
         planningTasksAPI.getAll({
+          startDate: quarterStart.toISOString(),
+          endDate: quarterEnd.toISOString(),
+        }),
+        deadlineTasksAPI.getAll({
           startDate: quarterStart.toISOString(),
           endDate: quarterEnd.toISOString(),
         }),
@@ -247,6 +373,10 @@ const PlanningScreen = () => {
       console.log('[PlanningScreen] Users:', usersResponse.data);
       console.log('[PlanningScreen] Projects loaded:', projectsResponse.data.length);
       console.log('[PlanningScreen] Planning tasks loaded:', planningTasksResponse.data.length);
+      console.log('[PlanningScreen] Deadline tasks loaded:', deadlineTasksResponse.data.length);
+
+      // Set deadline tasks
+      setDeadlineTasks(deadlineTasksResponse.data);
 
       let loadedUsers = usersResponse.data;
       setProjects(projectsResponse.data);
@@ -308,14 +438,52 @@ const PlanningScreen = () => {
 
       setBlockAssignments(assignments);
 
-      // Load saved user order from AsyncStorage
+      // Load user preferences: try database first, then global defaults
       try {
-        const savedUserOrder = await AsyncStorage.getItem(STORAGE_KEYS.USER_ORDER);
-        if (savedUserOrder) {
-          const userIds = JSON.parse(savedUserOrder);
-          console.log('[PlanningScreen] Loaded saved user order:', userIds);
+        let userIds: string[] | null = null;
+        let visibleIds: string[] | null = null;
 
-          // Reorder users based on saved order
+        // Try to load user-specific preferences from database
+        try {
+          const userOrderResponse = await settingsAPI.user.get(`planning_user_order`);
+          if (userOrderResponse.data?.value) {
+            userIds = userOrderResponse.data.value;
+            console.log('[PlanningScreen] Loaded user order from database:', userIds);
+          }
+        } catch (error: any) {
+          if (error.response?.status !== 404) {
+            console.error('[PlanningScreen] Error loading user order:', error);
+          }
+        }
+
+        try {
+          const visibleUsersResponse = await settingsAPI.user.get(`planning_visible_users`);
+          if (visibleUsersResponse.data?.value) {
+            visibleIds = visibleUsersResponse.data.value;
+            console.log('[PlanningScreen] Loaded visible users from database:', visibleIds);
+          }
+        } catch (error: any) {
+          if (error.response?.status !== 404) {
+            console.error('[PlanningScreen] Error loading visible users:', error);
+          }
+        }
+
+        // If no user-specific preferences, try global defaults
+        if (!userIds || !visibleIds) {
+          const globalDefaults = await loadGlobalDefaults();
+          if (globalDefaults) {
+            console.log('[PlanningScreen] Loaded global defaults:', globalDefaults);
+            if (!userIds && globalDefaults.userOrder) {
+              userIds = globalDefaults.userOrder;
+            }
+            if (!visibleIds && globalDefaults.visibleUsers) {
+              visibleIds = globalDefaults.visibleUsers;
+            }
+          }
+        }
+
+        // Apply user order if available
+        if (userIds) {
           const orderedUsers: any[] = [];
           userIds.forEach((userId: string) => {
             const user = loadedUsers.find((u: any) => u.id === userId);
@@ -326,33 +494,25 @@ const PlanningScreen = () => {
 
           // Add any new users that weren't in the saved order
           loadedUsers.forEach((user: any) => {
-            if (!userIds.includes(user.id)) {
+            if (!userIds!.includes(user.id)) {
               orderedUsers.push(user);
             }
           });
 
           loadedUsers = orderedUsers;
         }
-      } catch (error) {
-        console.error('[PlanningScreen] Error loading saved user order:', error);
-      }
 
-      setUsers(loadedUsers);
+        setUsers(loadedUsers);
 
-      // Load saved visible users from AsyncStorage
-      try {
-        const savedVisibleUsers = await AsyncStorage.getItem(STORAGE_KEYS.VISIBLE_USERS);
-        if (savedVisibleUsers) {
-          const visibleIds = JSON.parse(savedVisibleUsers);
-          console.log('[PlanningScreen] Loaded saved visible users:', visibleIds);
+        // Apply visible users if available, otherwise default to all visible
+        if (visibleIds) {
           setVisibleUserIds(visibleIds);
         } else {
-          // Initialize all users as visible by default
           setVisibleUserIds(loadedUsers.map((u: any) => u.id));
         }
       } catch (error) {
-        console.error('[PlanningScreen] Error loading saved visible users:', error);
-        // Initialize all users as visible by default
+        console.error('[PlanningScreen] Error loading preferences:', error);
+        // Fall back to defaults
         setVisibleUserIds(loadedUsers.map((u: any) => u.id));
       }
     } catch (error) {
@@ -1277,17 +1437,119 @@ const PlanningScreen = () => {
     }
   };
 
-  // Save settings to AsyncStorage
+  // Helper function to get deadline task colors
+  const getDeadlineTaskColors = (deadlineType: 'DEADLINE' | 'INTERNAL_DEADLINE' | 'MILESTONE') => {
+    switch (deadlineType) {
+      case 'DEADLINE':
+        return { bg: deadlineBg, font: deadlineFont };
+      case 'INTERNAL_DEADLINE':
+        return { bg: internalDeadlineBg, font: internalDeadlineFont };
+      case 'MILESTONE':
+        return { bg: milestoneBg, font: milestoneFont };
+      default:
+        return { bg: deadlineBg, font: deadlineFont };
+    }
+  };
+
+  // Deadline task handlers
+  const handleDeadlineSlotClick = (date: Date, slotIndex: number) => {
+    // Check if there's an existing task in this slot
+    const existingTask = deadlineTasks.find(
+      (task) => {
+        const taskDate = new Date(task.date);
+        const taskDateString = `${taskDate.getFullYear()}-${String(taskDate.getMonth() + 1).padStart(2, '0')}-${String(taskDate.getDate()).padStart(2, '0')}`;
+        const clickedDateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        return taskDateString === clickedDateString && task.slotIndex === slotIndex;
+      }
+    );
+
+    if (existingTask) {
+      setEditingDeadlineTask(existingTask);
+    } else {
+      setEditingDeadlineTask(null);
+    }
+
+    setSelectedDeadlineSlot({ date, slotIndex });
+    setShowDeadlineModal(true);
+  };
+
+  const handleSaveDeadlineTask = async (data: DeadlineTaskData) => {
+    if (!selectedDeadlineSlot) return;
+
+    try {
+      if (editingDeadlineTask) {
+        // Update existing task
+        const response = await deadlineTasksAPI.update(editingDeadlineTask.id, data);
+        setDeadlineTasks(deadlineTasks.map((task) =>
+          task.id === editingDeadlineTask.id ? response.data : task
+        ));
+      } else {
+        // Create new task
+        const response = await deadlineTasksAPI.create({
+          date: selectedDeadlineSlot.date.toISOString(),
+          slotIndex: selectedDeadlineSlot.slotIndex,
+          ...data,
+        });
+        setDeadlineTasks([...deadlineTasks, response.data]);
+      }
+
+      setShowDeadlineModal(false);
+      setSelectedDeadlineSlot(null);
+      setEditingDeadlineTask(null);
+    } catch (error: any) {
+      console.error('Error saving deadline task:', error);
+      Alert.alert('Error', error.response?.data?.error || 'Failed to save deadline task');
+    }
+  };
+
+  const handleDeleteDeadlineTask = async (taskId: string) => {
+    console.log('[PlanningScreen] handleDeleteDeadlineTask called', { taskId });
+    try {
+      console.log('[PlanningScreen] Calling API to delete task', { taskId });
+      await deadlineTasksAPI.delete(taskId);
+      console.log('[PlanningScreen] API delete successful, updating state');
+      setDeadlineTasks(deadlineTasks.filter((task) => task.id !== taskId));
+      console.log('[PlanningScreen] State updated successfully');
+    } catch (error: any) {
+      console.error('[PlanningScreen] Error deleting deadline task:', error);
+      Alert.alert('Error', error.response?.data?.error || 'Failed to delete deadline task');
+    }
+  };
+
+  const handleSyncProjectDueDates = async () => {
+    try {
+      const response = await deadlineTasksAPI.syncDueDates();
+      Alert.alert('Success', `Synced ${response.data.created} project due dates`);
+
+      // Reload deadline tasks
+      const quarterStart = new Date(currentQuarter.year, (currentQuarter.quarter - 1) * 3, 1);
+      const quarterEnd = new Date(currentQuarter.year, (currentQuarter.quarter - 1) * 3 + 3, 0);
+      const deadlineTasksResponse = await deadlineTasksAPI.getAll({
+        startDate: quarterStart.toISOString(),
+        endDate: quarterEnd.toISOString(),
+      });
+      setDeadlineTasks(deadlineTasksResponse.data);
+    } catch (error: any) {
+      console.error('Error syncing project due dates:', error);
+      Alert.alert('Error', error.response?.data?.error || 'Failed to sync project due dates');
+    }
+  };
+
+  // Save settings to database
   const handleSaveSettings = async () => {
     try {
-      // Save user order
       const userIds = users.map((u) => u.id);
-      await AsyncStorage.setItem(STORAGE_KEYS.USER_ORDER, JSON.stringify(userIds));
-      console.log('[PlanningScreen] Saved user order:', userIds);
 
-      // Save visible users
-      await AsyncStorage.setItem(STORAGE_KEYS.VISIBLE_USERS, JSON.stringify(visibleUserIds));
-      console.log('[PlanningScreen] Saved visible users:', visibleUserIds);
+      // Save user order to database using user settings API
+      await settingsAPI.user.set(`planning_user_order`, userIds);
+      console.log('[PlanningScreen] Saved user order to database:', userIds);
+
+      // Save visible users to database using user settings API
+      await settingsAPI.user.set(`planning_visible_users`, visibleUserIds);
+      console.log('[PlanningScreen] Saved visible users to database:', visibleUserIds);
+
+      // Show success message
+      Alert.alert('Success', 'Team view settings have been saved successfully.');
 
       // Close modal
       setShowManageModal(false);
@@ -1295,6 +1557,44 @@ const PlanningScreen = () => {
       console.error('[PlanningScreen] Error saving settings:', error);
       Alert.alert('Error', 'Failed to save settings. Please try again.');
     }
+  };
+
+  const handleSaveAsDefaultForAll = async () => {
+    try {
+      const userIds = users.map((u) => u.id);
+      const defaultSettings = {
+        userOrder: userIds,
+        visibleUsers: visibleUserIds,
+      };
+
+      // Save as app-wide default using app settings API
+      await settingsAPI.app.set('planning_default_view', defaultSettings);
+      console.log('[PlanningScreen] Saved default view for all users:', defaultSettings);
+
+      // Also save to current user's settings so they see the change immediately
+      await settingsAPI.user.set(`planning_user_order`, userIds);
+      await settingsAPI.user.set(`planning_visible_users`, visibleUserIds);
+      console.log('[PlanningScreen] Also saved to current user settings');
+
+      Alert.alert('Success', 'Default view saved for all users. New users will see this configuration by default.');
+      setShowManageModal(false);
+    } catch (error) {
+      console.error('[PlanningScreen] Error saving default settings:', error);
+      Alert.alert('Error', 'Failed to save default settings. Please try again.');
+    }
+  };
+
+  const loadGlobalDefaults = async () => {
+    try {
+      const response = await settingsAPI.app.get('planning_default_view');
+      if (response.data?.value) {
+        return response.data.value;
+      }
+    } catch (error) {
+      // Setting doesn't exist yet, that's okay
+      console.log('[PlanningScreen] No global defaults found');
+    }
+    return null;
   };
 
   // Generate all weeks in the current quarter
@@ -1586,16 +1886,16 @@ const PlanningScreen = () => {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: currentColors.background.bg700 }]}>
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { backgroundColor: calendarHeaderBg, borderBottomColor: currentColors.text }]}>
         <View style={styles.headerNav}>
           <TouchableOpacity onPress={loadPreviousWeek} style={styles.navButton}>
-            <HugeiconsIcon icon={ArrowLeft01Icon} size={28} color="#000" />
+            <HugeiconsIcon icon={ArrowLeft01Icon} size={28} color={prevNextIconColor} />
           </TouchableOpacity>
-          <Title style={styles.headerTitle}>{weekTitle}</Title>
+          <Title style={[styles.headerTitle, { color: calendarHeaderFont }]}>{weekTitle}</Title>
           <TouchableOpacity onPress={loadNextWeek} style={styles.navButton}>
-            <HugeiconsIcon icon={ArrowRight01Icon} size={28} color="#000" />
+            <HugeiconsIcon icon={ArrowRight01Icon} size={28} color={prevNextIconColor} />
           </TouchableOpacity>
         </View>
       </View>
@@ -1628,7 +1928,7 @@ const PlanningScreen = () => {
             <table style={{
               borderCollapse: 'separate',
               borderSpacing: 0,
-              backgroundColor: '#fff',
+              backgroundColor: currentColors.background.bg300,
               position: 'relative',
             }}>
               <thead>
@@ -1640,9 +1940,9 @@ const PlanningScreen = () => {
                       minWidth: `${USER_COLUMN_WIDTH}px`,
                       maxWidth: `${USER_COLUMN_WIDTH}px`,
                       height: '50px',
-                      borderBottom: '3px solid #333',
-                      borderRight: '3px solid #333',
-                      backgroundColor: '#d3d3d3',
+                      borderBottom: `3px solid ${currentColors.text}`,
+                      borderRight: `3px solid ${currentColors.text}`,
+                      backgroundColor: currentColors.background.bg500,
                       fontWeight: 'bold',
                       fontSize: '12px',
                       textAlign: 'center',
@@ -1676,6 +1976,13 @@ const PlanningScreen = () => {
                     // Check if this is the current week
                     const isCurrentWeek = today >= weekStart && today <= new Date(weekStart.getTime() + 6 * 24 * 60 * 60 * 1000);
 
+                    // Check if this is a weekend day (Saturday or Sunday)
+                    const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+
+                    // Determine header colors based on weekend status
+                    const headerBg = isWeekend ? weekendHeaderBg : weekdayHeaderBg;
+                    const headerFont = isWeekend ? weekendHeaderFont : weekdayHeaderFont;
+
                     return (
                       <th
                         key={`${weekIndex}-${dayIndex}`}
@@ -1688,9 +1995,9 @@ const PlanningScreen = () => {
                           minWidth: `${DAY_CELL_WIDTH}px`,
                           maxWidth: `${DAY_CELL_WIDTH}px`,
                           height: '50px',
-                          borderBottom: '3px solid #333',
-                          borderRight: '1px solid #000',
-                          backgroundColor: isToday ? '#FFE4B5' : '#d3d3d3',
+                          borderBottom: `3px solid ${currentColors.text}`,
+                          borderRight: `1px solid ${currentColors.text}`,
+                          backgroundColor: headerBg,
                           textAlign: 'center',
                           padding: '4px',
                           position: 'sticky',
@@ -1699,10 +2006,10 @@ const PlanningScreen = () => {
                           zIndex: 18,
                         }}
                       >
-                        <div style={{ fontWeight: 'bold', fontSize: '11px', color: isToday ? '#000' : '#333' }}>
+                        <div style={{ fontWeight: 'bold', fontSize: '11px', color: headerFont }}>
                           {dayName}
                         </div>
-                        <div style={{ fontSize: '10px', color: isToday ? '#000' : '#666' }}>
+                        <div style={{ fontSize: '10px', color: headerFont }}>
                           {day.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                         </div>
                       </th>
@@ -1712,6 +2019,121 @@ const PlanningScreen = () => {
               </tr>
             </thead>
             <tbody>
+              {/* Deadlines & Milestones Row - Two slots per day */}
+              {[0, 1].map((slotIndex) => (
+                <tr key={`deadline-row-${slotIndex}`} style={{ height: `${TIME_BLOCK_HEIGHT / 2}px` }}>
+                  {/* Label cell - only render on first slot */}
+                  {slotIndex === 0 && (
+                    <td
+                      className="deadline-label-cell"
+                      rowSpan={2}
+                      style={{
+                        width: `${USER_COLUMN_WIDTH}px`,
+                        minWidth: `${USER_COLUMN_WIDTH}px`,
+                        maxWidth: `${USER_COLUMN_WIDTH}px`,
+                        height: `${TIME_BLOCK_HEIGHT}px`,
+                        borderBottom: `2px solid ${currentColors.text}`,
+                        borderRight: `2px solid ${currentColors.text}`,
+                        backgroundColor: deadlineRowBg,
+                        verticalAlign: 'middle',
+                        textAlign: 'center',
+                        padding: '8px',
+                        fontWeight: '700',
+                        fontSize: '11px',
+                        position: 'sticky',
+                        left: 0,
+                        zIndex: 15,
+                        color: currentColors.text,
+                      }}
+                    >
+                      DEADLINES & MILESTONES
+                    </td>
+                  )}
+
+                  {/* Day cells for deadline slots */}
+                  {quarterWeeks.map((weekStart, weekIndex) => {
+                    const weekDays = [];
+                    for (let i = 0; i < 7; i++) {
+                      const day = new Date(weekStart);
+                      day.setDate(weekStart.getDate() + i);
+                      weekDays.push(day);
+                    }
+
+                    return weekDays.map((day) => {
+                      const dateString = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
+
+                      // Find deadline task for this day and slot
+                      const deadlineTask = deadlineTasks.find((task) => {
+                        const taskDate = new Date(task.date);
+                        // Use UTC methods to avoid timezone issues
+                        const taskDateString = `${taskDate.getUTCFullYear()}-${String(taskDate.getUTCMonth() + 1).padStart(2, '0')}-${String(taskDate.getUTCDate()).padStart(2, '0')}`;
+                        return taskDateString === dateString && task.slotIndex === slotIndex;
+                      });
+
+                      // Check if this day is a weekend
+                      const isWeekend = day.getDay() === 0 || day.getDay() === 6;
+
+                      // Get colors if task exists
+                      const colors = deadlineTask ? getDeadlineTaskColors(deadlineTask.deadlineType) : null;
+
+                      return (
+                        <td
+                          key={`${dateString}-deadline-${slotIndex}`}
+                          onClick={() => handleDeadlineSlotClick(day, slotIndex)}
+                          onContextMenu={(e) => {
+                            if (deadlineTask) {
+                              e.preventDefault();
+                              Alert.alert(
+                                'Delete Deadline Task',
+                                'Are you sure you want to delete this deadline task?',
+                                [
+                                  { text: 'Cancel', style: 'cancel' },
+                                  {
+                                    text: 'Delete',
+                                    style: 'destructive',
+                                    onPress: () => handleDeleteDeadlineTask(deadlineTask.id),
+                                  },
+                                ]
+                              );
+                            }
+                          }}
+                          style={{
+                            width: `${DAY_CELL_WIDTH}px`,
+                            minWidth: `${DAY_CELL_WIDTH}px`,
+                            maxWidth: `${DAY_CELL_WIDTH}px`,
+                            height: `${TIME_BLOCK_HEIGHT / 2}px`,
+                            borderRight: `1px solid ${currentColors.text}`,
+                            borderBottom: slotIndex === 1 ? `2px solid ${currentColors.text}` : `1px solid ${currentColors.text}`,
+                            backgroundColor: deadlineTask
+                              ? colors?.bg
+                              : isWeekend
+                              ? weekendCellBg
+                              : currentColors.background.bg700,
+                            cursor: 'pointer',
+                            padding: '4px',
+                            fontSize: '10px',
+                            verticalAlign: 'middle',
+                            textAlign: 'center',
+                            color: deadlineTask ? colors?.font : currentColors.textSecondary,
+                            fontWeight: deadlineTask ? '600' : 'normal',
+                          }}
+                        >
+                          {deadlineTask && (
+                            <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                              {deadlineTask.description
+                                ? deadlineTask.description
+                                : deadlineTask.project
+                                ? deadlineTask.project.name
+                                : deadlineTask.client?.name || 'Unknown'}
+                            </div>
+                          )}
+                        </td>
+                      );
+                    });
+                  })}
+                </tr>
+              ))}
+
               {/* User rows - each user gets 4 rows (one per time block) */}
               {users
                 .filter((user) => visibleUserIds.includes(user.id))
@@ -1729,16 +2151,18 @@ const PlanningScreen = () => {
                               minWidth: `${USER_COLUMN_WIDTH}px`,
                               maxWidth: `${USER_COLUMN_WIDTH}px`,
                               height: `${TIME_BLOCK_HEIGHT * 4}px`,
-                              borderBottom: '5px solid #333',
-                              borderRight: '5px solid #333',
-                              backgroundColor: '#fff',
-                              verticalAlign: 'top',
+                              borderBottom: `2px solid ${currentColors.text}`,
+                              borderRight: `2px solid ${currentColors.text}`,
+                              backgroundColor: teamMemberColBg,
+                              verticalAlign: 'middle',
+                              textAlign: 'center',
                               padding: '12px',
                               fontWeight: '700',
                               fontSize: '13px',
                               position: 'sticky',
                               left: 0,
                               zIndex: 15,
+                              color: teamMemberColText,
                             }}
                           >
                             {user.firstName.toUpperCase()}
@@ -1852,11 +2276,11 @@ const PlanningScreen = () => {
                                   minWidth: `${DAY_CELL_WIDTH}px`,
                                   maxWidth: `${DAY_CELL_WIDTH}px`,
                                   height: `${TIME_BLOCK_HEIGHT * span}px`,
-                                  borderBottom: isLastBlockForUser ? '3px solid #333' : '1px solid #ddd',
-                                  borderRight: '1px solid #000',
-                                  padding: '2px',
+                                  borderBottom: isLastBlockForUser ? `3px solid ${currentColors.text}` : `1px solid ${currentColors.border}`,
+                                  borderRight: `1px solid ${currentColors.text}`,
+                                  padding: assignment?.projectName === 'Unavailable' ? '0' : '2px',
                                   position: 'relative',
-                                  backgroundColor: isWeekend ? '#f0f0f0' : (isToday ? '#FFFACD' : '#fff'),
+                                  backgroundColor: isWeekend ? weekendCellBg : (isToday ? currentColors.background.bg300 : currentColors.background.white),
                                   verticalAlign: 'top',
                                   cursor: assignment ? 'pointer' : 'pointer',
                                 }}
@@ -1876,17 +2300,28 @@ const PlanningScreen = () => {
                                     margin: assignment ? (assignment.projectName === 'Unavailable' ? '0' : '2px') : '0',
                                     borderRadius: assignment ? (assignment.projectName === 'Unavailable' ? '0' : '6px') : '0',
                                     overflow: assignment ? (assignment.projectName === 'Unavailable' ? 'visible' : 'hidden') : 'visible',
-                                    backgroundColor: isDragOver ? '#90EE90' : (isSelected ? '#B3D9FF' : (isOutsideQuarter ? 'transparent' : (assignment ? (() => {
-                                      // Determine background color based on status event type
+                                    backgroundColor: isDragOver ? `${currentColors.secondary}99` : (isSelected ? `${currentColors.primary}66` : (isOutsideQuarter ? 'transparent' : (assignment ? (() => {
+                                      // Determine background color based on task type using custom planning colors
                                       const projectName = assignment.projectName || '';
+                                      const projectNameLower = projectName.toLowerCase();
+
+                                      // Status events
                                       if (projectName === 'Out of Office' || projectName.includes('(Out of Office)')) {
-                                        return '#1a7287'; // Blue for Out of Office
+                                        return outOfOfficeBg;
                                       } else if (projectName === 'Time Off') {
-                                        return '#e5cf07'; // Yellow for Time Off
+                                        return timeOffBg;
                                       } else if (projectName === 'Unavailable') {
-                                        return '#E0E0E0'; // Light grey for Unavailable
+                                        return unavailableBg;
                                       }
-                                      return '#dc5e83'; // Pink for regular projects
+
+                                      // Task types based on project name
+                                      if (projectNameLower.includes('admin')) {
+                                        return adminTaskBg;
+                                      } else if (projectNameLower.includes('marketing')) {
+                                        return marketingTaskBg;
+                                      }
+
+                                      return projectTaskBg; // Default color for regular projects
                                     })() : 'transparent'))),
                                   }}
                                   onClick={() => handleBlockClick(user.id, dateString, blockIndex)}
@@ -1901,7 +2336,7 @@ const PlanningScreen = () => {
                                         right: 0,
                                         height: 10,
                                         zIndex: 10,
-                                        backgroundColor: isHovered ? 'rgba(98, 0, 238, 0.5)' : 'transparent',
+                                        backgroundColor: isHovered ? `${currentColors.primary}80` : 'transparent',
                                         cursor: 'ns-resize',
                                       }}
                                       onMouseDown={(e) => {
@@ -1937,20 +2372,28 @@ const PlanningScreen = () => {
                                           fontSize: 11,
                                           color: (() => {
                                             const projectName = assignment.projectName || '';
-                                            // Yellow cells (Time Off) get black text
+                                            const projectNameLower = projectName.toLowerCase();
+
+                                            // Status events
                                             if (projectName === 'Time Off') {
-                                              return '#000000';
+                                              return timeOffFont;
                                             }
-                                            // Pink and blue cells get white text
                                             if (projectName === 'Out of Office' || projectName.includes('(Out of Office)')) {
-                                              return '#ffffff';
+                                              return outOfOfficeFont;
                                             }
-                                            // Grey (Unavailable) gets dark grey text
                                             if (projectName === 'Unavailable') {
-                                              return '#4a4a4a';
+                                              return unavailableFont;
                                             }
-                                            // Regular projects (pink) get white text
-                                            return '#ffffff';
+
+                                            // Task types based on project name
+                                            if (projectNameLower.includes('admin')) {
+                                              return adminTaskFont;
+                                            } else if (projectNameLower.includes('marketing')) {
+                                              return marketingTaskFont;
+                                            }
+
+                                            // Regular projects use custom project font color
+                                            return projectTaskFont;
                                           })(),
                                           fontWeight: 700,
                                           marginBottom: 2,
@@ -1970,20 +2413,28 @@ const PlanningScreen = () => {
                                             fontSize: 9,
                                             color: (() => {
                                               const projectName = assignment.projectName || '';
-                                              // Yellow cells (Time Off) get black text
+                                              const projectNameLower = projectName.toLowerCase();
+
+                                              // Status events
                                               if (projectName === 'Time Off') {
-                                                return '#000000';
+                                                return timeOffFont;
                                               }
-                                              // Pink and blue cells get white text
                                               if (projectName === 'Out of Office' || projectName.includes('(Out of Office)')) {
-                                                return '#ffffff';
+                                                return outOfOfficeFont;
                                               }
-                                              // Grey (Unavailable) gets dark grey text
                                               if (projectName === 'Unavailable') {
-                                                return '#4a4a4a';
+                                                return unavailableFont;
                                               }
-                                              // Regular projects (pink) get white text
-                                              return '#ffffff';
+
+                                              // Task types based on project name
+                                              if (projectNameLower.includes('admin')) {
+                                                return adminTaskFont;
+                                              } else if (projectNameLower.includes('marketing')) {
+                                                return marketingTaskFont;
+                                              }
+
+                                              // Regular projects use custom project font color
+                                              return projectTaskFont;
                                             })(),
                                             fontStyle: 'italic',
                                             overflow: 'hidden',
@@ -2012,7 +2463,7 @@ const PlanningScreen = () => {
                                         right: 0,
                                         height: 10,
                                         zIndex: 10,
-                                        backgroundColor: isHovered ? 'rgba(98, 0, 238, 0.5)' : 'transparent',
+                                        backgroundColor: isHovered ? `${currentColors.primary}80` : 'transparent',
                                         cursor: 'ns-resize',
                                       }}
                                       onMouseDown={(e) => {
@@ -2038,9 +2489,9 @@ const PlanningScreen = () => {
                   style={{
                     width: `${USER_COLUMN_WIDTH}px`,
                     height: `${TIME_BLOCK_HEIGHT * 4}px`,
-                    borderBottom: '1px solid #000',
-                    borderRight: '1px solid #000',
-                    backgroundColor: '#f9f9f9',
+                    borderBottom: `1px solid ${currentColors.text}`,
+                    borderRight: `1px solid ${currentColors.text}`,
+                    backgroundColor: currentColors.background.bg300,
                     textAlign: 'center',
                     verticalAlign: 'middle',
                     cursor: 'pointer',
@@ -2048,11 +2499,9 @@ const PlanningScreen = () => {
                     left: 0,
                     zIndex: 15,
                   }}
-                  onClick={handleManageTeamMembers}
+                  onClick={() => {}}
+                  style={{ cursor: 'default' }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
-                    <HugeiconsIcon icon={AddCircleIcon} size={24} color="#6200ee" />
-                  </div>
                 </td>
                 {/* Empty cells for the days */}
                 {quarterWeeks.map((weekStart, weekIndex) => {
@@ -2068,9 +2517,9 @@ const PlanningScreen = () => {
                         minWidth: `${DAY_CELL_WIDTH}px`,
                         maxWidth: `${DAY_CELL_WIDTH}px`,
                         height: `${TIME_BLOCK_HEIGHT * 4}px`,
-                        borderBottom: '1px solid #000',
-                        borderRight: '1px solid #000',
-                        backgroundColor: '#f9f9f9',
+                        borderBottom: `1px solid ${currentColors.text}`,
+                        borderRight: `1px solid ${currentColors.text}`,
+                        backgroundColor: currentColors.background.bg300,
                       }}
                     />
                   ));
@@ -2083,29 +2532,21 @@ const PlanningScreen = () => {
           // Fallback for non-web platforms - use View-based layout
           <View style={styles.mainContent}>
             {/* Fixed left column */}
-            <View style={styles.staticColumn}>
+            <View style={[styles.staticColumn, { borderRightColor: currentColors.text }]}>
               {/* Date label in header */}
-              <View style={styles.staticHeaderCell}>
-                <Text style={styles.staticHeaderText}>Date</Text>
+              <View style={[styles.staticHeaderCell, { borderBottomColor: currentColors.text }]}>
+                <Text style={[styles.staticHeaderText, { color: currentColors.text }]}>Date</Text>
               </View>
 
               {/* User names - only show visible users */}
               {users
                 .filter((user) => visibleUserIds.includes(user.id))
                 .map((user) => (
-                  <View key={user.id} style={styles.staticUserCell}>
-                    <Text style={styles.staticUserText}>{user.firstName.toUpperCase()}</Text>
+                  <View key={user.id} style={[styles.staticUserCell, { borderBottomColor: currentColors.text }]}>
+                    <Text style={[styles.staticUserText, { color: currentColors.text }]}>{user.firstName.toUpperCase()}</Text>
                   </View>
                 ))}
 
-              {/* Add/Remove team members button */}
-              <TouchableOpacity
-                style={styles.addTeamMemberButton}
-                onPress={handleManageTeamMembers}
-                activeOpacity={0.7}
-              >
-                <HugeiconsIcon icon={AddCircleIcon} size={24} color="#6200ee" />
-              </TouchableOpacity>
             </View>
 
             {/* Mobile view - simplified grid */}
@@ -2114,6 +2555,15 @@ const PlanningScreen = () => {
         )}
       </View>
 
+      {/* Floating Settings Button */}
+      <TouchableOpacity
+        style={[styles.floatingButton, { backgroundColor: currentColors.secondary }]}
+        onPress={handleManageTeamMembers}
+        activeOpacity={0.8}
+      >
+        <HugeiconsIcon icon={Settings01Icon} size={28} color={currentColors.white} />
+      </TouchableOpacity>
+
       {/* Team Members Management Modal */}
       <Modal
         visible={showManageModal}
@@ -2121,10 +2571,10 @@ const PlanningScreen = () => {
         animationType="fade"
         onRequestClose={() => setShowManageModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Title style={styles.modalTitle}>Manage Team Members</Title>
-            <Text style={styles.modalSubtitle}>
+        <View style={[styles.modalOverlay, { backgroundColor: `${currentColors.background.bg700}CC` }]}>
+          <View style={[styles.modalContent, { backgroundColor: currentColors.background.bg300 }]}>
+            <Title style={[styles.modalTitle, { color: currentColors.text }]}>Manage Team Members</Title>
+            <Text style={[styles.modalSubtitle, { color: currentColors.text }]}>
               Select team members to show in the planning view. Drag and drop to reorder.
             </Text>
 
@@ -2139,8 +2589,9 @@ const PlanningScreen = () => {
                     key={user.id}
                     style={[
                       styles.modalListItem,
-                      isBeingDragged && styles.modalListItemDragging,
-                      isDragOver && styles.modalListItemDragOver,
+                      { borderBottomColor: currentColors.border },
+                      isBeingDragged && [styles.modalListItemDragging, { backgroundColor: currentColors.background.bg300 }],
+                      isDragOver && [styles.modalListItemDragOver, { backgroundColor: currentColors.background.bg300, borderBottomColor: currentColors.primary }],
                     ]}
                     onStartShouldSetResponder={() => false}
                     onMoveShouldSetResponder={() => false}
@@ -2183,36 +2634,22 @@ const PlanningScreen = () => {
                         flexDirection: 'row',
                         alignItems: 'center',
                         width: '100%',
+                        justifyContent: 'space-between',
                       }}
                     >
-                      <View
-                        style={[styles.dragHandle, Platform.OS === 'web' && { cursor: 'grab' }]}
-                      >
-                        <HugeiconsIcon icon={DragDropIcon} size={20} color="#999" />
-                      </View>
-
-                      {/* Checkbox */}
-                      <TouchableOpacity
-                        onPress={() => toggleUserVisibility(user.id)}
-                        activeOpacity={0.7}
-                        style={styles.checkboxContainer}
-                      >
-                        <Checkbox
-                          status={isVisible ? 'checked' : 'unchecked'}
-                          onPress={() => toggleUserVisibility(user.id)}
-                        />
-                      </TouchableOpacity>
-
                       {/* User name */}
-                      <TouchableOpacity
-                        onPress={() => toggleUserVisibility(user.id)}
-                        activeOpacity={0.7}
-                        style={styles.userNameContainer}
-                      >
-                        <Text style={styles.modalListItemText}>
+                      <View style={styles.userNameContainer}>
+                        <Text style={[styles.modalListItemText, { color: currentColors.text }]}>
                           {user.firstName} {user.lastName}
                         </Text>
-                      </TouchableOpacity>
+                      </View>
+
+                      {/* Visibility Toggle */}
+                      <Switch
+                        value={isVisible}
+                        onValueChange={() => toggleUserVisibility(user.id)}
+                        color={currentColors.primary}
+                      />
                     </div>
                   </View>
                 );
@@ -2224,9 +2661,19 @@ const PlanningScreen = () => {
                 mode="contained"
                 onPress={handleSaveSettings}
                 style={styles.modalButton}
+                buttonColor={currentColors.primary}
               >
                 Save
               </Button>
+              {user?.role === 'ADMIN' && (
+                <Button
+                  mode="outlined"
+                  onPress={handleSaveAsDefaultForAll}
+                  style={[styles.modalButton, { marginTop: 10 }]}
+                >
+                  Save as Default for All Users
+                </Button>
+              )}
             </View>
           </View>
         </View>
@@ -2239,9 +2686,9 @@ const PlanningScreen = () => {
         animationType="fade"
         onRequestClose={() => setShowProjectModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalContent}>
-            <Title style={styles.modalTitle}>Assign Project</Title>
+        <View style={[styles.modalOverlay, { backgroundColor: `${currentColors.background.bg700}CC` }]}>
+          <View style={[styles.modalContent, { backgroundColor: currentColors.background.bg300 }]}>
+            <Title style={[styles.modalTitle, { color: currentColors.text }]}>Assign Project</Title>
 
             <ScrollView style={styles.modalScrollView} showsVerticalScrollIndicator={true}>
               {/* Only show project and task fields if Unavailable or Time Off is NOT selected */}
@@ -2258,15 +2705,15 @@ const PlanningScreen = () => {
                   />
 
                   {filteredProjects.length > 0 && projectSearch && (
-                    <View style={styles.projectsList}>
+                    <View style={[styles.projectsList, { borderColor: currentColors.border }]}>
                       {filteredProjects.map((project) => (
                         <TouchableOpacity
                           key={project.id}
-                          style={styles.projectItem}
+                          style={[styles.projectItem, { borderBottomColor: currentColors.border }]}
                           onPress={() => setProjectSearch(project.description || project.name)}
                           activeOpacity={0.7}
                         >
-                          <Text style={styles.projectItemText}>
+                          <Text style={[styles.projectItemText, { color: currentColors.text }]}>
                             {project.description || project.name}
                           </Text>
                         </TouchableOpacity>
@@ -2288,7 +2735,7 @@ const PlanningScreen = () => {
               )}
 
             {/* Status Checkboxes */}
-            <View style={styles.checkboxGroup}>
+            <View style={[styles.checkboxGroup, { borderColor: currentColors.border }]}>
               <TouchableOpacity
                 style={styles.checkboxRow}
                 onPress={() => {
@@ -2300,17 +2747,12 @@ const PlanningScreen = () => {
                 }}
                 activeOpacity={0.7}
               >
-                <Checkbox
-                  status={isOutOfOffice ? 'checked' : 'unchecked'}
-                  onPress={() => {
-                    setIsOutOfOffice(!isOutOfOffice);
-                    if (!isOutOfOffice) {
-                      setIsTimeOff(false);
-                      setIsUnavailable(false);
-                    }
-                  }}
+                <HugeiconsIcon
+                  icon={isOutOfOffice ? CheckmarkCircle02Icon : CircleIcon}
+                  size={24}
+                  color={currentColors.primary}
                 />
-                <Text style={styles.checkboxLabel}>Out of Office</Text>
+                <Text style={[styles.checkboxLabel, { color: currentColors.text }]}>Out of Office</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -2324,17 +2766,12 @@ const PlanningScreen = () => {
                 }}
                 activeOpacity={0.7}
               >
-                <Checkbox
-                  status={isTimeOff ? 'checked' : 'unchecked'}
-                  onPress={() => {
-                    setIsTimeOff(!isTimeOff);
-                    if (!isTimeOff) {
-                      setIsOutOfOffice(false);
-                      setIsUnavailable(false);
-                    }
-                  }}
+                <HugeiconsIcon
+                  icon={isTimeOff ? CheckmarkCircle02Icon : CircleIcon}
+                  size={24}
+                  color={currentColors.primary}
                 />
-                <Text style={styles.checkboxLabel}>Time Off</Text>
+                <Text style={[styles.checkboxLabel, { color: currentColors.text }]}>Time Off</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -2348,32 +2785,28 @@ const PlanningScreen = () => {
                 }}
                 activeOpacity={0.7}
               >
-                <Checkbox
-                  status={isUnavailable ? 'checked' : 'unchecked'}
-                  onPress={() => {
-                    setIsUnavailable(!isUnavailable);
-                    if (!isUnavailable) {
-                      setIsOutOfOffice(false);
-                      setIsTimeOff(false);
-                    }
-                  }}
+                <HugeiconsIcon
+                  icon={isUnavailable ? CheckmarkCircle02Icon : CircleIcon}
+                  size={24}
+                  color={currentColors.primary}
                 />
-                <Text style={styles.checkboxLabel}>Unavailable</Text>
+                <Text style={[styles.checkboxLabel, { color: currentColors.text }]}>Unavailable</Text>
               </TouchableOpacity>
             </View>
 
             {/* Repeat Event Section */}
-            <View style={styles.repeatSection}>
+            <View style={[styles.repeatSection, { borderColor: currentColors.border }]}>
               <TouchableOpacity
                 style={styles.checkboxRow}
                 onPress={() => setIsRepeatEvent(!isRepeatEvent)}
                 activeOpacity={0.7}
               >
-                <Checkbox
-                  status={isRepeatEvent ? 'checked' : 'unchecked'}
-                  onPress={() => setIsRepeatEvent(!isRepeatEvent)}
+                <HugeiconsIcon
+                  icon={isRepeatEvent ? CheckmarkCircle02Icon : CircleIcon}
+                  size={24}
+                  color={currentColors.primary}
                 />
-                <Text style={styles.checkboxLabel}>Repeat Event</Text>
+                <Text style={[styles.checkboxLabel, { color: currentColors.text }]}>Repeat Event</Text>
               </TouchableOpacity>
 
               {isRepeatEvent && (
@@ -2381,20 +2814,20 @@ const PlanningScreen = () => {
                   {/* Repeat Type Selection */}
                   <View style={styles.repeatTypeRow}>
                     <TouchableOpacity
-                      style={[styles.repeatTypeButton, repeatType === 'weekly' && styles.repeatTypeButtonActive]}
+                      style={[styles.repeatTypeButton, { borderColor: currentColors.border }, repeatType === 'weekly' && [styles.repeatTypeButtonActive, { backgroundColor: currentColors.primary, borderColor: currentColors.primary }]]}
                       onPress={() => setRepeatType('weekly')}
                       activeOpacity={0.7}
                     >
-                      <Text style={[styles.repeatTypeText, repeatType === 'weekly' && styles.repeatTypeTextActive]}>
+                      <Text style={[styles.repeatTypeText, { color: currentColors.textSecondary }, repeatType === 'weekly' && [styles.repeatTypeTextActive, { color: currentColors.background.white }]]}>
                         Weekly
                       </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
-                      style={[styles.repeatTypeButton, repeatType === 'monthly' && styles.repeatTypeButtonActive]}
+                      style={[styles.repeatTypeButton, { borderColor: currentColors.border }, repeatType === 'monthly' && [styles.repeatTypeButtonActive, { backgroundColor: currentColors.primary, borderColor: currentColors.primary }]]}
                       onPress={() => setRepeatType('monthly')}
                       activeOpacity={0.7}
                     >
-                      <Text style={[styles.repeatTypeText, repeatType === 'monthly' && styles.repeatTypeTextActive]}>
+                      <Text style={[styles.repeatTypeText, { color: currentColors.textSecondary }, repeatType === 'monthly' && [styles.repeatTypeTextActive, { color: currentColors.background.white }]]}>
                         Monthly
                       </Text>
                     </TouchableOpacity>
@@ -2403,12 +2836,12 @@ const PlanningScreen = () => {
                   {/* Weekly Options */}
                   {repeatType === 'weekly' && (
                     <View style={styles.weeklyOptions}>
-                      <Text style={styles.repeatSubtitle}>Repeat on:</Text>
+                      <Text style={[styles.repeatSubtitle, { color: currentColors.text }]}>Repeat on:</Text>
                       <View style={styles.weekdayButtons}>
                         {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, index) => (
                           <TouchableOpacity
                             key={day}
-                            style={[styles.weekdayButton, repeatWeeklyDays[index] && styles.weekdayButtonActive]}
+                            style={[styles.weekdayButton, { borderColor: currentColors.border }, repeatWeeklyDays[index] && [styles.weekdayButtonActive, { backgroundColor: currentColors.primary, borderColor: currentColors.primary }]]}
                             onPress={() => {
                               const newDays = [...repeatWeeklyDays];
                               newDays[index] = !newDays[index];
@@ -2416,7 +2849,7 @@ const PlanningScreen = () => {
                             }}
                             activeOpacity={0.7}
                           >
-                            <Text style={[styles.weekdayText, repeatWeeklyDays[index] && styles.weekdayTextActive]}>
+                            <Text style={[styles.weekdayText, { color: currentColors.textSecondary }, repeatWeeklyDays[index] && [styles.weekdayTextActive, { color: currentColors.background.white }]]}>
                               {day}
                             </Text>
                           </TouchableOpacity>
@@ -2433,11 +2866,12 @@ const PlanningScreen = () => {
                         onPress={() => setMonthlyRepeatType('date')}
                         activeOpacity={0.7}
                       >
-                        <Checkbox
-                          status={monthlyRepeatType === 'date' ? 'checked' : 'unchecked'}
-                          onPress={() => setMonthlyRepeatType('date')}
+                        <HugeiconsIcon
+                          icon={monthlyRepeatType === 'date' ? CheckmarkCircle02Icon : CircleIcon}
+                          size={24}
+                          color={currentColors.primary}
                         />
-                        <Text style={styles.checkboxLabel}>Same date every month</Text>
+                        <Text style={[styles.checkboxLabel, { color: currentColors.text }]}>Same date every month</Text>
                       </TouchableOpacity>
 
                       <TouchableOpacity
@@ -2445,26 +2879,27 @@ const PlanningScreen = () => {
                         onPress={() => setMonthlyRepeatType('weekday')}
                         activeOpacity={0.7}
                       >
-                        <Checkbox
-                          status={monthlyRepeatType === 'weekday' ? 'checked' : 'unchecked'}
-                          onPress={() => setMonthlyRepeatType('weekday')}
+                        <HugeiconsIcon
+                          icon={monthlyRepeatType === 'weekday' ? CheckmarkCircle02Icon : CircleIcon}
+                          size={24}
+                          color={currentColors.primary}
                         />
-                        <Text style={styles.checkboxLabel}>Specific week and day</Text>
+                        <Text style={[styles.checkboxLabel, { color: currentColors.text }]}>Specific week and day</Text>
                       </TouchableOpacity>
 
                       {monthlyRepeatType === 'weekday' && (
                         <View style={styles.weekdaySelectors}>
                           <View style={styles.selectorRow}>
-                            <Text style={styles.selectorLabel}>Week:</Text>
+                            <Text style={[styles.selectorLabel, { color: currentColors.text }]}>Week:</Text>
                             <View style={styles.weekNumbers}>
                               {[1, 2, 3, 4].map((num) => (
                                 <TouchableOpacity
                                   key={num}
-                                  style={[styles.weekNumberButton, monthlyWeekNumber === num && styles.weekNumberButtonActive]}
+                                  style={[styles.weekNumberButton, { borderColor: currentColors.border }, monthlyWeekNumber === num && [styles.weekNumberButtonActive, { backgroundColor: currentColors.primary, borderColor: currentColors.primary }]]}
                                   onPress={() => setMonthlyWeekNumber(num)}
                                   activeOpacity={0.7}
                                 >
-                                  <Text style={[styles.weekNumberText, monthlyWeekNumber === num && styles.weekNumberTextActive]}>
+                                  <Text style={[styles.weekNumberText, { color: currentColors.textSecondary }, monthlyWeekNumber === num && [styles.weekNumberTextActive, { color: currentColors.background.white }]]}>
                                     {num === 1 ? '1st' : num === 2 ? '2nd' : num === 3 ? '3rd' : '4th'}
                                   </Text>
                                 </TouchableOpacity>
@@ -2473,16 +2908,16 @@ const PlanningScreen = () => {
                           </View>
 
                           <View style={styles.selectorRow}>
-                            <Text style={styles.selectorLabel}>Day:</Text>
+                            <Text style={[styles.selectorLabel, { color: currentColors.text }]}>Day:</Text>
                             <View style={styles.weekdayButtons}>
                               {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, index) => (
                                 <TouchableOpacity
                                   key={day}
-                                  style={[styles.weekdayButton, monthlyDayOfWeek === (index + 1) && styles.weekdayButtonActive]}
+                                  style={[styles.weekdayButton, { borderColor: currentColors.border }, monthlyDayOfWeek === (index + 1) && [styles.weekdayButtonActive, { backgroundColor: currentColors.primary, borderColor: currentColors.primary }]]}
                                   onPress={() => setMonthlyDayOfWeek(index + 1)}
                                   activeOpacity={0.7}
                                 >
-                                  <Text style={[styles.weekdayText, monthlyDayOfWeek === (index + 1) && styles.weekdayTextActive]}>
+                                  <Text style={[styles.weekdayText, { color: currentColors.textSecondary }, monthlyDayOfWeek === (index + 1) && [styles.weekdayTextActive, { color: currentColors.background.white }]]}>
                                     {day}
                                   </Text>
                                 </TouchableOpacity>
@@ -2511,7 +2946,7 @@ const PlanningScreen = () => {
                         style={{
                           padding: 12,
                           borderWidth: 1,
-                          borderColor: '#ccc',
+                          borderColor: currentColors.border,
                           borderRadius: 4,
                           fontSize: 16,
                           fontFamily: 'system-ui',
@@ -2560,7 +2995,7 @@ const PlanningScreen = () => {
                   mode="outlined"
                   onPress={handleDeletePlanningTask}
                   style={styles.modalButton}
-                  textColor="#d32f2f"
+                  textColor={currentColors.secondary}
                 >
                   Delete
                 </Button>
@@ -2576,6 +3011,21 @@ const PlanningScreen = () => {
           </View>
         </View>
       </Modal>
+
+      {/* Deadline Task Modal */}
+      <DeadlineTaskModal
+        visible={showDeadlineModal}
+        onDismiss={() => {
+          setShowDeadlineModal(false);
+          setSelectedDeadlineSlot(null);
+          setEditingDeadlineTask(null);
+        }}
+        onSave={handleSaveDeadlineTask}
+        onDelete={editingDeadlineTask ? async () => await handleDeleteDeadlineTask(editingDeadlineTask.id) : undefined}
+        date={selectedDeadlineSlot?.date || new Date()}
+        slotIndex={selectedDeadlineSlot?.slotIndex || 0}
+        existingTask={editingDeadlineTask}
+      />
     </View>
   );
 };
@@ -2585,7 +3035,6 @@ const ROW_HEIGHT = 200; // Increased to fit 4 time blocks
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
   },
   centered: {
     flex: 1,
@@ -2593,10 +3042,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   header: {
-    backgroundColor: 'white',
     padding: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#000',
   },
   mainContent: {
     flex: 1,
@@ -2605,22 +3052,17 @@ const styles = StyleSheet.create({
   // Static left column
   staticColumn: {
     width: USER_COLUMN_WIDTH,
-    backgroundColor: '#fff',
     borderRightWidth: 1,
-    borderRightColor: '#000',
   },
   staticHeaderCell: {
     height: 50,
     justifyContent: 'center',
     alignItems: 'center',
     borderBottomWidth: 1,
-    borderBottomColor: '#000',
-    backgroundColor: '#d3d3d3',
   },
   staticHeaderText: {
     fontWeight: 'bold',
     fontSize: 12,
-    color: '#000',
   },
   staticUserCell: {
     height: ROW_HEIGHT,
@@ -2628,21 +3070,26 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     paddingLeft: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#000',
-    backgroundColor: '#fff',
   },
   staticUserText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#000',
   },
-  addTeamMemberButton: {
-    height: ROW_HEIGHT,
+  floatingButton: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     justifyContent: 'center',
     alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#000',
-    backgroundColor: '#f9f9f9',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    zIndex: 1000,
   },
   // Scrollable grid
   scrollableGrid: {
@@ -2655,24 +3102,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     height: 50,
     borderBottomWidth: 1,
-    borderBottomColor: '#000',
   },
   dayHeaderCell: {
     width: DAY_CELL_WIDTH,
     justifyContent: 'center',
     alignItems: 'center',
     borderRightWidth: 1,
-    borderRightColor: '#000',
-    backgroundColor: '#d3d3d3',
     paddingVertical: 4,
   },
   todayHeaderCell: {
-    backgroundColor: '#a8d5ff',
   },
   dayHeaderName: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#000',
     marginBottom: 2,
   },
   todayHeaderName: {
@@ -2680,34 +3122,27 @@ const styles = StyleSheet.create({
   },
   dayHeaderDate: {
     fontSize: 10,
-    color: '#333',
   },
   todayHeaderDate: {
     fontWeight: 'bold',
-    color: '#000',
   },
   gridUserRow: {
     flexDirection: 'row',
     height: ROW_HEIGHT,
     borderBottomWidth: 1,
-    borderBottomColor: '#000',
   },
   gridDayCell: {
     width: DAY_CELL_WIDTH,
     borderRightWidth: 1,
-    borderRightColor: '#000',
-    backgroundColor: '#fff',
   },
   timeBlock: {
     height: TIME_BLOCK_HEIGHT,
     borderBottomWidth: 1,
-    borderBottomColor: '#ddd',
     padding: 4,
     justifyContent: 'center',
     position: 'relative',
   },
   timeBlockFilled: {
-    backgroundColor: '#FFE4E1', // Light pink background for filled cells
   },
   timeBlockTouchable: {
     flex: 1,
@@ -2734,13 +3169,11 @@ const styles = StyleSheet.create({
     bottom: 0,
   },
   dragEdgeVisible: {
-    backgroundColor: 'rgba(98, 0, 238, 0.5)',
   },
   collapseButton: {
     position: 'absolute',
     top: 2,
     right: 2,
-    backgroundColor: 'rgba(211, 47, 47, 0.8)',
     borderRadius: 10,
     width: 20,
     height: 20,
@@ -2748,19 +3181,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   collapseButtonText: {
-    color: '#fff',
     fontSize: 12,
     fontWeight: 'bold',
   },
   projectName: {
     fontSize: 11,
-    color: '#6200ee',
     fontWeight: '700',
     marginBottom: 2,
   },
   taskText: {
     fontSize: 9,
-    color: '#666',
     fontStyle: 'italic',
   },
   input: {
@@ -2770,23 +3200,18 @@ const styles = StyleSheet.create({
     maxHeight: 150,
     marginBottom: 15,
     borderWidth: 1,
-    borderColor: '#e0e0e0',
     borderRadius: 4,
   },
   projectItem: {
     padding: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
   },
   projectItemText: {
     fontSize: 14,
-    color: '#000',
   },
   gridTodayCell: {
-    backgroundColor: '#e3f2fd',
   },
   gridOutsideQuarterCell: {
-    backgroundColor: '#f5f5f5',
   },
   headerNav: {
     flexDirection: 'row',
@@ -2812,12 +3237,10 @@ const styles = StyleSheet.create({
   // Modal styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   modalContent: {
-    backgroundColor: '#fff',
     borderRadius: 12,
     padding: 24,
     width: Platform.OS === 'web' ? 600 : '95%',
@@ -2842,11 +3265,9 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     marginBottom: 8,
-    color: '#000',
   },
   modalSubtitle: {
     fontSize: 14,
-    color: '#666',
     marginBottom: 20,
   },
   modalList: {
@@ -2859,16 +3280,11 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-    backgroundColor: '#fff',
   },
   modalListItemDragging: {
     opacity: 0.5,
-    backgroundColor: '#f0f0f0',
   },
   modalListItemDragOver: {
-    backgroundColor: '#e3f2fd',
-    borderBottomColor: '#2196F3',
     borderBottomWidth: 2,
   },
   dragHandle: {
@@ -2886,7 +3302,6 @@ const styles = StyleSheet.create({
   },
   modalListItemText: {
     fontSize: 16,
-    color: '#000',
     marginLeft: 12,
   },
   modalButtons: {
@@ -2896,13 +3311,26 @@ const styles = StyleSheet.create({
   modalButton: {
     minWidth: 100,
   },
+  // Preference row styles
+  preferenceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  preferenceLabel: {
+    fontSize: 15,
+    flex: 1,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+  },
   // Checkbox styles
   checkboxGroup: {
     marginVertical: 16,
     paddingVertical: 12,
     borderTopWidth: 1,
-    borderBottomWidth: 1,
-    borderColor: '#e0e0e0',
   },
   checkboxRow: {
     flexDirection: 'row',
@@ -2912,14 +3340,12 @@ const styles = StyleSheet.create({
   checkboxLabel: {
     fontSize: 16,
     marginLeft: 8,
-    color: '#333',
   },
   // Repeat event styles
   repeatSection: {
     marginVertical: 16,
     paddingVertical: 12,
     borderTopWidth: 1,
-    borderColor: '#e0e0e0',
   },
   repeatOptions: {
     marginTop: 16,
@@ -2935,27 +3361,20 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderWidth: 2,
-    borderColor: '#e0e0e0',
     borderRadius: 8,
     alignItems: 'center',
-    backgroundColor: '#fff',
   },
   repeatTypeButtonActive: {
-    borderColor: '#6200ee',
-    backgroundColor: '#f3e5f5',
   },
   repeatTypeText: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#666',
   },
   repeatTypeTextActive: {
-    color: '#6200ee',
   },
   repeatSubtitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 8,
     marginTop: 8,
   },
@@ -2971,23 +3390,17 @@ const styles = StyleSheet.create({
     width: 45,
     height: 45,
     borderWidth: 2,
-    borderColor: '#e0e0e0',
     borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#fff',
   },
   weekdayButtonActive: {
-    borderColor: '#6200ee',
-    backgroundColor: '#6200ee',
   },
   weekdayText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#666',
   },
   weekdayTextActive: {
-    color: '#fff',
   },
   monthlyOptions: {
     marginBottom: 16,
@@ -3002,7 +3415,6 @@ const styles = StyleSheet.create({
   selectorLabel: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 8,
   },
   weekNumbers: {
@@ -3013,25 +3425,55 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 16,
     borderWidth: 2,
-    borderColor: '#e0e0e0',
     borderRadius: 8,
     alignItems: 'center',
-    backgroundColor: '#fff',
   },
   weekNumberButtonActive: {
-    borderColor: '#6200ee',
-    backgroundColor: '#6200ee',
   },
   weekNumberText: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#666',
   },
   weekNumberTextActive: {
-    color: '#fff',
   },
   endDateSection: {
     marginTop: 16,
+  },
+  // Color customization styles
+  colorSectionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 10,
+  },
+  colorSubtitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    marginTop: 10,
+    marginBottom: 5,
+  },
+  colorPickerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+    paddingHorizontal: 10,
+  },
+  colorLabel: {
+    fontSize: 14,
+    flex: 1,
+  },
+  colorButton: {
+    flex: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    minHeight: 36,
+  },
+  colorPreview: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    marginRight: 8,
+    borderWidth: 1,
   },
 });
 

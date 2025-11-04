@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useMemo, useCallback } from 'react';
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from '../services/api';
@@ -49,7 +49,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
-  const login = async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string) => {
     try {
       const response = await authAPI.login({ email, password });
       const { token: authToken, user: userData } = response.data;
@@ -62,9 +62,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error: any) {
       throw new Error(error.response?.data?.error || 'Login failed');
     }
-  };
+  }, []);
 
-  const register = async (data: any) => {
+  const register = useCallback(async (data: any) => {
     try {
       const response = await authAPI.register(data);
       const { token: authToken, user: userData } = response.data;
@@ -77,26 +77,44 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error: any) {
       throw new Error(error.response?.data?.error || 'Registration failed');
     }
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     try {
+      console.log('[AuthContext] Logging out...');
+
+      // Clear AsyncStorage
       await AsyncStorage.removeItem('authToken');
       await AsyncStorage.removeItem('user');
+      console.log('[AuthContext] Cleared AsyncStorage');
 
+      // Clear state
       setToken(null);
       setUser(null);
+      console.log('[AuthContext] Cleared state');
 
-      // Force reload on web to ensure clean logout
-      if (Platform.OS === 'web') {
-        window.location.href = '/';
+      // Force clear localStorage on web and reload
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        console.log('[AuthContext] Clearing localStorage...');
+        try {
+          window.localStorage.removeItem('authToken');
+          window.localStorage.removeItem('user');
+          window.localStorage.clear(); // Nuclear option
+        } catch (e) {
+          console.error('[AuthContext] Error clearing localStorage:', e);
+        }
+
+        console.log('[AuthContext] Reloading page in 100ms...');
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 100);
       }
     } catch (error) {
-      console.error('Error during logout:', error);
+      console.error('[AuthContext] Error during logout:', error);
     }
-  };
+  }, []);
 
-  const refreshUser = async () => {
+  const refreshUser = useCallback(async () => {
     try {
       if (!token) return;
 
@@ -108,9 +126,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } catch (error) {
       console.error('Error refreshing user:', error);
     }
-  };
+  }, [token]);
 
-  const value = {
+  const isAuthenticated = useMemo(() => !!token && !!user, [token, user]);
+
+  const value = useMemo(() => ({
     user,
     token,
     loading,
@@ -118,8 +138,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     register,
     logout,
     refreshUser,
-    isAuthenticated: !!token && !!user,
-  };
+    isAuthenticated,
+  }), [user, token, loading, login, register, logout, refreshUser, isAuthenticated]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

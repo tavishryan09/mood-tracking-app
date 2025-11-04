@@ -10,6 +10,7 @@ import {
   List,
 } from 'react-native-paper';
 import { userManagementAPI } from '../../services/api';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface User {
   id: string;
@@ -23,6 +24,7 @@ interface User {
 
 const EditUserScreen = ({ route, navigation }: any) => {
   const { userId } = route.params;
+  const { currentColors } = useTheme();
   const [user, setUser] = useState<User | null>(null);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
@@ -124,16 +126,16 @@ const EditUserScreen = ({ route, navigation }: any) => {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
+      <View style={[styles.centered, { backgroundColor: currentColors.background.bg700 }]}>
         <ActivityIndicator size="large" />
       </View>
     );
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={[styles.container, { backgroundColor: currentColors.background.bg700 }]}>
       <View style={styles.content}>
-        <Title style={styles.title}>Edit User</Title>
+        <Title style={[styles.title, { color: currentColors.text }]}>Edit User</Title>
 
         <TextInput
           label="Email"
@@ -141,7 +143,6 @@ const EditUserScreen = ({ route, navigation }: any) => {
           mode="outlined"
           disabled
           style={styles.input}
-          left={<TextInput.Icon icon="email" />}
         />
 
         <TextInput
@@ -150,7 +151,6 @@ const EditUserScreen = ({ route, navigation }: any) => {
           onChangeText={setFirstName}
           mode="outlined"
           style={styles.input}
-          left={<TextInput.Icon icon="account" />}
         />
 
         <TextInput
@@ -159,10 +159,9 @@ const EditUserScreen = ({ route, navigation }: any) => {
           onChangeText={setLastName}
           mode="outlined"
           style={styles.input}
-          left={<TextInput.Icon icon="account" />}
         />
 
-        <Title style={styles.label}>User Role *</Title>
+        <Title style={[styles.label, { color: currentColors.text }]}>User Role *</Title>
         <SegmentedButtons
           value={role}
           onValueChange={(value) => setRole(value as 'USER' | 'MANAGER' | 'ADMIN')}
@@ -170,17 +169,14 @@ const EditUserScreen = ({ route, navigation }: any) => {
             {
               value: 'USER',
               label: 'Team Member',
-              icon: 'account',
             },
             {
               value: 'MANAGER',
               label: 'Manager',
-              icon: 'account-tie',
             },
             {
               value: 'ADMIN',
               label: 'Admin',
-              icon: 'shield-account',
             },
           ]}
           style={styles.input}
@@ -193,16 +189,14 @@ const EditUserScreen = ({ route, navigation }: any) => {
           mode="outlined"
           keyboardType="decimal-pad"
           style={styles.input}
-          left={<TextInput.Icon icon="currency-usd" />}
           placeholder="e.g., 50.00"
         />
 
         <List.Item
           title="Active"
           description={isActive ? 'User can log in' : 'User is deactivated'}
-          left={(props) => <List.Icon {...props} icon={isActive ? 'account-check' : 'account-off'} />}
           right={() => <Switch value={isActive} onValueChange={setIsActive} />}
-          style={styles.switchItem}
+          style={[styles.switchItem, { backgroundColor: currentColors.background.bg300 }]}
         />
 
         <Button
@@ -219,7 +213,6 @@ const EditUserScreen = ({ route, navigation }: any) => {
           mode="outlined"
           onPress={handleResetPassword}
           style={styles.button}
-          icon="lock-reset"
         >
           Reset Password
         </Button>
@@ -235,7 +228,6 @@ const EditUserScreen = ({ route, navigation }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   centered: {
     flex: 1,
@@ -259,7 +251,6 @@ const styles = StyleSheet.create({
     marginBottom: 15,
   },
   switchItem: {
-    backgroundColor: 'white',
     marginBottom: 15,
     borderRadius: 8,
   },

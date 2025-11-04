@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, Alert, Modal } from 'react-native';
 import {
   List,
   FAB,
@@ -10,8 +10,12 @@ import {
   IconButton,
   Card,
   Paragraph,
+  Button,
 } from 'react-native-paper';
+import { HugeiconsIcon } from '@hugeicons/react-native';
+import { PencilEdit02Icon } from '@hugeicons/core-free-icons';
 import { userManagementAPI } from '../../services/api';
+import { useTheme } from '../../contexts/ThemeContext';
 
 interface User {
   id: string;
@@ -25,11 +29,13 @@ interface User {
 }
 
 const ManageUsersScreen = ({ navigation }: any) => {
+  const { currentColors } = useTheme();
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [menuVisible, setMenuVisible] = useState<{ [key: string]: boolean }>({});
+  const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
 
   useEffect(() => {
     loadUsers();
@@ -86,23 +92,25 @@ const ManageUsersScreen = ({ navigation }: any) => {
     }
   };
 
-  const handleDeleteUser = (user: User) => {
-    Alert.alert('Delete User', `Are you sure you want to delete ${user.firstName} ${user.lastName}?`, [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await userManagementAPI.deleteUser(user.id);
-            Alert.alert('Success', 'User deleted successfully');
-            loadUsers();
-          } catch (error: any) {
-            Alert.alert('Error', error.response?.data?.error || 'Failed to delete user');
-          }
-        },
-      },
-    ]);
+  const handleDeleteClick = (userId: string) => {
+    setDeletingUserId(userId);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deletingUserId) return;
+
+    try {
+      await userManagementAPI.deleteUser(deletingUserId);
+      setDeletingUserId(null);
+      loadUsers();
+    } catch (error: any) {
+      console.error('Delete user error:', error);
+      setDeletingUserId(null);
+    }
+  };
+
+  const handleDeleteCancel = () => {
+    setDeletingUserId(null);
   };
 
   const handleToggleActive = async (user: User) => {
@@ -119,14 +127,14 @@ const ManageUsersScreen = ({ navigation }: any) => {
 
   if (loading) {
     return (
-      <View style={styles.centered}>
+      <View style={[styles.centered, { backgroundColor: currentColors.background.bg700 }]}>
         <ActivityIndicator size="large" />
       </View>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: currentColors.background.bg700 }]}>
       <Searchbar
         placeholder="Search users..."
         onChangeText={setSearchQuery}
@@ -136,9 +144,9 @@ const ManageUsersScreen = ({ navigation }: any) => {
 
       <ScrollView style={styles.list}>
         {filteredUsers.length === 0 ? (
-          <Card style={styles.emptyCard}>
+          <Card style={[styles.emptyCard, { backgroundColor: currentColors.background.bg300 }]}>
             <Card.Content>
-              <Paragraph style={styles.emptyText}>No users found</Paragraph>
+              <Paragraph style={[styles.emptyText, { color: currentColors.textSecondary }]}>No users found</Paragraph>
             </Card.Content>
           </Card>
         ) : (
@@ -147,9 +155,6 @@ const ManageUsersScreen = ({ navigation }: any) => {
               key={user.id}
               title={`${user.firstName} ${user.lastName}`}
               description={user.email}
-              left={(props) => (
-                <List.Icon {...props} icon={user.isActive ? 'account' : 'account-off'} />
-              )}
               right={(props) => (
                 <View style={styles.rightContent}>
                   <Chip
@@ -159,45 +164,22 @@ const ManageUsersScreen = ({ navigation }: any) => {
                   >
                     {user.role}
                   </Chip>
-                  <Menu
-                    visible={menuVisible[user.id] || false}
-                    onDismiss={() => toggleMenu(user.id)}
-                    anchor={
-                      <IconButton
-                        {...props}
-                        icon="dots-vertical"
-                        onPress={() => toggleMenu(user.id)}
-                      />
-                    }
-                  >
-                    <Menu.Item
-                      onPress={() => {
-                        toggleMenu(user.id);
-                        navigation.navigate('EditUser', { userId: user.id });
-                      }}
-                      title="Edit"
-                      leadingIcon="pencil"
-                    />
-                    <Menu.Item
-                      onPress={() => {
-                        toggleMenu(user.id);
-                        handleToggleActive(user);
-                      }}
-                      title={user.isActive ? 'Deactivate' : 'Activate'}
-                      leadingIcon={user.isActive ? 'account-off' : 'account-check'}
-                    />
-                    <Menu.Item
-                      onPress={() => {
-                        toggleMenu(user.id);
-                        handleDeleteUser(user);
-                      }}
-                      title="Delete"
-                      leadingIcon="delete"
-                    />
-                  </Menu>
+                  <IconButton
+                    icon={() => <HugeiconsIcon icon={PencilEdit02Icon} size={24} color={currentColors.icon} />}
+                    onPress={() => navigation.navigate('EditUser', { userId: user.id })}
+                  />
+                  <IconButton
+                    icon="delete"
+                    iconColor={currentColors.error}
+                    onPress={() => handleDeleteClick(user.id)}
+                  />
                 </View>
               )}
-              style={[styles.userItem, !user.isActive && styles.inactiveUser]}
+              style={[
+                styles.userItem,
+                { backgroundColor: currentColors.background.bg300 },
+                !user.isActive && styles.inactiveUser
+              ]}
             />
           ))
         )}
@@ -205,10 +187,47 @@ const ManageUsersScreen = ({ navigation }: any) => {
 
       <FAB
         icon="account-plus"
-        style={styles.fab}
+        style={[styles.fab, { backgroundColor: currentColors.secondary }]}
         onPress={() => navigation.navigate('InviteUser')}
         label="Invite User"
       />
+
+      <Modal
+        visible={deletingUserId !== null}
+        transparent
+        animationType="fade"
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: currentColors.background.bg300 }]}>
+            <Paragraph style={[styles.modalTitle, { color: currentColors.text }]}>
+              Delete User
+            </Paragraph>
+            <Paragraph style={[styles.modalMessage, { color: currentColors.textSecondary }]}>
+              Are you sure you want to delete {deletingUserId ? users.find(u => u.id === deletingUserId)?.firstName : ''} {deletingUserId ? users.find(u => u.id === deletingUserId)?.lastName : ''}?
+            </Paragraph>
+            <Paragraph style={[styles.modalWarning, { color: currentColors.error }]}>
+              This action cannot be undone.
+            </Paragraph>
+            <View style={styles.modalButtons}>
+              <Button
+                mode="outlined"
+                onPress={handleDeleteCancel}
+                style={styles.cancelButton}
+              >
+                Cancel
+              </Button>
+              <Button
+                mode="contained"
+                buttonColor={currentColors.error}
+                onPress={handleDeleteConfirm}
+                style={styles.deleteButton}
+              >
+                Delete
+              </Button>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 };
@@ -216,7 +235,6 @@ const ManageUsersScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   centered: {
     flex: 1,
@@ -231,7 +249,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   userItem: {
-    backgroundColor: 'white',
     marginHorizontal: 10,
     marginVertical: 5,
     borderRadius: 8,
@@ -253,13 +270,51 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     textAlign: 'center',
-    color: '#666',
   },
   fab: {
     position: 'absolute',
     margin: 16,
     right: 0,
     bottom: 0,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContent: {
+    borderRadius: 12,
+    padding: 20,
+    width: '100%',
+    maxWidth: 400,
+    elevation: 8,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  modalMessage: {
+    fontSize: 14,
+    marginBottom: 8,
+  },
+  modalWarning: {
+    fontSize: 12,
+    marginBottom: 20,
+    fontWeight: '500',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'flex-end',
+  },
+  cancelButton: {
+    flex: 1,
+  },
+  deleteButton: {
+    flex: 1,
   },
 });
 

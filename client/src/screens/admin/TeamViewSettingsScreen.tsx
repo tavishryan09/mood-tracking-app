@@ -1,16 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Alert } from 'react-native';
 import { List, Switch, Title, Paragraph, Divider, Button, Menu } from 'react-native-paper';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useTheme } from '../../contexts/ThemeContext';
+import { settingsAPI } from '../../services/api';
 
-// Storage keys
-const STORAGE_KEYS = {
-  ADMIN_PAGE_ACCESS: '@team_view_admin_page_access',
-  ADMIN_DEFAULT_PAGE: '@team_view_admin_default_page',
-  MANAGER_PAGE_ACCESS: '@team_view_manager_page_access',
-  MANAGER_DEFAULT_PAGE: '@team_view_manager_default_page',
-  USER_PAGE_ACCESS: '@team_view_user_page_access',
-  USER_DEFAULT_PAGE: '@team_view_user_default_page',
+// Settings keys (stored in database)
+const SETTINGS_KEYS = {
+  ADMIN_PAGE_ACCESS: 'team_view_admin_page_access',
+  ADMIN_DEFAULT_PAGE: 'team_view_admin_default_page',
+  ADMIN_SHOW_WEEKENDS: 'team_view_admin_show_weekends',
+  ADMIN_DEFAULT_PROJECTS_TABLE: 'team_view_admin_default_projects_table',
+  MANAGER_PAGE_ACCESS: 'team_view_manager_page_access',
+  MANAGER_DEFAULT_PAGE: 'team_view_manager_default_page',
+  MANAGER_SHOW_WEEKENDS: 'team_view_manager_show_weekends',
+  MANAGER_DEFAULT_PROJECTS_TABLE: 'team_view_manager_default_projects_table',
+  USER_PAGE_ACCESS: 'team_view_user_page_access',
+  USER_DEFAULT_PAGE: 'team_view_user_default_page',
+  USER_SHOW_WEEKENDS: 'team_view_user_show_weekends',
+  USER_DEFAULT_PROJECTS_TABLE: 'team_view_user_default_projects_table',
 };
 
 // Available pages
@@ -20,6 +27,7 @@ const PAGES = [
   { key: 'Planning', label: 'Planning' },
   { key: 'Time', label: 'Time Tracking' },
   { key: 'Projects', label: 'Projects' },
+  { key: 'Clients', label: 'Clients' },
   { key: 'Profile', label: 'Profile' },
 ];
 
@@ -28,6 +36,8 @@ interface PageAccess {
 }
 
 const TeamViewSettingsScreen = ({ navigation }: any) => {
+  const { currentColors } = useTheme();
+
   // Admin settings
   const [adminPageAccess, setAdminPageAccess] = useState<PageAccess>({
     Dashboard: true,
@@ -35,6 +45,7 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
     Planning: true,
     Time: true,
     Projects: true,
+    Clients: true,
     Profile: true,
   });
   const [adminDefaultPage, setAdminDefaultPage] = useState('Dashboard');
@@ -47,6 +58,7 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
     Planning: true,
     Time: true,
     Projects: true,
+    Clients: true,
     Profile: true,
   });
   const [managerDefaultPage, setManagerDefaultPage] = useState('Dashboard');
@@ -59,10 +71,20 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
     Planning: true,
     Time: true,
     Projects: true,
+    Clients: true,
     Profile: true,
   });
   const [userDefaultPage, setUserDefaultPage] = useState('Dashboard');
   const [userMenuVisible, setUserMenuVisible] = useState(false);
+
+  // View preferences per role
+  const [adminShowWeekends, setAdminShowWeekends] = useState(false);
+  const [adminDefaultProjectsTable, setAdminDefaultProjectsTable] = useState(false);
+  const [managerShowWeekends, setManagerShowWeekends] = useState(false);
+  const [managerDefaultProjectsTable, setManagerDefaultProjectsTable] = useState(false);
+  const [userShowWeekends, setUserShowWeekends] = useState(false);
+  const [userDefaultProjectsTable, setUserDefaultProjectsTable] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     loadSettings();
@@ -70,40 +92,67 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
 
   const loadSettings = async () => {
     try {
+      console.log('[TeamViewSettings] Loading settings from database...');
+      const response = await settingsAPI.user.getAll();
+      const settings = response.data;
+
+      console.log('[TeamViewSettings] Loaded settings:', settings);
+
+      // Convert array of settings to a map for easy lookup
+      const settingsMap: Record<string, any> = {};
+      settings.forEach((setting: any) => {
+        settingsMap[setting.key] = setting.value;
+      });
+
       // Load Admin settings
-      const adminAccessStr = await AsyncStorage.getItem(STORAGE_KEYS.ADMIN_PAGE_ACCESS);
-      if (adminAccessStr) {
-        setAdminPageAccess(JSON.parse(adminAccessStr));
+      if (settingsMap[SETTINGS_KEYS.ADMIN_PAGE_ACCESS]) {
+        setAdminPageAccess(settingsMap[SETTINGS_KEYS.ADMIN_PAGE_ACCESS]);
       }
-      const adminDefault = await AsyncStorage.getItem(STORAGE_KEYS.ADMIN_DEFAULT_PAGE);
-      if (adminDefault) {
-        setAdminDefaultPage(adminDefault);
+      if (settingsMap[SETTINGS_KEYS.ADMIN_DEFAULT_PAGE]) {
+        setAdminDefaultPage(settingsMap[SETTINGS_KEYS.ADMIN_DEFAULT_PAGE]);
+      }
+      if (settingsMap[SETTINGS_KEYS.ADMIN_SHOW_WEEKENDS] !== undefined) {
+        setAdminShowWeekends(settingsMap[SETTINGS_KEYS.ADMIN_SHOW_WEEKENDS]);
+      }
+      if (settingsMap[SETTINGS_KEYS.ADMIN_DEFAULT_PROJECTS_TABLE] !== undefined) {
+        setAdminDefaultProjectsTable(settingsMap[SETTINGS_KEYS.ADMIN_DEFAULT_PROJECTS_TABLE]);
       }
 
       // Load Manager settings
-      const managerAccessStr = await AsyncStorage.getItem(STORAGE_KEYS.MANAGER_PAGE_ACCESS);
-      if (managerAccessStr) {
-        setManagerPageAccess(JSON.parse(managerAccessStr));
+      if (settingsMap[SETTINGS_KEYS.MANAGER_PAGE_ACCESS]) {
+        setManagerPageAccess(settingsMap[SETTINGS_KEYS.MANAGER_PAGE_ACCESS]);
       }
-      const managerDefault = await AsyncStorage.getItem(STORAGE_KEYS.MANAGER_DEFAULT_PAGE);
-      if (managerDefault) {
-        setManagerDefaultPage(managerDefault);
+      if (settingsMap[SETTINGS_KEYS.MANAGER_DEFAULT_PAGE]) {
+        setManagerDefaultPage(settingsMap[SETTINGS_KEYS.MANAGER_DEFAULT_PAGE]);
+      }
+      if (settingsMap[SETTINGS_KEYS.MANAGER_SHOW_WEEKENDS] !== undefined) {
+        setManagerShowWeekends(settingsMap[SETTINGS_KEYS.MANAGER_SHOW_WEEKENDS]);
+      }
+      if (settingsMap[SETTINGS_KEYS.MANAGER_DEFAULT_PROJECTS_TABLE] !== undefined) {
+        setManagerDefaultProjectsTable(settingsMap[SETTINGS_KEYS.MANAGER_DEFAULT_PROJECTS_TABLE]);
       }
 
       // Load User settings
-      const userAccessStr = await AsyncStorage.getItem(STORAGE_KEYS.USER_PAGE_ACCESS);
-      if (userAccessStr) {
-        setUserPageAccess(JSON.parse(userAccessStr));
+      if (settingsMap[SETTINGS_KEYS.USER_PAGE_ACCESS]) {
+        setUserPageAccess(settingsMap[SETTINGS_KEYS.USER_PAGE_ACCESS]);
       }
-      const userDefault = await AsyncStorage.getItem(STORAGE_KEYS.USER_DEFAULT_PAGE);
-      if (userDefault) {
-        setUserDefaultPage(userDefault);
+      if (settingsMap[SETTINGS_KEYS.USER_DEFAULT_PAGE]) {
+        setUserDefaultPage(settingsMap[SETTINGS_KEYS.USER_DEFAULT_PAGE]);
+      }
+      if (settingsMap[SETTINGS_KEYS.USER_SHOW_WEEKENDS] !== undefined) {
+        setUserShowWeekends(settingsMap[SETTINGS_KEYS.USER_SHOW_WEEKENDS]);
+      }
+      if (settingsMap[SETTINGS_KEYS.USER_DEFAULT_PROJECTS_TABLE] !== undefined) {
+        setUserDefaultProjectsTable(settingsMap[SETTINGS_KEYS.USER_DEFAULT_PROJECTS_TABLE]);
       }
 
-      console.log('[TeamViewSettings] Settings loaded successfully');
+      console.log('[TeamViewSettings] Settings loaded successfully from database');
     } catch (error) {
       console.error('[TeamViewSettings] Error loading settings:', error);
-      Alert.alert('Error', 'Failed to load team view settings');
+      // Don't show alert for 404 errors (settings don't exist yet)
+      if ((error as any)?.response?.status !== 404) {
+        Alert.alert('Error', 'Failed to load team view settings');
+      }
     }
   };
 
@@ -119,22 +168,27 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
     });
 
     try {
+      setSaving(true);
+
       // Validate that default pages are enabled
       console.log('[TeamViewSettings] Starting validation...');
 
       if (!adminPageAccess[adminDefaultPage]) {
         console.log('[TeamViewSettings] Validation failed: Admin default page not enabled');
         Alert.alert('Invalid Configuration', 'Admin default page must be enabled');
+        setSaving(false);
         return;
       }
       if (!managerPageAccess[managerDefaultPage]) {
         console.log('[TeamViewSettings] Validation failed: Manager default page not enabled');
         Alert.alert('Invalid Configuration', 'Manager default page must be enabled');
+        setSaving(false);
         return;
       }
       if (!userPageAccess[userDefaultPage]) {
         console.log('[TeamViewSettings] Validation failed: User default page not enabled');
         Alert.alert('Invalid Configuration', 'User default page must be enabled');
+        setSaving(false);
         return;
       }
 
@@ -152,37 +206,41 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
       if (!adminEnabled || !managerEnabled || !userEnabled) {
         console.log('[TeamViewSettings] Validation failed: Not all roles have pages enabled');
         Alert.alert('Invalid Configuration', 'Each role must have at least one page enabled');
+        setSaving(false);
         return;
       }
 
       console.log('[TeamViewSettings] Validation passed, starting save...');
 
-      // Save Admin settings
-      console.log('[TeamViewSettings] Saving admin settings...');
-      await AsyncStorage.setItem(STORAGE_KEYS.ADMIN_PAGE_ACCESS, JSON.stringify(adminPageAccess));
-      console.log('[TeamViewSettings] Admin page access saved');
-      await AsyncStorage.setItem(STORAGE_KEYS.ADMIN_DEFAULT_PAGE, adminDefaultPage);
-      console.log('[TeamViewSettings] Admin default page saved');
+      // Prepare batch settings update
+      const settingsToSave = [
+        // Admin settings
+        { key: SETTINGS_KEYS.ADMIN_PAGE_ACCESS, value: adminPageAccess },
+        { key: SETTINGS_KEYS.ADMIN_DEFAULT_PAGE, value: adminDefaultPage },
+        { key: SETTINGS_KEYS.ADMIN_SHOW_WEEKENDS, value: adminShowWeekends },
+        { key: SETTINGS_KEYS.ADMIN_DEFAULT_PROJECTS_TABLE, value: adminDefaultProjectsTable },
+        // Manager settings
+        { key: SETTINGS_KEYS.MANAGER_PAGE_ACCESS, value: managerPageAccess },
+        { key: SETTINGS_KEYS.MANAGER_DEFAULT_PAGE, value: managerDefaultPage },
+        { key: SETTINGS_KEYS.MANAGER_SHOW_WEEKENDS, value: managerShowWeekends },
+        { key: SETTINGS_KEYS.MANAGER_DEFAULT_PROJECTS_TABLE, value: managerDefaultProjectsTable },
+        // User settings
+        { key: SETTINGS_KEYS.USER_PAGE_ACCESS, value: userPageAccess },
+        { key: SETTINGS_KEYS.USER_DEFAULT_PAGE, value: userDefaultPage },
+        { key: SETTINGS_KEYS.USER_SHOW_WEEKENDS, value: userShowWeekends },
+        { key: SETTINGS_KEYS.USER_DEFAULT_PROJECTS_TABLE, value: userDefaultProjectsTable },
+      ];
 
-      // Save Manager settings
-      console.log('[TeamViewSettings] Saving manager settings...');
-      await AsyncStorage.setItem(STORAGE_KEYS.MANAGER_PAGE_ACCESS, JSON.stringify(managerPageAccess));
-      console.log('[TeamViewSettings] Manager page access saved');
-      await AsyncStorage.setItem(STORAGE_KEYS.MANAGER_DEFAULT_PAGE, managerDefaultPage);
-      console.log('[TeamViewSettings] Manager default page saved');
+      console.log('[TeamViewSettings] Saving all settings to database...');
+      await settingsAPI.user.batchSet(settingsToSave);
 
-      // Save User settings
-      console.log('[TeamViewSettings] Saving user settings...');
-      await AsyncStorage.setItem(STORAGE_KEYS.USER_PAGE_ACCESS, JSON.stringify(userPageAccess));
-      console.log('[TeamViewSettings] User page access saved');
-      await AsyncStorage.setItem(STORAGE_KEYS.USER_DEFAULT_PAGE, userDefaultPage);
-      console.log('[TeamViewSettings] User default page saved');
-
-      console.log('[TeamViewSettings] All settings saved successfully');
+      console.log('[TeamViewSettings] All settings saved successfully to database');
+      setSaving(false);
       Alert.alert('Success', 'Team view settings saved successfully');
     } catch (error) {
       console.error('[TeamViewSettings] Error saving settings:', error);
       console.error('[TeamViewSettings] Error details:', JSON.stringify(error, null, 2));
+      setSaving(false);
       Alert.alert('Error', 'Failed to save team view settings');
     }
   };
@@ -240,7 +298,11 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
     defaultPage: string,
     menuVisible: boolean,
     setMenuVisible: (visible: boolean) => void,
-    setDefaultPage: (page: string) => void
+    setDefaultPage: (page: string) => void,
+    showWeekends: boolean,
+    setShowWeekends: (value: boolean) => void,
+    defaultProjectsTable: boolean,
+    setDefaultProjectsTable: (value: boolean) => void
   ) => {
     const availablePages = PAGES.filter((p) => pageAccess[p.key]);
     const isProfileLocked = role === 'admin'; // Profile is always enabled for admin
@@ -262,7 +324,6 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
                   ? `Profile is always available for ${roleLabel}s`
                   : `Enable/disable ${page.label} for ${roleLabel}s`
               }
-              left={(props) => <List.Icon {...props} icon="view-dashboard" />}
               right={() => (
                 <Switch
                   value={pageAccess[page.key]}
@@ -278,7 +339,6 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
         <List.Item
           title="Default Page"
           description={`Page to show when ${roleLabel}s log in`}
-          left={(props) => <List.Icon {...props} icon="home" />}
           right={() => (
             <Menu
               visible={menuVisible}
@@ -303,15 +363,40 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
             </Menu>
           )}
         />
+
+        {/* View Preferences */}
+        <Divider style={{ marginVertical: 10 }} />
+        <List.Item
+          title="Show Weekends in Week View"
+          description={`Default setting for ${roleLabel}s to display weekends in calendar week view`}
+          right={() => (
+            <Switch
+              value={showWeekends}
+              onValueChange={setShowWeekends}
+              color={currentColors.primary}
+            />
+          )}
+        />
+        <List.Item
+          title="Default to Table View"
+          description={`Default setting for ${roleLabel}s to open projects in table view`}
+          right={() => (
+            <Switch
+              value={defaultProjectsTable}
+              onValueChange={setDefaultProjectsTable}
+              color={currentColors.primary}
+            />
+          )}
+        />
       </>
     );
   };
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <Title style={styles.title}>Team View Settings</Title>
-        <Paragraph style={styles.description}>
+    <ScrollView style={[styles.container, { backgroundColor: currentColors.background.bg700 }]}>
+      <View style={[styles.header, { backgroundColor: currentColors.background.bg300 }]}>
+        <Title style={[styles.title, { color: currentColors.text }]}>Team View Settings</Title>
+        <Paragraph style={[styles.description, { color: currentColors.textSecondary }]}>
           Configure which pages are accessible for each user role and set the default landing page.
         </Paragraph>
       </View>
@@ -327,7 +412,11 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
           adminDefaultPage,
           adminMenuVisible,
           setAdminMenuVisible,
-          setAdminDefaultPage
+          setAdminDefaultPage,
+          adminShowWeekends,
+          setAdminShowWeekends,
+          adminDefaultProjectsTable,
+          setAdminDefaultProjectsTable
         )}
       </List.Section>
 
@@ -342,7 +431,11 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
           managerDefaultPage,
           managerMenuVisible,
           setManagerMenuVisible,
-          setManagerDefaultPage
+          setManagerDefaultPage,
+          managerShowWeekends,
+          setManagerShowWeekends,
+          managerDefaultProjectsTable,
+          setManagerDefaultProjectsTable
         )}
       </List.Section>
 
@@ -357,16 +450,27 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
           userDefaultPage,
           userMenuVisible,
           setUserMenuVisible,
-          setUserDefaultPage
+          setUserDefaultPage,
+          userShowWeekends,
+          setUserShowWeekends,
+          userDefaultProjectsTable,
+          setUserDefaultProjectsTable
         )}
       </List.Section>
 
       <Divider style={styles.divider} />
 
       {/* Save Button */}
-      <View style={styles.saveContainer}>
-        <Button mode="contained" onPress={handleSaveSettings} style={styles.saveButton}>
-          Save Settings
+      <View style={[styles.saveContainer, { backgroundColor: currentColors.background.bg300 }]}>
+        <Button
+          mode="contained"
+          onPress={handleSaveSettings}
+          loading={saving}
+          disabled={saving}
+          style={styles.saveButton}
+          buttonColor={currentColors.secondary}
+        >
+          {saving ? 'Saving...' : 'Save Settings'}
         </Button>
       </View>
     </ScrollView>
@@ -376,18 +480,15 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   header: {
     padding: 20,
-    backgroundColor: 'white',
   },
   title: {
     fontSize: 24,
     marginBottom: 10,
   },
   description: {
-    color: '#666',
     fontSize: 14,
   },
   divider: {
@@ -395,7 +496,6 @@ const styles = StyleSheet.create({
   },
   saveContainer: {
     padding: 20,
-    backgroundColor: 'white',
   },
   saveButton: {
     paddingVertical: 5,

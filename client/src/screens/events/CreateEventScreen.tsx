@@ -5,8 +5,10 @@ import { HugeiconsIcon } from '@hugeicons/react-native';
 import { UserAdd02Icon, Delete02Icon } from '@hugeicons/core-free-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { eventsAPI, projectsAPI, clientsAPI, usersAPI } from '../../services/api';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const CreateEventScreen = ({ navigation, route }: any) => {
+  const { currentColors } = useTheme();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [eventType, setEventType] = useState('MEETING');
@@ -19,6 +21,16 @@ const CreateEventScreen = ({ navigation, route }: any) => {
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [selectedAttendees, setSelectedAttendees] = useState<string[]>([]);
   const [showUserPicker, setShowUserPicker] = useState(false);
+
+  // Dynamic styles that depend on theme
+  const dynamicStyles = {
+    emptyText: {
+      color: currentColors.textTertiary,
+    },
+    userPicker: {
+      borderTopColor: currentColors.border,
+    },
+  };
 
   // Load users
   useEffect(() => {
@@ -154,7 +166,7 @@ const CreateEventScreen = ({ navigation, route }: any) => {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={[styles.container, { backgroundColor: currentColors.background.bg700 }]}>
       <View style={styles.content}>
         <Title>Create New Event</Title>
 
@@ -202,14 +214,14 @@ const CreateEventScreen = ({ navigation, route }: any) => {
             <View style={styles.sectionHeader}>
               <Title style={styles.sectionTitle}>Attendees</Title>
               <IconButton
-                icon={() => <HugeiconsIcon icon={UserAdd02Icon} size={24} color="#6200ee" />}
+                icon={() => <HugeiconsIcon icon={UserAdd02Icon} size={24} color={currentColors.primary} />}
                 size={24}
                 onPress={() => setShowUserPicker(!showUserPicker)}
               />
             </View>
 
             {selectedAttendeeObjects.length === 0 ? (
-              <Paragraph style={styles.emptyText}>
+              <Paragraph style={[styles.emptyText, dynamicStyles.emptyText]}>
                 No attendees selected. Tap the + button to add attendees.
               </Paragraph>
             ) : (
@@ -220,7 +232,7 @@ const CreateEventScreen = ({ navigation, route }: any) => {
                     mode="outlined"
                     style={styles.attendeeChip}
                     onClose={() => handleRemoveAttendee(attendee.id)}
-                    closeIcon={() => <HugeiconsIcon icon={Delete02Icon} size={16} color="#666" />}
+                    closeIcon={() => <HugeiconsIcon icon={Delete02Icon} size={16} color={currentColors.icon} />}
                   >
                     {attendee.firstName} {attendee.lastName}
                   </Chip>
@@ -229,7 +241,7 @@ const CreateEventScreen = ({ navigation, route }: any) => {
             )}
 
             {showUserPicker && availableUsers.length > 0 && (
-              <View style={styles.userPicker}>
+              <View style={[styles.userPicker, dynamicStyles.userPicker]}>
                 <Title style={styles.pickerTitle}>Add Attendee</Title>
                 {availableUsers.map((user) => (
                   <List.Item
@@ -244,7 +256,7 @@ const CreateEventScreen = ({ navigation, route }: any) => {
             )}
 
             {showUserPicker && availableUsers.length === 0 && (
-              <Paragraph style={styles.emptyText}>
+              <Paragraph style={[styles.emptyText, dynamicStyles.emptyText]}>
                 All users have been added as attendees.
               </Paragraph>
             )}
@@ -294,7 +306,6 @@ const CreateEventScreen = ({ navigation, route }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   content: {
     padding: 20,
@@ -336,14 +347,12 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     textAlign: 'center',
-    color: '#999',
     fontStyle: 'italic',
     paddingVertical: 20,
   },
   userPicker: {
     marginTop: 15,
     borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
     paddingTop: 15,
   },
   pickerTitle: {

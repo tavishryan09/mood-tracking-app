@@ -5,6 +5,8 @@ import { validationResult } from 'express-validator';
 
 export const getAllProjects = async (req: AuthRequest, res: Response) => {
   try {
+    // Optimized: Use aggregation instead of loading all timeEntries and planningTasks
+    // This prevents N+1 queries and reduces data transfer
     const projects = await prisma.project.findMany({
       include: {
         client: true,
@@ -17,27 +19,29 @@ export const getAllProjects = async (req: AuthRequest, res: Response) => {
           },
         },
         members: {
-          include: {
+          select: {
+            userId: true,
+            customHourlyRate: true,
             user: {
               select: {
                 id: true,
                 firstName: true,
                 lastName: true,
                 email: true,
+                defaultHourlyRate: true,
               },
             },
           },
         },
-        timeEntries: {
-          select: {
-            durationMinutes: true,
-          },
-        },
+        // Include planning tasks for hours calculation in ProjectTableView
         planningTasks: {
           select: {
             span: true,
+            date: true,
+            userId: true,
           },
         },
+        // Only get counts for other records
         _count: {
           select: {
             timeEntries: true,
@@ -48,7 +52,22 @@ export const getAllProjects = async (req: AuthRequest, res: Response) => {
       orderBy: { createdAt: 'desc' },
     });
 
-    res.json(projects);
+    // Compute aggregated time in a single query per project
+    const projectsWithAggregates = await Promise.all(
+      projects.map(async (project) => {
+        const timeAggregate = await prisma.timeEntry.aggregate({
+          where: { projectId: project.id },
+          _sum: { durationMinutes: true },
+        });
+
+        return {
+          ...project,
+          totalTimeMinutes: timeAggregate._sum.durationMinutes || 0,
+        };
+      })
+    );
+
+    res.json(projectsWithAggregates);
   } catch (error) {
     console.error('Get projects error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -59,52 +78,69 @@ export const getProjectById = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
-    const project = await prisma.project.findUnique({
-      where: { id },
-      include: {
-        client: true,
-        creator: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
+    // Optimized: Load project and aggregates in parallel
+    const [project, timeAggregate] = await Promise.all([
+      prisma.project.findUnique({
+        where: { id },
+        include: {
+          client: true,
+          creator: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
           },
-        },
-        members: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
-                email: true,
-                avatarUrl: true,
+          members: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                  email: true,
+                  avatarUrl: true,
+                },
               },
             },
           },
-        },
-        timeEntries: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                firstName: true,
-                lastName: true,
+          timeEntries: {
+            include: {
+              user: {
+                select: {
+                  id: true,
+                  firstName: true,
+                  lastName: true,
+                },
               },
             },
+            orderBy: { startTime: 'desc' },
+            take: 10,
           },
-          orderBy: { startTime: 'desc' },
-          take: 10,
+          _count: {
+            select: {
+              timeEntries: true,
+              events: true,
+              planningTasks: true,
+            },
+          },
         },
-      },
-    });
+      }),
+      prisma.timeEntry.aggregate({
+        where: { projectId: id },
+        _sum: { durationMinutes: true },
+      }),
+    ]);
 
     if (!project) {
       return res.status(404).json({ error: 'Project not found' });
     }
 
-    res.json(project);
+    res.json({
+      ...project,
+      totalTimeMinutes: timeAggregate._sum.durationMinutes || 0,
+    });
   } catch (error) {
     console.error('Get project error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -129,6 +165,7 @@ export const createProject = async (req: AuthRequest, res: Response) => {
       dueDate,
       budgetHours,
       budgetAmount,
+      projectValue,
       useStandardRate,
       standardHourlyRate,
       color,
@@ -148,6 +185,7 @@ export const createProject = async (req: AuthRequest, res: Response) => {
         dueDate: dueDate ? new Date(dueDate) : null,
         budgetHours,
         budgetAmount,
+        projectValue,
         useStandardRate: useStandardRate !== undefined ? useStandardRate : true,
         standardHourlyRate,
         color,
@@ -202,6 +240,61 @@ export const createProject = async (req: AuthRequest, res: Response) => {
           color: color || '#FF3B30',
         },
       });
+
+      // Create deadline task for planning view
+      // Parse the date and create a UTC midnight date to avoid timezone issues
+      const dueDateParsed = new Date(dueDate);
+      const dueDateNormalized = new Date(Date.UTC(
+        dueDateParsed.getFullYear(),
+        dueDateParsed.getMonth(),
+        dueDateParsed.getDate(),
+        0, 0, 0, 0
+      ));
+
+      // Find available slot on the due date
+      const existingTasksOnDate = await prisma.deadlineTask.findMany({
+        where: {
+          date: dueDateNormalized,
+        },
+      });
+
+      const usedSlots = new Set(existingTasksOnDate.map(t => t.slotIndex));
+      let availableSlot = 0;
+      if (usedSlots.has(0)) {
+        availableSlot = 1;
+        if (!usedSlots.has(1)) {
+          // Slot 1 is available
+          await prisma.deadlineTask.create({
+            data: {
+              date: dueDateNormalized,
+              slotIndex: availableSlot,
+              clientId,
+              description: name,
+              deadlineType: 'DEADLINE',
+              projectId: project.id,
+              isAutoGenerated: true,
+              createdBy: userId,
+            },
+          });
+        } else {
+          // Both slots taken - log warning but continue
+          console.warn(`Both deadline slots occupied on ${dueDateNormalized.toISOString().split('T')[0]} for project ${name}`);
+        }
+      } else {
+        // Slot 0 is available
+        await prisma.deadlineTask.create({
+          data: {
+            date: dueDateNormalized,
+            slotIndex: availableSlot,
+            clientId,
+            description: name,
+            deadlineType: 'DEADLINE',
+            projectId: project.id,
+            isAutoGenerated: true,
+            createdBy: userId,
+          },
+        });
+      }
     }
 
     res.status(201).json(project);
@@ -230,6 +323,7 @@ export const updateProject = async (req: AuthRequest, res: Response) => {
       dueDate,
       budgetHours,
       budgetAmount,
+      projectValue,
       useStandardRate,
       standardHourlyRate,
       color,
@@ -254,6 +348,7 @@ export const updateProject = async (req: AuthRequest, res: Response) => {
         dueDate: dueDate ? new Date(dueDate) : null,
         budgetHours,
         budgetAmount,
+        projectValue,
         useStandardRate: useStandardRate !== undefined ? useStandardRate : undefined,
         standardHourlyRate,
         color,
@@ -337,6 +432,114 @@ export const updateProject = async (req: AuthRequest, res: Response) => {
           });
         }
       }
+
+      // Handle deadline task when dueDate changes
+      // Find existing auto-generated deadline task for this project
+      const existingDeadlineTask = await prisma.deadlineTask.findFirst({
+        where: {
+          projectId: id,
+          isAutoGenerated: true,
+        },
+      });
+
+      // If dueDate was removed, delete the deadline task
+      if (existingDueDate && !newDueDate && existingDeadlineTask) {
+        await prisma.deadlineTask.delete({
+          where: { id: existingDeadlineTask.id },
+        });
+      }
+      // If dueDate was added or changed, update or create deadline task
+      else if (newDueDate && existingDueDate !== newDueDate) {
+        // Normalize the due date to start of day (midnight UTC) to avoid timezone issues
+        const dueDateParsed = new Date(dueDate);
+        const dueDateNormalized = new Date(Date.UTC(
+          dueDateParsed.getFullYear(),
+          dueDateParsed.getMonth(),
+          dueDateParsed.getDate(),
+          0, 0, 0, 0
+        ));
+
+        if (existingDeadlineTask) {
+          // Check if the date changed - if so, we need to find a new slot
+          const existingDateNormalized = new Date(existingDeadlineTask.date);
+          existingDateNormalized.setHours(0, 0, 0, 0);
+
+          if (existingDateNormalized.getTime() !== dueDateNormalized.getTime()) {
+            // Date changed - need to find available slot on new date
+            const existingTaskOnNewDate = await prisma.deadlineTask.findMany({
+              where: {
+                date: dueDateNormalized,
+              },
+            });
+
+            // Find available slot (0 or 1)
+            const usedSlots = new Set(existingTaskOnNewDate.map(t => t.slotIndex));
+            let availableSlot = 0;
+            if (usedSlots.has(0)) {
+              availableSlot = 1;
+              if (usedSlots.has(1)) {
+                // Both slots taken - delete the old task and skip creating new one
+                await prisma.deadlineTask.delete({
+                  where: { id: existingDeadlineTask.id },
+                });
+                console.warn(`Both deadline slots occupied on ${dueDateNormalized.toISOString().split('T')[0]} for project ${name}`);
+                return res.json(project);
+              }
+            }
+
+            // Update with new date and slot
+            await prisma.deadlineTask.update({
+              where: { id: existingDeadlineTask.id },
+              data: {
+                date: dueDateNormalized,
+                slotIndex: availableSlot,
+                clientId,
+                description: name,
+              },
+            });
+          } else {
+            // Same date - just update description and client
+            await prisma.deadlineTask.update({
+              where: { id: existingDeadlineTask.id },
+              data: {
+                clientId,
+                description: name,
+              },
+            });
+          }
+        } else {
+          // Create new deadline task - find available slot
+          const existingTasksOnDate = await prisma.deadlineTask.findMany({
+            where: {
+              date: dueDateNormalized,
+            },
+          });
+
+          const usedSlots = new Set(existingTasksOnDate.map(t => t.slotIndex));
+          let availableSlot = 0;
+          if (usedSlots.has(0)) {
+            availableSlot = 1;
+            if (usedSlots.has(1)) {
+              // Both slots taken - skip creating deadline task
+              console.warn(`Both deadline slots occupied on ${dueDateNormalized.toISOString().split('T')[0]} for project ${name}`);
+              return res.json(project);
+            }
+          }
+
+          await prisma.deadlineTask.create({
+            data: {
+              date: dueDateNormalized,
+              slotIndex: availableSlot,
+              clientId,
+              description: name,
+              deadlineType: 'DEADLINE',
+              projectId: id,
+              isAutoGenerated: true,
+              createdBy: userId,
+            },
+          });
+        }
+      }
     }
 
     res.json(project);
@@ -391,6 +594,41 @@ export const addProjectMember = async (req: AuthRequest, res: Response) => {
     res.status(201).json(member);
   } catch (error) {
     console.error('Add project member error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const updateProjectMember = async (req: AuthRequest, res: Response) => {
+  try {
+    const { id, memberId } = req.params;
+    const { role, customHourlyRate } = req.body;
+
+    const member = await prisma.projectMember.update({
+      where: {
+        projectId_userId: {
+          projectId: id,
+          userId: memberId,
+        },
+      },
+      data: {
+        role,
+        customHourlyRate,
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+      },
+    });
+
+    res.json(member);
+  } catch (error) {
+    console.error('Update project member error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };

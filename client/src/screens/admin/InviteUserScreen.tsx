@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, Alert } from 'react-native';
 import { TextInput, Button, Title, SegmentedButtons } from 'react-native-paper';
 import { userManagementAPI } from '../../services/api';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const InviteUserScreen = ({ navigation }: any) => {
+  const { currentColors } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [firstName, setFirstName] = useState('');
@@ -52,9 +54,9 @@ const InviteUserScreen = ({ navigation }: any) => {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={[styles.container, { backgroundColor: currentColors.background.bg700 }]}>
       <View style={styles.content}>
-        <Title style={styles.title}>Invite New User</Title>
+        <Title style={[styles.title, { color: currentColors.text }]}>Invite New User</Title>
 
         <TextInput
           label="Email *"
@@ -96,7 +98,7 @@ const InviteUserScreen = ({ navigation }: any) => {
           placeholder="User can change this later"
         />
 
-        <Title style={styles.label}>User Role *</Title>
+        <Title style={[styles.label, { color: currentColors.text }]}>User Role *</Title>
         <SegmentedButtons
           value={role}
           onValueChange={(value) => setRole(value as 'USER' | 'MANAGER' | 'ADMIN')}
@@ -152,7 +154,6 @@ const InviteUserScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   content: {
     padding: 20,

@@ -9,6 +9,7 @@ import {
 } from 'react-native';
 import { TextInput, Button, Title, Text } from 'react-native-paper';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext';
 
 const RegisterScreen = ({ navigation }: any) => {
   const [firstName, setFirstName] = useState('');
@@ -19,6 +20,20 @@ const RegisterScreen = ({ navigation }: any) => {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { register } = useAuth();
+  const { currentColors } = useTheme();
+
+  // Dynamic styles based on current theme
+  const dynamicStyles = {
+    container: {
+      backgroundColor: currentColors.background.bg500,
+    },
+    title: {
+      color: currentColors.primary,
+    },
+    subtitle: {
+      color: currentColors.textSecondary,
+    },
+  };
 
   const handleRegister = async () => {
     if (!firstName || !lastName || !email || !password || !confirmPassword) {
@@ -49,15 +64,15 @@ const RegisterScreen = ({ navigation }: any) => {
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      style={styles.container}
+      style={[styles.container, dynamicStyles.container]}
     >
       <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.content}>
-          <Title style={styles.title}>Create Account</Title>
-          <Text style={styles.subtitle}>Sign up to get started</Text>
+          <Title style={[styles.title, dynamicStyles.title]}>Create Account</Title>
+          <Text style={[styles.subtitle, dynamicStyles.subtitle]}>Sign up to get started</Text>
 
           <TextInput
             label="First Name"
@@ -140,7 +155,6 @@ const RegisterScreen = ({ navigation }: any) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
   },
   scrollContent: {
     flexGrow: 1,
@@ -154,13 +168,11 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 10,
-    color: '#6200ee',
   },
   subtitle: {
     fontSize: 16,
     textAlign: 'center',
     marginBottom: 30,
-    color: '#666',
   },
   input: {
     marginBottom: 15,
