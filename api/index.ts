@@ -1,7 +1,6 @@
 import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import compression from 'compression';
-import dotenv from 'dotenv';
 import authRoutes from '../server/src/routes/authRoutes';
 import clientRoutes from '../server/src/routes/clientRoutes';
 import projectRoutes from '../server/src/routes/projectRoutes';
@@ -14,8 +13,8 @@ import planningTaskRoutes from '../server/src/routes/planningTaskRoutes';
 import settingsRoutes from '../server/src/routes/settingsRoutes';
 import deadlineTaskRoutes from '../server/src/routes/deadlineTaskRoutes';
 
-// Load environment variables
-dotenv.config();
+// Note: In Vercel serverless functions, environment variables are already available
+// No need to call dotenv.config() here - it can cause crashes
 
 const app: Application = express();
 
