@@ -2,6 +2,11 @@
   "buildCommand": "npm install --prefix client && npm run --prefix client export:web",
   "outputDirectory": "client/dist",
   "framework": null,
+  "functions": {
+    "api/index.ts": {
+      "includeFiles": "server/**"
+    }
+  },
   "rewrites": [
     {
       "source": "/api/:path*",
