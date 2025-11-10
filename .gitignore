@@ -61,3 +61,4 @@ prisma/migrations/
 # Misc
 .turbo
 .vercel
+.env.production

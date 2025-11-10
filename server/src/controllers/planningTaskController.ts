@@ -2,7 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import prisma from '../config/database';
 import { validationResult } from 'express-validator';
-import { outlookCalendarService } from '../services/outlookCalendarService';
+// import { outlookCalendarService } from '../services/outlookCalendarService'; // Temporarily disabled
 
 export const getAllPlanningTasks = async (req: AuthRequest, res: Response) => {
   try {
@@ -144,8 +144,8 @@ export const createPlanningTask = async (req: AuthRequest, res: Response) => {
     });
 
     // Sync to the assigned user's Outlook calendar (non-blocking)
-    outlookCalendarService.syncPlanningTask(planningTask.id, userId).catch((error) => {
-      console.error('[Outlook] Failed to sync planning task:', error);
+    // outlookCalendarService.syncPlanningTask(planningTask.id, userId).catch((error) => {
+      //       console.error('[Outlook] Failed to sync planning task:', error);
     });
 
     res.status(201).json(planningTask);
@@ -220,18 +220,18 @@ export const updatePlanningTask = async (req: AuthRequest, res: Response) => {
           console.log(`[Outlook] Planning task moved from user ${oldUserId} to ${userId}`);
 
           // Delete from old user's calendar (non-blocking)
-          outlookCalendarService.deletePlanningTask(id, oldUserId).catch((error) => {
-            console.error('[Outlook] Failed to delete planning task from old user:', error);
+          // outlookCalendarService.deletePlanningTask(id, oldUserId).catch((error) => {
+            //             console.error('[Outlook] Failed to delete planning task from old user:', error);
           });
 
           // Sync to new user's calendar (non-blocking)
-          outlookCalendarService.syncPlanningTask(planningTask.id, planningTask.userId).catch((error) => {
-            console.error('[Outlook] Failed to sync planning task to new user:', error);
+          // outlookCalendarService.syncPlanningTask(planningTask.id, planningTask.userId).catch((error) => {
+            //             console.error('[Outlook] Failed to sync planning task to new user:', error);
           });
         } else {
           // Same user, just sync
-          outlookCalendarService.syncPlanningTask(planningTask.id, planningTask.userId).catch((error) => {
-            console.error('[Outlook] Failed to sync planning task:', error);
+          // outlookCalendarService.syncPlanningTask(planningTask.id, planningTask.userId).catch((error) => {
+            //             console.error('[Outlook] Failed to sync planning task:', error);
           });
         }
 
@@ -295,18 +295,18 @@ export const updatePlanningTask = async (req: AuthRequest, res: Response) => {
       console.log(`[Outlook] Planning task moved from user ${oldUserId} to ${userId}`);
 
       // Delete from old user's calendar (non-blocking)
-      outlookCalendarService.deletePlanningTask(id, oldUserId).catch((error) => {
-        console.error('[Outlook] Failed to delete planning task from old user:', error);
+      // outlookCalendarService.deletePlanningTask(id, oldUserId).catch((error) => {
+        //         console.error('[Outlook] Failed to delete planning task from old user:', error);
       });
 
       // Sync to new user's calendar (non-blocking)
-      outlookCalendarService.syncPlanningTask(planningTask.id, planningTask.userId).catch((error) => {
-        console.error('[Outlook] Failed to sync planning task to new user:', error);
+      // outlookCalendarService.syncPlanningTask(planningTask.id, planningTask.userId).catch((error) => {
+        //         console.error('[Outlook] Failed to sync planning task to new user:', error);
       });
     } else {
       // Same user, just sync
-      outlookCalendarService.syncPlanningTask(planningTask.id, planningTask.userId).catch((error) => {
-        console.error('[Outlook] Failed to sync planning task:', error);
+      // outlookCalendarService.syncPlanningTask(planningTask.id, planningTask.userId).catch((error) => {
+        //         console.error('[Outlook] Failed to sync planning task:', error);
       });
     }
 
@@ -329,8 +329,8 @@ export const deletePlanningTask = async (req: AuthRequest, res: Response) => {
 
     // Delete from the assigned user's Outlook calendar BEFORE deleting from database
     if (task?.userId && task?.outlookEventId) {
-      outlookCalendarService.deletePlanningTaskByEventId(task.outlookEventId, task.userId).catch((error) => {
-        console.error('[Outlook] Failed to delete planning task:', error);
+      // outlookCalendarService.deletePlanningTaskByEventId(task.outlookEventId, task.userId).catch((error) => {
+        //         console.error('[Outlook] Failed to delete planning task:', error);
       });
     }
 
