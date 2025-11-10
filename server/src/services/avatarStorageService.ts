@@ -5,18 +5,32 @@ import { v4 as uuidv4 } from 'uuid';
 
 class AvatarStorageService {
   private uploadsDir: string;
+  private isVercel: boolean;
+  private dirEnsured: boolean = false;
 
   constructor() {
-    // Store avatars in public/uploads directory
-    this.uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'avatars');
-    this.ensureUploadDirExists();
+    // Detect if running in Vercel serverless environment
+    this.isVercel = !!process.env.VERCEL;
+
+    // Use /tmp in Vercel (only writable directory), otherwise use public/uploads
+    if (this.isVercel) {
+      this.uploadsDir = path.join('/tmp', 'avatars');
+    } else {
+      this.uploadsDir = path.join(process.cwd(), 'public', 'uploads', 'avatars');
+    }
+
+    // Don't create directory in constructor - do it lazily when needed
   }
 
   private async ensureUploadDirExists() {
+    if (this.dirEnsured) return;
+
     try {
       await fs.mkdir(this.uploadsDir, { recursive: true });
+      this.dirEnsured = true;
     } catch (error) {
       console.error('[AvatarStorage] Error creating upload directory:', error);
+      // In Vercel, this might fail but we'll handle it
     }
   }
 
@@ -28,6 +42,9 @@ class AvatarStorageService {
    */
   async uploadAvatar(buffer: Buffer, mimetype: string): Promise<string> {
     try {
+      // Ensure upload directory exists (lazy initialization)
+      await this.ensureUploadDirExists();
+
       // Generate unique filename
       const filename = `${uuidv4()}.jpg`;
       const filepath = path.join(this.uploadsDir, filename);
