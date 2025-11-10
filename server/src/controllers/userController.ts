@@ -238,7 +238,7 @@ export const uploadAvatar = async (req: AuthRequest, res: Response) => {
 
     // Delete old avatar if exists
     const currentUser = await prisma.user.findUnique({
-      where: { id: req.userId },
+      where: { id: req.user!.userId },
       select: { avatarUrl: true }
     });
 
@@ -248,7 +248,7 @@ export const uploadAvatar = async (req: AuthRequest, res: Response) => {
 
     // Update user's avatar URL (now just a path, not base64!)
     const updatedUser = await prisma.user.update({
-      where: { id: req.userId },
+      where: { id: req.user!.userId },
       data: { avatarUrl },
       select: {
         id: true,
@@ -260,7 +260,7 @@ export const uploadAvatar = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    console.log(`[Avatar] Uploaded avatar for user ${req.userId}: ${avatarUrl}`);
+    console.log(`[Avatar] Uploaded avatar for user ${req.user!.userId}: ${avatarUrl}`);
     res.json({
       message: 'Avatar uploaded successfully',
       user: updatedUser,

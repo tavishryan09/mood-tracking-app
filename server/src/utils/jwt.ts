@@ -22,14 +22,13 @@ export interface JWTPayload {
 }
 
 export const generateToken = (payload: JWTPayload): string => {
-  const expiresIn = process.env.JWT_EXPIRES_IN || '7d';
-  const options: SignOptions = {
-    expiresIn,
-    algorithm: 'HS256', // Explicitly set secure algorithm
-    issuer: 'mood-tracker-api', // Add issuer claim
-    audience: 'mood-tracker-client', // Add audience claim
-  };
-  return jwt.sign(payload, JWT_SECRET, options);
+  // Use type assertion to work around jsonwebtoken's strict typing
+  return jwt.sign(payload, JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+    algorithm: 'HS256',
+    issuer: 'mood-tracker-api',
+    audience: 'mood-tracker-client',
+  } as SignOptions);
 };
 
 export const verifyToken = (token: string): JWTPayload => {
