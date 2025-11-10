@@ -29,11 +29,12 @@ export const getAllProjects = async (req: AuthRequest, res: Response) => {
                 lastName: true,
                 email: true,
                 defaultHourlyRate: true,
+                // Don't include avatarUrl here - it's base64 and huge
               },
             },
           },
         },
-        // Include planning tasks for hours calculation in ProjectTableView
+        // Include planning tasks for project hours calculations
         planningTasks: {
           select: {
             span: true,
@@ -52,22 +53,7 @@ export const getAllProjects = async (req: AuthRequest, res: Response) => {
       orderBy: { createdAt: 'desc' },
     });
 
-    // Compute aggregated time in a single query per project
-    const projectsWithAggregates = await Promise.all(
-      projects.map(async (project) => {
-        const timeAggregate = await prisma.timeEntry.aggregate({
-          where: { projectId: project.id },
-          _sum: { durationMinutes: true },
-        });
-
-        return {
-          ...project,
-          totalTimeMinutes: timeAggregate._sum.durationMinutes || 0,
-        };
-      })
-    );
-
-    res.json(projectsWithAggregates);
+    res.json(projects);
   } catch (error) {
     console.error('Get projects error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -78,69 +64,45 @@ export const getProjectById = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
-    // Optimized: Load project and aggregates in parallel
-    const [project, timeAggregate] = await Promise.all([
-      prisma.project.findUnique({
-        where: { id },
-        include: {
-          client: true,
-          creator: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-            },
+    const project = await prisma.project.findUnique({
+      where: { id },
+      include: {
+        client: true,
+        creator: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
           },
-          members: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  firstName: true,
-                  lastName: true,
-                  email: true,
-                  avatarUrl: true,
-                },
+        },
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                firstName: true,
+                lastName: true,
+                email: true,
+                avatarUrl: true,
               },
-            },
-          },
-          timeEntries: {
-            include: {
-              user: {
-                select: {
-                  id: true,
-                  firstName: true,
-                  lastName: true,
-                },
-              },
-            },
-            orderBy: { startTime: 'desc' },
-            take: 10,
-          },
-          _count: {
-            select: {
-              timeEntries: true,
-              events: true,
-              planningTasks: true,
             },
           },
         },
-      }),
-      prisma.timeEntry.aggregate({
-        where: { projectId: id },
-        _sum: { durationMinutes: true },
-      }),
-    ]);
+        _count: {
+          select: {
+            events: true,
+            planningTasks: true,
+          },
+        },
+      },
+    });
 
     if (!project) {
       return res.status(404).json({ error: 'Project not found' });
     }
 
-    res.json({
-      ...project,
-      totalTimeMinutes: timeAggregate._sum.durationMinutes || 0,
-    });
+    res.json(project);
   } catch (error) {
     console.error('Get project error:', error);
     res.status(500).json({ error: 'Internal server error' });

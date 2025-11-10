@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView } from 'react-native';
 import { List, Switch, Title, Paragraph, Divider, Button, Menu } from 'react-native-paper';
 import { useTheme } from '../../contexts/ThemeContext';
 import { settingsAPI } from '../../services/api';
+import { CustomDialog } from '../../components/CustomDialog';
 
 // Settings keys (stored in database)
 const SETTINGS_KEYS = {
@@ -86,6 +87,14 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
   const [userDefaultProjectsTable, setUserDefaultProjectsTable] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // Dialog state variables
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showValidationDialog, setShowValidationDialog] = useState(false);
+  const [validationMessage, setValidationMessage] = useState('');
+
   useEffect(() => {
     loadSettings();
   }, []);
@@ -93,7 +102,7 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
   const loadSettings = async () => {
     try {
       console.log('[TeamViewSettings] Loading settings from database...');
-      const response = await settingsAPI.user.getAll();
+      const response = await settingsAPI.app.getAll();
       const settings = response.data;
 
       console.log('[TeamViewSettings] Loaded settings:', settings);
@@ -151,7 +160,8 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
       console.error('[TeamViewSettings] Error loading settings:', error);
       // Don't show alert for 404 errors (settings don't exist yet)
       if ((error as any)?.response?.status !== 404) {
-        Alert.alert('Error', 'Failed to load team view settings');
+        setErrorMessage('Failed to load team view settings');
+        setShowErrorDialog(true);
       }
     }
   };
@@ -175,19 +185,22 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
 
       if (!adminPageAccess[adminDefaultPage]) {
         console.log('[TeamViewSettings] Validation failed: Admin default page not enabled');
-        Alert.alert('Invalid Configuration', 'Admin default page must be enabled');
+        setValidationMessage('Admin default page must be enabled');
+        setShowValidationDialog(true);
         setSaving(false);
         return;
       }
       if (!managerPageAccess[managerDefaultPage]) {
         console.log('[TeamViewSettings] Validation failed: Manager default page not enabled');
-        Alert.alert('Invalid Configuration', 'Manager default page must be enabled');
+        setValidationMessage('Manager default page must be enabled');
+        setShowValidationDialog(true);
         setSaving(false);
         return;
       }
       if (!userPageAccess[userDefaultPage]) {
         console.log('[TeamViewSettings] Validation failed: User default page not enabled');
-        Alert.alert('Invalid Configuration', 'User default page must be enabled');
+        setValidationMessage('User default page must be enabled');
+        setShowValidationDialog(true);
         setSaving(false);
         return;
       }
@@ -205,7 +218,8 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
 
       if (!adminEnabled || !managerEnabled || !userEnabled) {
         console.log('[TeamViewSettings] Validation failed: Not all roles have pages enabled');
-        Alert.alert('Invalid Configuration', 'Each role must have at least one page enabled');
+        setValidationMessage('Each role must have at least one page enabled');
+        setShowValidationDialog(true);
         setSaving(false);
         return;
       }
@@ -232,16 +246,18 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
       ];
 
       console.log('[TeamViewSettings] Saving all settings to database...');
-      await settingsAPI.user.batchSet(settingsToSave);
+      await settingsAPI.app.batchSet(settingsToSave);
 
       console.log('[TeamViewSettings] All settings saved successfully to database');
       setSaving(false);
-      Alert.alert('Success', 'Team view settings saved successfully');
+      setSuccessMessage('Team view settings saved successfully');
+      setShowSuccessDialog(true);
     } catch (error) {
       console.error('[TeamViewSettings] Error saving settings:', error);
       console.error('[TeamViewSettings] Error details:', JSON.stringify(error, null, 2));
       setSaving(false);
-      Alert.alert('Error', 'Failed to save team view settings');
+      setErrorMessage('Failed to save team view settings');
+      setShowErrorDialog(true);
     }
   };
 
@@ -473,6 +489,51 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
           {saving ? 'Saving...' : 'Save Settings'}
         </Button>
       </View>
+
+      {/* Error Dialog */}
+      <CustomDialog
+        visible={showErrorDialog}
+        title="Error"
+        message={errorMessage}
+        buttons={[
+          {
+            text: 'OK',
+            onPress: () => setShowErrorDialog(false),
+            style: 'default',
+          },
+        ]}
+        onDismiss={() => setShowErrorDialog(false)}
+      />
+
+      {/* Success Dialog */}
+      <CustomDialog
+        visible={showSuccessDialog}
+        title="Success"
+        message={successMessage}
+        buttons={[
+          {
+            text: 'OK',
+            onPress: () => setShowSuccessDialog(false),
+            style: 'default',
+          },
+        ]}
+        onDismiss={() => setShowSuccessDialog(false)}
+      />
+
+      {/* Validation Error Dialog */}
+      <CustomDialog
+        visible={showValidationDialog}
+        title="Invalid Configuration"
+        message={validationMessage}
+        buttons={[
+          {
+            text: 'OK',
+            onPress: () => setShowValidationDialog(false),
+            style: 'default',
+          },
+        ]}
+        onDismiss={() => setShowValidationDialog(false)}
+      />
     </ScrollView>
   );
 };

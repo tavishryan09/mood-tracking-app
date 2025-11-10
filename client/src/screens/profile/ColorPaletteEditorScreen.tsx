@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Alert, Text, TextInput, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, ScrollView, Text, TextInput, TouchableOpacity, Modal } from 'react-native';
 import { Button, Title, Menu, IconButton } from 'react-native-paper';
+import { ColorPicker } from 'react-native-color-picker';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { colorPalettes, ColorPaletteName, ColorPalette } from '../../theme/colorPalettes';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { CustomDialog } from '../../components/CustomDialog';
+import { settingsAPI } from '../../services/api';
 
-const CUSTOM_PALETTES_KEY = '@app_custom_palettes';
+const CUSTOM_PALETTES_KEY = 'custom_palettes';
 
 const ColorPaletteEditorScreen = ({ navigation, route }: any) => {
   const { currentColors, selectedPalette, setSelectedPalette, loadCustomPalettes: reloadThemeCustomPalettes } = useTheme();
@@ -20,6 +22,17 @@ const ColorPaletteEditorScreen = ({ navigation, route }: any) => {
   const [newPaletteName, setNewPaletteName] = useState<string>('');
   const [saving, setSaving] = useState<boolean>(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<boolean>(false);
+  const [showColorPicker, setShowColorPicker] = useState<boolean>(false);
+  const [activeColorField, setActiveColorField] = useState<string | null>(null);
+  const [tempColor, setTempColor] = useState<string>('#000000');
+  const [currentColorOnChange, setCurrentColorOnChange] = useState<((color: string) => void) | null>(null);
+
+  // Dialog state variables
+  const [showErrorDialog, setShowErrorDialog] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string>('');
+  const [showSuccessDialog, setShowSuccessDialog] = useState<boolean>(false);
+  const [successMessage, setSuccessMessage] = useState<string>('');
+  const [successCallback, setSuccessCallback] = useState<(() => void) | null>(null);
 
   const isAdmin = user?.role === 'ADMIN';
 
@@ -97,21 +110,29 @@ const ColorPaletteEditorScreen = ({ navigation, route }: any) => {
 
   const loadCustomPalettes = async () => {
     try {
-      const saved = await AsyncStorage.getItem(CUSTOM_PALETTES_KEY);
-      if (saved) {
-        setCustomPalettes(JSON.parse(saved));
+      if (!user) return;
+
+      const response = await settingsAPI.user.get(CUSTOM_PALETTES_KEY);
+      if (response?.data?.value) {
+        const palettes: Record<string, ColorPalette> = response.data.value;
+        setCustomPalettes(palettes);
       }
-    } catch (error) {
-      console.error('[ColorPaletteEditor] Error loading custom palettes:', error);
+    } catch (error: any) {
+      if (error?.response?.status !== 404) {
+        console.error('[ColorPaletteEditor] Error loading custom palettes:', error);
+      }
     }
   };
 
   const saveCustomPalettes = async (palettes: Record<string, ColorPalette>) => {
     try {
-      await AsyncStorage.setItem(CUSTOM_PALETTES_KEY, JSON.stringify(palettes));
+      if (!user) throw new Error('User not logged in');
+
+      await settingsAPI.user.set(CUSTOM_PALETTES_KEY, palettes);
       setCustomPalettes(palettes);
       // Reload custom palettes in ThemeContext
       await reloadThemeCustomPalettes();
+      console.log('[ColorPaletteEditor] Saved custom palettes to database:', Object.keys(palettes));
     } catch (error) {
       console.error('[ColorPaletteEditor] Error saving custom palettes:', error);
       throw error;
@@ -125,7 +146,8 @@ const ColorPaletteEditorScreen = ({ navigation, route }: any) => {
     try {
       if (editMode === 'create') {
         if (!newPaletteName.trim()) {
-          Alert.alert('Error', 'Please enter a palette name');
+          setErrorMessage('Please enter a palette name');
+          setShowErrorDialog(true);
           setSaving(false);
           return;
         }
@@ -135,15 +157,16 @@ const ColorPaletteEditorScreen = ({ navigation, route }: any) => {
         await saveCustomPalettes(updatedPalettes);
         setEditingPalette(customId);
         await setSelectedPalette(customId as ColorPaletteName);
-        Alert.alert('Success', 'Custom palette created successfully!', [
-          { text: 'OK', onPress: () => navigation.goBack() }
-        ]);
+        setSuccessMessage('Custom palette created successfully!');
+        setSuccessCallback(() => () => navigation.goBack());
+        setShowSuccessDialog(true);
       } else {
         const isPredefined = colorPalettes[editingPalette as ColorPaletteName];
 
         // Non-admins cannot edit predefined palettes
         if (isPredefined && !isAdmin) {
-          Alert.alert('Error', 'Cannot modify predefined palettes. Please duplicate the palette to create a custom version you can edit.');
+          setErrorMessage('Cannot modify predefined palettes. Please duplicate the palette to create a custom version you can edit.');
+          setShowErrorDialog(true);
           setSaving(false);
           return;
         }
@@ -152,21 +175,22 @@ const ColorPaletteEditorScreen = ({ navigation, route }: any) => {
         if (isPredefined && isAdmin) {
           const updatedPalettes = { ...customPalettes, [editingPalette]: editedColors };
           await saveCustomPalettes(updatedPalettes);
-          Alert.alert('Success', 'Predefined palette override saved successfully!', [
-            { text: 'OK', onPress: () => navigation.goBack() }
-          ]);
+          setSuccessMessage('Predefined palette override saved successfully!');
+          setSuccessCallback(() => () => navigation.goBack());
+          setShowSuccessDialog(true);
         } else {
           // Editing an existing custom palette
           const updatedPalettes = { ...customPalettes, [editingPalette]: editedColors };
           await saveCustomPalettes(updatedPalettes);
-          Alert.alert('Success', 'Palette updated successfully!', [
-            { text: 'OK', onPress: () => navigation.goBack() }
-          ]);
+          setSuccessMessage('Palette updated successfully!');
+          setSuccessCallback(() => () => navigation.goBack());
+          setShowSuccessDialog(true);
         }
       }
     } catch (error) {
       console.error('Error saving palette:', error);
-      Alert.alert('Error', 'Failed to save palette');
+      setErrorMessage('Failed to save palette');
+      setShowErrorDialog(true);
     } finally {
       setSaving(false);
     }
@@ -215,12 +239,37 @@ const ColorPaletteEditorScreen = ({ navigation, route }: any) => {
     setEditMode('create');
   };
 
+  const openColorPickerForField = (fieldName: string, currentValue: string, onChange: (color: string) => void) => {
+    setActiveColorField(fieldName);
+    setTempColor(currentValue);
+    setCurrentColorOnChange(() => onChange);
+    setShowColorPicker(true);
+  };
+
+  const handleColorPickerSave = () => {
+    if (activeColorField && currentColorOnChange) {
+      currentColorOnChange(tempColor);
+    }
+    setShowColorPicker(false);
+    setActiveColorField(null);
+    setCurrentColorOnChange(null);
+  };
+
+  const handleColorPickerCancel = () => {
+    setShowColorPicker(false);
+    setActiveColorField(null);
+    setCurrentColorOnChange(null);
+  };
+
   const renderColorInput = (label: string, value: string, onChange: (color: string) => void) => {
     return (
       <View style={styles.colorInputRow}>
         <Text style={[styles.colorLabel, { color: currentColors.textSecondary }]}>{label}:</Text>
         <View style={styles.colorInputContainer}>
-          <View style={[styles.colorPreview, { backgroundColor: value, borderColor: currentColors.border }]} />
+          <TouchableOpacity
+            style={[styles.colorPreview, { backgroundColor: value, borderColor: currentColors.border }]}
+            onPress={() => openColorPickerForField(label, value, onChange)}
+          />
           <TextInput
             style={[styles.colorInput, { color: currentColors.text, borderColor: currentColors.border }]}
             value={value}
@@ -229,6 +278,14 @@ const ColorPaletteEditorScreen = ({ navigation, route }: any) => {
             placeholderTextColor={currentColors.textTertiary}
             maxLength={7}
           />
+          <Button
+            mode="outlined"
+            onPress={() => openColorPickerForField(label, value, onChange)}
+            style={styles.colorPickerButton}
+            compact
+          >
+            Pick
+          </Button>
         </View>
       </View>
     );
@@ -513,6 +570,93 @@ const ColorPaletteEditorScreen = ({ navigation, route }: any) => {
 
         {(editMode === 'edit' || editMode === 'create') && renderEditForm()}
       </View>
+
+      <Modal
+        visible={showColorPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={handleColorPickerCancel}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: currentColors.background.bg700 }]}>
+            <Text style={[styles.modalTitle, { color: currentColors.text }]}>
+              Select Color for {activeColorField}
+            </Text>
+
+            <View style={styles.colorPickerContainer}>
+              <ColorPicker
+                color={tempColor}
+                onColorChange={(color) => setTempColor(color)}
+                style={styles.colorPicker}
+                hideSliders={false}
+              />
+            </View>
+
+            <View style={styles.selectedColorContainer}>
+              <Text style={[styles.selectedColorLabel, { color: currentColors.textSecondary }]}>
+                Selected Color:
+              </Text>
+              <View style={styles.selectedColorRow}>
+                <View style={[styles.selectedColorPreview, { backgroundColor: tempColor, borderColor: currentColors.border }]} />
+                <Text style={[styles.selectedColorText, { color: currentColors.text }]}>
+                  {tempColor.toUpperCase()}
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.modalButtons}>
+              <Button
+                mode="outlined"
+                onPress={handleColorPickerCancel}
+                style={styles.modalButton}
+              >
+                Cancel
+              </Button>
+              <Button
+                mode="contained"
+                onPress={handleColorPickerSave}
+                style={styles.modalButton}
+              >
+                Save
+              </Button>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <CustomDialog
+        visible={showErrorDialog}
+        title="Error"
+        message={errorMessage}
+        onDismiss={() => setShowErrorDialog(false)}
+        buttons={[
+          {
+            text: 'OK',
+            onPress: () => setShowErrorDialog(false),
+            style: 'default',
+          },
+        ]}
+      />
+
+      <CustomDialog
+        visible={showSuccessDialog}
+        title="Success"
+        message={successMessage}
+        onDismiss={() => {
+          setShowSuccessDialog(false);
+          if (successCallback) successCallback();
+        }}
+        buttons={[
+          {
+            text: 'OK',
+            onPress: () => {
+              setShowSuccessDialog(false);
+              if (successCallback) successCallback();
+            },
+            style: 'default',
+          },
+        ]}
+      />
     </ScrollView>
   );
 };
@@ -619,6 +763,9 @@ const styles = StyleSheet.create({
     padding: 8,
     fontSize: 14,
     flex: 1,
+  },
+  colorPickerButton: {
+    minWidth: 60,
   },
   saveButton: {
     paddingVertical: 5,

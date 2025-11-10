@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import prisma from '../config/database';
 import { validationResult } from 'express-validator';
+import { outlookCalendarService } from '../services/outlookCalendarService';
 
 export const getAllPlanningTasks = async (req: AuthRequest, res: Response) => {
   try {
@@ -142,6 +143,11 @@ export const createPlanningTask = async (req: AuthRequest, res: Response) => {
       },
     });
 
+    // Sync to the assigned user's Outlook calendar (non-blocking)
+    outlookCalendarService.syncPlanningTask(planningTask.id, userId).catch((error) => {
+      console.error('[Outlook] Failed to sync planning task:', error);
+    });
+
     res.status(201).json(planningTask);
   } catch (error) {
     console.error('Create planning task error:', error);
@@ -157,19 +163,21 @@ export const updatePlanningTask = async (req: AuthRequest, res: Response) => {
     }
 
     const { id } = req.params;
-    const { projectId, task, span, blockIndex } = req.body;
+    const { projectId, task, span, blockIndex, completed, userId } = req.body;
+
+    // Get the existing task first to track userId changes
+    const existingTask = await prisma.planningTask.findUnique({
+      where: { id },
+    });
+
+    if (!existingTask) {
+      return res.status(404).json({ error: 'Planning task not found' });
+    }
+
+    const oldUserId = existingTask.userId;
 
     // If blockIndex is being changed, we need to delete and recreate due to unique constraint
     if (blockIndex !== undefined) {
-      // Get the existing task
-      const existingTask = await prisma.planningTask.findUnique({
-        where: { id },
-      });
-
-      if (!existingTask) {
-        return res.status(404).json({ error: 'Planning task not found' });
-      }
-
       // Check if blockIndex is actually changing
       if (existingTask.blockIndex !== blockIndex) {
         // Delete the old task and create a new one with the new blockIndex
@@ -179,12 +187,13 @@ export const updatePlanningTask = async (req: AuthRequest, res: Response) => {
 
         const planningTask = await prisma.planningTask.create({
           data: {
-            userId: existingTask.userId,
+            userId: userId || existingTask.userId,
             projectId: projectId || existingTask.projectId,
             date: existingTask.date,
             blockIndex,
             task: task !== undefined ? task : existingTask.task,
             span: span !== undefined ? span : existingTask.span,
+            completed: completed !== undefined ? completed : existingTask.completed,
           },
           include: {
             user: {
@@ -206,19 +215,56 @@ export const updatePlanningTask = async (req: AuthRequest, res: Response) => {
           },
         });
 
+        // If userId changed, delete from old user's calendar and sync to new user's calendar
+        if (userId && userId !== oldUserId) {
+          console.log(`[Outlook] Planning task moved from user ${oldUserId} to ${userId}`);
+
+          // Delete from old user's calendar (non-blocking)
+          outlookCalendarService.deletePlanningTask(id, oldUserId).catch((error) => {
+            console.error('[Outlook] Failed to delete planning task from old user:', error);
+          });
+
+          // Sync to new user's calendar (non-blocking)
+          outlookCalendarService.syncPlanningTask(planningTask.id, planningTask.userId).catch((error) => {
+            console.error('[Outlook] Failed to sync planning task to new user:', error);
+          });
+        } else {
+          // Same user, just sync
+          outlookCalendarService.syncPlanningTask(planningTask.id, planningTask.userId).catch((error) => {
+            console.error('[Outlook] Failed to sync planning task:', error);
+          });
+        }
+
         return res.json(planningTask);
       }
     }
 
     // Normal update (no blockIndex change)
-    const updateData: any = {
-      projectId,
-      task: task || null,
-    };
+    const updateData: any = {};
+
+    // Only update projectId if provided
+    if (projectId !== undefined) {
+      updateData.projectId = projectId;
+    }
+
+    // Only update task if provided
+    if (task !== undefined) {
+      updateData.task = task || null;
+    }
 
     // Only update span if provided
     if (span !== undefined) {
       updateData.span = span;
+    }
+
+    // Only update completed if provided
+    if (completed !== undefined) {
+      updateData.completed = completed;
+    }
+
+    // Only update userId if provided
+    if (userId !== undefined) {
+      updateData.userId = userId;
     }
 
     const planningTask = await prisma.planningTask.update({
@@ -244,6 +290,26 @@ export const updatePlanningTask = async (req: AuthRequest, res: Response) => {
       },
     });
 
+    // If userId changed, delete from old user's calendar and sync to new user's calendar
+    if (userId && userId !== oldUserId) {
+      console.log(`[Outlook] Planning task moved from user ${oldUserId} to ${userId}`);
+
+      // Delete from old user's calendar (non-blocking)
+      outlookCalendarService.deletePlanningTask(id, oldUserId).catch((error) => {
+        console.error('[Outlook] Failed to delete planning task from old user:', error);
+      });
+
+      // Sync to new user's calendar (non-blocking)
+      outlookCalendarService.syncPlanningTask(planningTask.id, planningTask.userId).catch((error) => {
+        console.error('[Outlook] Failed to sync planning task to new user:', error);
+      });
+    } else {
+      // Same user, just sync
+      outlookCalendarService.syncPlanningTask(planningTask.id, planningTask.userId).catch((error) => {
+        console.error('[Outlook] Failed to sync planning task:', error);
+      });
+    }
+
     res.json(planningTask);
   } catch (error) {
     console.error('Update planning task error:', error);
@@ -254,6 +320,19 @@ export const updatePlanningTask = async (req: AuthRequest, res: Response) => {
 export const deletePlanningTask = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
+
+    // Get task before deleting (to get userId and outlookEventId for Outlook sync)
+    const task = await prisma.planningTask.findUnique({
+      where: { id },
+      select: { userId: true, outlookEventId: true }
+    });
+
+    // Delete from the assigned user's Outlook calendar BEFORE deleting from database
+    if (task?.userId && task?.outlookEventId) {
+      outlookCalendarService.deletePlanningTaskByEventId(task.outlookEventId, task.userId).catch((error) => {
+        console.error('[Outlook] Failed to delete planning task:', error);
+      });
+    }
 
     await prisma.planningTask.delete({
       where: { id },

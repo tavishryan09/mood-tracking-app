@@ -102,9 +102,15 @@ export const iOSTypography = {
   },
   // Body
   body: {
-    fontFamily: Platform.OS === 'web' ? 'Josefin Sans, sans-serif' : 'JosefinSans_400Regular',
+    fontFamily: Platform.OS === 'web' ? 'Josefin Sans, sans-serif' : 'JosefinSans_300Light',
     fontSize: 17,
-    fontWeight: '400' as '400',
+    fontWeight: '300' as '300',
+    lineHeight: 22,
+  },
+   bodythin: {
+    fontFamily: Platform.OS === 'web' ? 'Josefin Sans, sans-serif' : 'JosefinSans_100Thin',
+    fontSize: 14,
+    fontWeight: '100' as '100',
     lineHeight: 22,
   },
   // Callout

@@ -1,0 +1,425 @@
+// New custom color palette system
+
+export interface CustomColor {
+  id: string;
+  name: string;
+  hexCode: string;
+  isPrimary: boolean;
+  isSecondary: boolean;
+}
+
+export interface CustomColorPalette {
+  id: string;
+  name: string;
+  colors: CustomColor[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Element mapping types - organized by category
+export interface ElementColorMapping {
+  // Navigation (Mobile)
+  navigation: {
+    tabBarBackground: string; // color id
+    tabBarActiveIcon: string;
+    tabBarInactiveIcon: string;
+  };
+
+  // Desktop Navigation
+  desktopNavigation: {
+    drawerBackground: string;
+    drawerActiveItemBackground: string;
+    drawerInactiveItemBackground: string;
+    drawerActiveItemText: string;
+    drawerInactiveItemText: string;
+    drawerActiveItemIcon: string;
+    drawerInactiveItemIcon: string;
+    drawerDividerColor: string;
+    drawerHeaderBackground: string;
+    drawerHeaderText: string;
+  };
+
+  // Global
+  global: {
+    primaryButton: string;
+    primaryButtonText: string;
+    secondaryButton: string;
+    secondaryButtonText: string;
+    textPrimary: string;
+    textSecondary: string;
+    textTertiary: string;
+    background: string;
+    cardBackground: string;
+    borderColor: string;
+    iconDefault: string;
+    iconInactive: string;
+    errorColor: string;
+    successColor: string;
+    warningColor: string;
+  };
+
+  // Dashboard Screen
+  dashboard: {
+    background: string;
+    cardBackground: string;
+    cardText: string;
+    headerBackground: string;
+    headerText: string;
+  };
+
+  // Projects Screen
+  projects: {
+    background: string;
+    projectCardBackground: string;
+    projectCardText: string;
+    projectCardBorder: string;
+    statusActiveColor: string;
+    statusOnHoldColor: string;
+    statusCompletedColor: string;
+    statusArchivedColor: string;
+    addButtonBackground: string;
+    addButtonIcon: string;
+    tableHeaderBackground: string;
+    tableHeaderText: string;
+  };
+
+  // Time Tracking Screen
+  timeTracking: {
+    background: string;
+    timerCardBackground: string;
+    timerText: string;
+    startButtonBackground: string;
+    startButtonText: string;
+    stopButtonBackground: string;
+    stopButtonText: string;
+    entryCardBackground: string;
+    entryText: string;
+    billableColor: string;
+    nonBillableColor: string;
+  };
+
+  // Calendar/Planning Screen
+  calendar: {
+    background: string;
+    headerBackground: string;
+    headerText: string;
+    headerIcons: string;
+    weekdayHeaderBackground: string;
+    weekdayHeaderText: string;
+    weekendHeaderBackground: string;
+    weekendHeaderText: string;
+    weekendCellBackground: string;
+    currentDayBackground: string;
+    teamMemberColumnBackground: string;
+    teamMemberColumnText: string;
+    eventBackground: string;
+    eventText: string;
+  };
+
+  // Planning Tasks
+  planningTasks: {
+    projectTaskBackground: string;
+    projectTaskText: string;
+    adminTaskBackground: string;
+    adminTaskText: string;
+    marketingTaskBackground: string;
+    marketingTaskText: string;
+    outOfOfficeBackground: string;
+    outOfOfficeText: string;
+    unavailableBackground: string;
+    unavailableText: string;
+    timeOffBackground: string;
+    timeOffText: string;
+    deadlineRowBackground: string;
+    deadlineBackground: string;
+    deadlineText: string;
+    internalDeadlineBackground: string;
+    internalDeadlineText: string;
+    milestoneBackground: string;
+    milestoneText: string;
+  };
+
+  // Planning Grid
+  planningGrid: {
+    headerBackground: string;
+    headerText: string;
+    headerIcon: string;
+    settingsIconColor: string;
+    dateCellBackground: string;
+    dateCellText: string;
+    deadlinesRowBackground: string;
+    deadlinesRowText: string;
+    teamMemberCellBackground: string;
+    teamMemberCellText: string;
+    weekdayHeaderBackground: string;
+    weekdayHeaderText: string;
+    weekendHeaderBackground: string;
+    weekendHeaderText: string;
+    weekdayCellBackground: string;
+    weekendCellBackground: string;
+    headerBorderColor: string;
+    cellBorderColor: string;
+  };
+
+  // Clients Screen
+  clients: {
+    background: string;
+    clientCardBackground: string;
+    clientCardText: string;
+    clientCardBorder: string;
+    addButtonBackground: string;
+    addButtonIcon: string;
+  };
+
+  // Events Screen
+  events: {
+    background: string;
+    eventCardBackground: string;
+    eventCardText: string;
+    eventCardBorder: string;
+    attendeeChipBackground: string;
+    attendeeChipText: string;
+  };
+
+  // Profile Screen
+  profile: {
+    background: string;
+    cardBackground: string;
+    cardText: string;
+    menuItemBackground: string;
+    menuItemText: string;
+    menuItemIcon: string;
+    logoutButtonBackground: string;
+    logoutButtonText: string;
+  };
+
+  // Admin Screens
+  admin: {
+    background: string;
+    cardBackground: string;
+    cardText: string;
+    tableHeaderBackground: string;
+    tableHeaderText: string;
+    tableRowBackground: string;
+    tableRowText: string;
+    tableRowAlternateBackground: string;
+    actionButtonBackground: string;
+    actionButtonText: string;
+    deleteButtonBackground: string;
+    deleteButtonText: string;
+  };
+}
+
+export interface CustomColorTheme {
+  paletteId: string;
+  paletteName: string;
+  elementMapping: ElementColorMapping;
+}
+
+// Helper to get element labels for UI
+export const ElementLabels = {
+  navigation: {
+    title: 'Mobile Navigation',
+    elements: {
+      tabBarBackground: 'Background Color',
+      tabBarActiveIcon: 'Active Icon Color',
+      tabBarInactiveIcon: 'Inactive Icon Color',
+    },
+  },
+  desktopNavigation: {
+    title: 'Desktop Navigation',
+    elements: {
+      drawerBackground: 'Drawer Background',
+      drawerActiveItemBackground: 'Active Item Background',
+      drawerInactiveItemBackground: 'Inactive Item Background',
+      drawerActiveItemText: 'Active Item Text',
+      drawerInactiveItemText: 'Inactive Item Text',
+      drawerActiveItemIcon: 'Active Item Icon',
+      drawerInactiveItemIcon: 'Inactive Item Icon',
+      drawerDividerColor: 'Divider Color',
+      drawerHeaderBackground: 'Header Background',
+      drawerHeaderText: 'Header Text',
+    },
+  },
+  global: {
+    title: 'Global Elements',
+    elements: {
+      primaryButton: 'Primary Button',
+      primaryButtonText: 'Primary Button Text',
+      secondaryButton: 'Secondary Button',
+      secondaryButtonText: 'Secondary Button Text',
+      textPrimary: 'Primary Text',
+      textSecondary: 'Secondary Text',
+      textTertiary: 'Tertiary Text',
+      background: 'Background',
+      cardBackground: 'Card Background',
+      borderColor: 'Border Color',
+      iconDefault: 'Default Icon',
+      iconInactive: 'Inactive Icon',
+      errorColor: 'Error Color',
+      successColor: 'Success Color',
+      warningColor: 'Warning Color',
+    },
+  },
+  dashboard: {
+    title: 'Dashboard',
+    elements: {
+      background: 'Background',
+      cardBackground: 'Card Background',
+      cardText: 'Card Text',
+      headerBackground: 'Header Background',
+      headerText: 'Header Text',
+    },
+  },
+  projects: {
+    title: 'Projects',
+    elements: {
+      background: 'Background',
+      projectCardBackground: 'Project Card Background',
+      projectCardText: 'Project Card Text',
+      projectCardBorder: 'Project Card Border',
+      statusActiveColor: 'Status: Active',
+      statusOnHoldColor: 'Status: On Hold',
+      statusCompletedColor: 'Status: Completed',
+      statusArchivedColor: 'Status: Archived',
+      addButtonBackground: 'Add Button Background',
+      addButtonIcon: 'Add Button Icon',
+      tableHeaderBackground: 'Table Header Background',
+      tableHeaderText: 'Table Header Text',
+    },
+  },
+  timeTracking: {
+    title: 'Time Tracking',
+    elements: {
+      background: 'Background',
+      timerCardBackground: 'Timer Card Background',
+      timerText: 'Timer Text',
+      startButtonBackground: 'Start Button Background',
+      startButtonText: 'Start Button Text',
+      stopButtonBackground: 'Stop Button Background',
+      stopButtonText: 'Stop Button Text',
+      entryCardBackground: 'Entry Card Background',
+      entryText: 'Entry Text',
+      billableColor: 'Billable Color',
+      nonBillableColor: 'Non-Billable Color',
+    },
+  },
+  calendar: {
+    title: 'Calendar',
+    elements: {
+      background: 'Background',
+      headerBackground: 'Header Background',
+      headerText: 'Header Text',
+      headerIcons: 'Header Icons',
+      weekdayHeaderBackground: 'Weekday Header Background',
+      weekdayHeaderText: 'Weekday Header Text',
+      weekendHeaderBackground: 'Weekend Header Background',
+      weekendHeaderText: 'Weekend Header Text',
+      weekendCellBackground: 'Weekend Cell Background',
+      currentDayBackground: 'Current Day Background',
+      teamMemberColumnBackground: 'Team Member Column Background',
+      teamMemberColumnText: 'Team Member Column Text',
+      eventBackground: 'Event Background',
+      eventText: 'Event Text',
+    },
+  },
+  planningTasks: {
+    title: 'Planning Tasks',
+    elements: {
+      projectTaskBackground: 'Project Task Background',
+      projectTaskText: 'Project Task Text',
+      adminTaskBackground: 'Admin Task Background',
+      adminTaskText: 'Admin Task Text',
+      marketingTaskBackground: 'Marketing Task Background',
+      marketingTaskText: 'Marketing Task Text',
+      outOfOfficeBackground: 'Out of Office Background',
+      outOfOfficeText: 'Out of Office Text',
+      unavailableBackground: 'Unavailable Background',
+      unavailableText: 'Unavailable Text',
+      timeOffBackground: 'Time Off Background',
+      timeOffText: 'Time Off Text',
+      deadlineRowBackground: 'Deadline Row Background',
+      deadlineBackground: 'Deadline Background',
+      deadlineText: 'Deadline Text',
+      internalDeadlineBackground: 'Internal Deadline Background',
+      internalDeadlineText: 'Internal Deadline Text',
+      milestoneBackground: 'Milestone Background',
+      milestoneText: 'Milestone Text',
+    },
+  },
+  planningGrid: {
+    title: 'Planning Grid',
+    elements: {
+      headerBackground: 'Header Background',
+      headerText: 'Header Text',
+      headerIcon: 'Header Icon',
+      settingsIconColor: 'Settings Icon Color',
+      dateCellBackground: 'Date Cell Background',
+      dateCellText: 'Date Cell Text',
+      deadlinesRowBackground: 'Deadlines Row Background',
+      deadlinesRowText: 'Deadlines Row Text',
+      teamMemberCellBackground: 'Team Member Cell Background',
+      teamMemberCellText: 'Team Member Cell Text',
+      weekdayHeaderBackground: 'Weekday Header Background',
+      weekdayHeaderText: 'Weekday Header Text',
+      weekendHeaderBackground: 'Weekend Header Background',
+      weekendHeaderText: 'Weekend Header Text',
+      weekdayCellBackground: 'Weekday Cell Background',
+      weekendCellBackground: 'Weekend Cell Background',
+      headerBorderColor: 'Header Border Color',
+      cellBorderColor: 'Cell Border Color',
+    },
+  },
+  clients: {
+    title: 'Clients',
+    elements: {
+      background: 'Background',
+      clientCardBackground: 'Client Card Background',
+      clientCardText: 'Client Card Text',
+      clientCardBorder: 'Client Card Border',
+      addButtonBackground: 'Add Button Background',
+      addButtonIcon: 'Add Button Icon',
+    },
+  },
+  events: {
+    title: 'Events',
+    elements: {
+      background: 'Background',
+      eventCardBackground: 'Event Card Background',
+      eventCardText: 'Event Card Text',
+      eventCardBorder: 'Event Card Border',
+      attendeeChipBackground: 'Attendee Chip Background',
+      attendeeChipText: 'Attendee Chip Text',
+    },
+  },
+  profile: {
+    title: 'Profile',
+    elements: {
+      background: 'Background',
+      cardBackground: 'Card Background',
+      cardText: 'Card Text',
+      menuItemBackground: 'Menu Item Background',
+      menuItemText: 'Menu Item Text',
+      menuItemIcon: 'Menu Item Icon',
+      logoutButtonBackground: 'Logout Button Background',
+      logoutButtonText: 'Logout Button Text',
+    },
+  },
+  admin: {
+    title: 'Admin',
+    elements: {
+      background: 'Background',
+      cardBackground: 'Card Background',
+      cardText: 'Card Text',
+      tableHeaderBackground: 'Table Header Background',
+      tableHeaderText: 'Table Header Text',
+      tableRowBackground: 'Table Row Background',
+      tableRowText: 'Table Row Text',
+      tableRowAlternateBackground: 'Table Row Alternate Background',
+      actionButtonBackground: 'Action Button Background',
+      actionButtonText: 'Action Button Text',
+      deleteButtonBackground: 'Delete Button Background',
+      deleteButtonText: 'Delete Button Text',
+    },
+  },
+};

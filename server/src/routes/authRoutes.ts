@@ -1,6 +1,12 @@
 import { Router } from 'express';
 import { body } from 'express-validator';
-import { register, login, getProfile } from '../controllers/authController';
+import {
+  register,
+  login,
+  getProfile,
+  // microsoftAuth,
+  // microsoftCallback,
+} from '../controllers/authController';
 import { authenticate } from '../middleware/auth';
 
 const router = Router();
@@ -25,5 +31,9 @@ const loginValidation = [
 // router.post('/register', registerValidation, register);
 router.post('/login', loginValidation, login);
 router.get('/profile', authenticate, getProfile);
+
+// Microsoft OAuth Routes - Temporarily disabled due to TypeScript errors
+// router.get('/microsoft', microsoftAuth);
+// router.get('/microsoft/callback', microsoftCallback);
 
 export default router;

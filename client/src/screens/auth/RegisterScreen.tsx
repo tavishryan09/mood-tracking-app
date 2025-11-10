@@ -5,11 +5,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  Alert,
 } from 'react-native';
 import { TextInput, Button, Title, Text } from 'react-native-paper';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { CustomDialog } from '../../components/CustomDialog';
 
 const RegisterScreen = ({ navigation }: any) => {
   const [firstName, setFirstName] = useState('');
@@ -21,6 +21,12 @@ const RegisterScreen = ({ navigation }: any) => {
   const [showPassword, setShowPassword] = useState(false);
   const { register } = useAuth();
   const { currentColors } = useTheme();
+
+  // Dialog state
+  const [dialogVisible, setDialogVisible] = useState(false);
+  const [dialogTitle, setDialogTitle] = useState('');
+  const [dialogMessage, setDialogMessage] = useState('');
+  const [dialogButtons, setDialogButtons] = useState<any[]>([]);
 
   // Dynamic styles based on current theme
   const dynamicStyles = {
@@ -37,17 +43,26 @@ const RegisterScreen = ({ navigation }: any) => {
 
   const handleRegister = async () => {
     if (!firstName || !lastName || !email || !password || !confirmPassword) {
-      Alert.alert('Error', 'Please fill in all fields');
+      setDialogTitle('Error');
+      setDialogMessage('Please fill in all fields');
+      setDialogButtons([{ text: 'OK', onPress: () => {} }]);
+      setDialogVisible(true);
       return;
     }
 
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      setDialogTitle('Error');
+      setDialogMessage('Passwords do not match');
+      setDialogButtons([{ text: 'OK', onPress: () => {} }]);
+      setDialogVisible(true);
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters');
+      setDialogTitle('Error');
+      setDialogMessage('Password must be at least 6 characters');
+      setDialogButtons([{ text: 'OK', onPress: () => {} }]);
+      setDialogVisible(true);
       return;
     }
 
@@ -55,7 +70,10 @@ const RegisterScreen = ({ navigation }: any) => {
     try {
       await register({ firstName, lastName, email, password });
     } catch (error: any) {
-      Alert.alert('Registration Failed', error.message);
+      setDialogTitle('Registration Failed');
+      setDialogMessage(error.message);
+      setDialogButtons([{ text: 'OK', onPress: () => {} }]);
+      setDialogVisible(true);
     } finally {
       setLoading(false);
     }
@@ -148,6 +166,14 @@ const RegisterScreen = ({ navigation }: any) => {
           </Button>
         </View>
       </ScrollView>
+
+      <CustomDialog
+        visible={dialogVisible}
+        title={dialogTitle}
+        message={dialogMessage}
+        buttons={dialogButtons}
+        onDismiss={() => setDialogVisible(false)}
+      />
     </KeyboardAvoidingView>
   );
 };

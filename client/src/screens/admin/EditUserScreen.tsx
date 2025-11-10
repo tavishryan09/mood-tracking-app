@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView } from 'react-native';
 import {
   TextInput,
   Button,
@@ -11,6 +11,7 @@ import {
 } from 'react-native-paper';
 import { userManagementAPI } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
+import { CustomDialog } from '../../components/CustomDialog';
 
 interface User {
   id: string;
@@ -34,6 +35,21 @@ const EditUserScreen = ({ route, navigation }: any) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
+  // Dialog states for error messages
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  // Dialog states for success messages
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [successAction, setSuccessAction] = useState<(() => void) | null>(null);
+
+  // Dialog states for password reset
+  const [showResetPasswordDialog, setShowResetPasswordDialog] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [resetPasswordError, setResetPasswordError] = useState('');
+  const [showResetPasswordErrorDialog, setShowResetPasswordErrorDialog] = useState(false);
+
   useEffect(() => {
     loadUser();
   }, [userId]);
@@ -52,13 +68,15 @@ const EditUserScreen = ({ route, navigation }: any) => {
         setIsActive(foundUser.isActive);
         setDefaultHourlyRate(foundUser.defaultHourlyRate?.toString() || '');
       } else {
-        Alert.alert('Error', 'User not found');
-        navigation.goBack();
+        setErrorMessage('User not found');
+        setShowErrorDialog(true);
+        setSuccessAction(() => () => navigation.goBack());
       }
     } catch (error: any) {
       console.error('Error loading user:', error);
-      Alert.alert('Error', 'Failed to load user');
-      navigation.goBack();
+      setErrorMessage('Failed to load user');
+      setShowErrorDialog(true);
+      setSuccessAction(() => () => navigation.goBack());
     } finally {
       setLoading(false);
     }
@@ -66,7 +84,8 @@ const EditUserScreen = ({ route, navigation }: any) => {
 
   const handleUpdateUser = async () => {
     if (!firstName || !lastName) {
-      Alert.alert('Error', 'Please fill in all required fields');
+      setErrorMessage('Please fill in all required fields');
+      setShowErrorDialog(true);
       return;
     }
 
@@ -84,44 +103,40 @@ const EditUserScreen = ({ route, navigation }: any) => {
       }
 
       await userManagementAPI.updateUser(userId, data);
-      Alert.alert('Success', 'User updated successfully', [
-        {
-          text: 'OK',
-          onPress: () => navigation.goBack(),
-        },
-      ]);
+      setSuccessMessage('User updated successfully');
+      setShowSuccessDialog(true);
+      setSuccessAction(() => () => navigation.goBack());
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to update user');
+      setErrorMessage(error.response?.data?.error || 'Failed to update user');
+      setShowErrorDialog(true);
     } finally {
       setSaving(false);
     }
   };
 
   const handleResetPassword = () => {
-    Alert.prompt(
-      'Reset Password',
-      'Enter new password (min 6 characters)',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Reset',
-          onPress: async (newPassword) => {
-            if (!newPassword || newPassword.length < 6) {
-              Alert.alert('Error', 'Password must be at least 6 characters long');
-              return;
-            }
+    setNewPassword('');
+    setShowResetPasswordDialog(true);
+  };
 
-            try {
-              await userManagementAPI.resetPassword(userId, newPassword);
-              Alert.alert('Success', 'Password reset successfully');
-            } catch (error: any) {
-              Alert.alert('Error', error.response?.data?.error || 'Failed to reset password');
-            }
-          },
-        },
-      ],
-      'secure-text'
-    );
+  const handleResetPasswordConfirm = async () => {
+    if (!newPassword || newPassword.length < 6) {
+      setResetPasswordError('Password must be at least 6 characters long');
+      setShowResetPasswordErrorDialog(true);
+      return;
+    }
+
+    setShowResetPasswordDialog(false);
+
+    try {
+      await userManagementAPI.resetPassword(userId, newPassword);
+      setSuccessMessage('Password reset successfully');
+      setShowSuccessDialog(true);
+      setNewPassword('');
+    } catch (error: any) {
+      setErrorMessage(error.response?.data?.error || 'Failed to reset password');
+      setShowErrorDialog(true);
+    }
   };
 
   if (loading) {
@@ -221,6 +236,113 @@ const EditUserScreen = ({ route, navigation }: any) => {
           Cancel
         </Button>
       </View>
+
+      {/* Error Dialog */}
+      <CustomDialog
+        visible={showErrorDialog}
+        title="Error"
+        message={errorMessage}
+        buttons={[
+          {
+            text: 'OK',
+            onPress: () => {
+              setShowErrorDialog(false);
+              if (successAction) {
+                successAction();
+                setSuccessAction(null);
+              }
+            },
+            style: 'default',
+          },
+        ]}
+        onDismiss={() => {
+          setShowErrorDialog(false);
+          if (successAction) {
+            successAction();
+            setSuccessAction(null);
+          }
+        }}
+      />
+
+      {/* Success Dialog */}
+      <CustomDialog
+        visible={showSuccessDialog}
+        title="Success"
+        message={successMessage}
+        buttons={[
+          {
+            text: 'OK',
+            onPress: () => {
+              setShowSuccessDialog(false);
+              if (successAction) {
+                successAction();
+                setSuccessAction(null);
+              }
+            },
+            style: 'default',
+          },
+        ]}
+        onDismiss={() => {
+          setShowSuccessDialog(false);
+          if (successAction) {
+            successAction();
+            setSuccessAction(null);
+          }
+        }}
+      />
+
+      {/* Reset Password Dialog */}
+      <CustomDialog
+        visible={showResetPasswordDialog}
+        title="Reset Password"
+        message="Enter new password (min 6 characters)"
+        textInput={{
+          value: newPassword,
+          onChangeText: setNewPassword,
+          placeholder: 'New password',
+          secureTextEntry: true,
+        }}
+        buttons={[
+          {
+            text: 'Cancel',
+            onPress: () => {
+              setShowResetPasswordDialog(false);
+              setNewPassword('');
+            },
+            style: 'cancel',
+          },
+          {
+            text: 'Reset',
+            onPress: handleResetPasswordConfirm,
+            style: 'default',
+          },
+        ]}
+        onDismiss={() => {
+          setShowResetPasswordDialog(false);
+          setNewPassword('');
+        }}
+      />
+
+      {/* Reset Password Error Dialog */}
+      <CustomDialog
+        visible={showResetPasswordErrorDialog}
+        title="Error"
+        message={resetPasswordError}
+        buttons={[
+          {
+            text: 'OK',
+            onPress: () => {
+              setShowResetPasswordErrorDialog(false);
+              setShowResetPasswordDialog(true);
+            },
+            style: 'default',
+          },
+        ]}
+        onDismiss={() => {
+          setShowResetPasswordErrorDialog(false);
+          setShowResetPasswordDialog(true);
+        }}
+      />
     </ScrollView>
   );
 };

@@ -16,6 +16,7 @@ interface AuthContextType {
   token: string | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  loginWithToken: (authToken: string) => Promise<void>;
   register: (data: any) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -81,6 +82,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
+  const loginWithToken = useCallback(async (authToken: string) => {
+    try {
+      // Store the token first
+      await AsyncStorage.setItem('authToken', authToken);
+      setToken(authToken);
+
+      // Fetch user profile using the token
+      const response = await authAPI.getProfile();
+      const userData = response.data;
+
+      // Store user data
+      await AsyncStorage.setItem('user', JSON.stringify(userData));
+      setUser(userData);
+    } catch (error: any) {
+      console.error('[AuthContext] Login with token error:', error);
+      // Clear invalid token
+      await AsyncStorage.removeItem('authToken');
+      setToken(null);
+      throw new Error('Failed to authenticate with token');
+    }
+  }, []);
+
   const register = useCallback(async (data: any) => {
     try {
       const response = await authAPI.register(data);
@@ -100,17 +123,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       console.log('[AuthContext] Logging out...');
 
-      // Clear AsyncStorage
-      await AsyncStorage.removeItem('authToken');
-      await AsyncStorage.removeItem('user');
-      console.log('[AuthContext] Cleared AsyncStorage');
-
-      // Clear state
+      // Clear state FIRST to trigger immediate UI update
       setToken(null);
       setUser(null);
       console.log('[AuthContext] Cleared state');
 
-      // Force clear localStorage on web and reload
+      // Then clear AsyncStorage
+      await AsyncStorage.removeItem('authToken');
+      await AsyncStorage.removeItem('user');
+      console.log('[AuthContext] Cleared AsyncStorage');
+
+      // Force clear localStorage on web
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
         console.log('[AuthContext] Clearing localStorage...');
         try {
@@ -121,13 +144,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           console.error('[AuthContext] Error clearing localStorage:', e);
         }
 
-        console.log('[AuthContext] Reloading page in 100ms...');
+        // Give React time to update UI before reload
+        console.log('[AuthContext] Reloading page in 200ms...');
         setTimeout(() => {
           window.location.href = '/';
-        }, 100);
+        }, 200);
       }
     } catch (error) {
       console.error('[AuthContext] Error during logout:', error);
+      // Even if there's an error, ensure state is cleared
+      setToken(null);
+      setUser(null);
     }
   }, []);
 
@@ -152,11 +179,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     token,
     loading,
     login,
+    loginWithToken,
     register,
     logout,
     refreshUser,
     isAuthenticated,
-  }), [user, token, loading, login, register, logout, refreshUser, isAuthenticated]);
+  }), [user, token, loading, login, loginWithToken, register, logout, refreshUser, isAuthenticated]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

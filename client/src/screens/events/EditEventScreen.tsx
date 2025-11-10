@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Alert, Platform } from 'react-native';
+import { View, StyleSheet, ScrollView, Platform } from 'react-native';
 import { TextInput, Button, Title, SegmentedButtons, ActivityIndicator, Card, IconButton, Chip, Paragraph, List } from 'react-native-paper';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { UserAdd02Icon, Delete02Icon } from '@hugeicons/core-free-icons';
 import { eventsAPI, usersAPI } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
+import { CustomDialog } from '../../components/CustomDialog';
 
 const EditEventScreen = ({ navigation, route }: any) => {
   const { currentColors } = useTheme();
@@ -23,6 +24,17 @@ const EditEventScreen = ({ navigation, route }: any) => {
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [attendees, setAttendees] = useState<any[]>([]);
   const [showUserPicker, setShowUserPicker] = useState(false);
+
+  // Dialog state variables
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showValidationDialog, setShowValidationDialog] = useState(false);
+  const [validationMessage, setValidationMessage] = useState('');
+  const [showRemoveAttendeeDialog, setShowRemoveAttendeeDialog] = useState(false);
+  const [removeAttendeeUserId, setRemoveAttendeeUserId] = useState<string | null>(null);
+  const [successCallback, setSuccessCallback] = useState<(() => void) | null>(null);
 
   // Dynamic styles that depend on theme
   const dynamicStyles = {
@@ -62,8 +74,9 @@ const EditEventScreen = ({ navigation, route }: any) => {
       console.error('Error loading event:', error);
       setAllUsers([]);
       setAttendees([]);
-      Alert.alert('Error', 'Failed to load event');
-      navigation.goBack();
+      setErrorMessage('Failed to load event');
+      setShowErrorDialog(true);
+      setSuccessCallback(() => () => navigation.goBack());
     } finally {
       setLoading(false);
     }
@@ -71,12 +84,14 @@ const EditEventScreen = ({ navigation, route }: any) => {
 
   const handleUpdate = async () => {
     if (!title) {
-      Alert.alert('Error', 'Please enter an event title');
+      setValidationMessage('Please enter an event title');
+      setShowValidationDialog(true);
       return;
     }
 
     if (endDate <= startDate) {
-      Alert.alert('Error', 'End time must be after start time');
+      setValidationMessage('End time must be after start time');
+      setShowValidationDialog(true);
       return;
     }
 
@@ -91,10 +106,12 @@ const EditEventScreen = ({ navigation, route }: any) => {
         location,
       });
 
-      Alert.alert('Success', 'Event updated successfully');
-      navigation.goBack();
+      setSuccessMessage('Event updated successfully');
+      setShowSuccessDialog(true);
+      setSuccessCallback(() => () => navigation.goBack());
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to update event');
+      setErrorMessage(error.response?.data?.error || 'Failed to update event');
+      setShowErrorDialog(true);
     } finally {
       setSaving(false);
     }
@@ -109,10 +126,12 @@ const EditEventScreen = ({ navigation, route }: any) => {
     setSaving(true);
     try {
       await eventsAPI.delete(eventId);
-      Alert.alert('Success', 'Event deleted successfully');
-      navigation.goBack();
+      setSuccessMessage('Event deleted successfully');
+      setShowSuccessDialog(true);
+      setSuccessCallback(() => () => navigation.goBack());
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to delete event');
+      setErrorMessage(error.response?.data?.error || 'Failed to delete event');
+      setShowErrorDialog(true);
     } finally {
       setSaving(false);
     }
@@ -127,33 +146,32 @@ const EditEventScreen = ({ navigation, route }: any) => {
       await eventsAPI.addAttendee(eventId, { userId });
       setShowUserPicker(false);
       await loadEvent();
-      Alert.alert('Success', 'Attendee added successfully');
+      setSuccessMessage('Attendee added successfully');
+      setShowSuccessDialog(true);
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to add attendee');
+      setErrorMessage(error.response?.data?.error || 'Failed to add attendee');
+      setShowErrorDialog(true);
     }
   };
 
   const handleRemoveAttendee = async (userId: string) => {
-    Alert.alert(
-      'Remove Attendee',
-      'Are you sure you want to remove this attendee from the event?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await eventsAPI.removeAttendee(eventId, userId);
-              await loadEvent();
-              Alert.alert('Success', 'Attendee removed successfully');
-            } catch (error: any) {
-              Alert.alert('Error', error.response?.data?.error || 'Failed to remove attendee');
-            }
-          },
-        },
-      ]
-    );
+    setRemoveAttendeeUserId(userId);
+    setShowRemoveAttendeeDialog(true);
+  };
+
+  const performRemoveAttendee = async () => {
+    if (!removeAttendeeUserId) return;
+    setShowRemoveAttendeeDialog(false);
+    try {
+      await eventsAPI.removeAttendee(eventId, removeAttendeeUserId);
+      await loadEvent();
+      setSuccessMessage('Attendee removed successfully');
+      setShowSuccessDialog(true);
+    } catch (error: any) {
+      setErrorMessage(error.response?.data?.error || 'Failed to remove attendee');
+      setShowErrorDialog(true);
+    }
+    setRemoveAttendeeUserId(null);
   };
 
   // Get users that are not already attendees
@@ -343,6 +361,82 @@ const EditEventScreen = ({ navigation, route }: any) => {
           Cancel
         </Button>
       </View>
+
+      {/* Error Dialog */}
+      <CustomDialog
+        visible={showErrorDialog}
+        title="Error"
+        message={errorMessage}
+        buttons={[
+          {
+            text: 'OK',
+            onPress: () => {
+              setShowErrorDialog(false);
+              if (successCallback) {
+                successCallback();
+                setSuccessCallback(null);
+              }
+            },
+            style: 'default',
+          },
+        ]}
+      />
+
+      {/* Success Dialog */}
+      <CustomDialog
+        visible={showSuccessDialog}
+        title="Success"
+        message={successMessage}
+        buttons={[
+          {
+            text: 'OK',
+            onPress: () => {
+              setShowSuccessDialog(false);
+              if (successCallback) {
+                successCallback();
+                setSuccessCallback(null);
+              }
+            },
+            style: 'default',
+          },
+        ]}
+      />
+
+      {/* Validation Dialog */}
+      <CustomDialog
+        visible={showValidationDialog}
+        title="Validation Error"
+        message={validationMessage}
+        buttons={[
+          {
+            text: 'OK',
+            onPress: () => setShowValidationDialog(false),
+            style: 'default',
+          },
+        ]}
+      />
+
+      {/* Remove Attendee Confirmation Dialog */}
+      <CustomDialog
+        visible={showRemoveAttendeeDialog}
+        title="Remove Attendee"
+        message="Are you sure you want to remove this attendee from the event?"
+        buttons={[
+          {
+            text: 'Cancel',
+            onPress: () => {
+              setShowRemoveAttendeeDialog(false);
+              setRemoveAttendeeUserId(null);
+            },
+            style: 'cancel',
+          },
+          {
+            text: 'Remove',
+            onPress: performRemoveAttendee,
+            style: 'destructive',
+          },
+        ]}
+      />
     </ScrollView>
   );
 };

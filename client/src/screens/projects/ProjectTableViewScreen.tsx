@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Dimensions, Text, TouchableOpacity, Alert, TextInput, FlatList, Modal } from 'react-native';
+import { View, StyleSheet, ScrollView, Dimensions, Text, TouchableOpacity, TextInput, FlatList, Modal } from 'react-native';
 import { ActivityIndicator, FAB, IconButton, Switch, Button } from 'react-native-paper';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { projectsAPI, clientsAPI, settingsAPI } from '../../services/api';
@@ -7,15 +7,18 @@ import { HugeiconsIcon } from '@hugeicons/react-native';
 import { Delete02Icon, AddCircleIcon, Edit02Icon, Tick02Icon, Cancel01Icon, Settings02Icon } from '@hugeicons/core-free-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useCustomColorTheme } from '../../contexts/CustomColorThemeContext';
 import EditProjectModal from '../../components/EditProjectModal';
+import { CustomDialog } from '../../components/CustomDialog';
 
 const { width } = Dimensions.get('window');
 const TABLE_WIDTH = width > 1800 ? 1800 : width - 40;
-const PROJECT_NUM_WIDTH = 100;
+const PROJECT_NUM_WIDTH = 140;
 const PROJECT_NAME_WIDTH = 250;
 const CLIENT_WIDTH = 200;
 const COMMON_NAME_WIDTH = 200;
 const HOURS_WIDTH = 100;
+const HOURS_WEEK_WIDTH = 120;
 const HOURS_MONTH_WIDTH = 120;
 const HOURS_QUARTER_WIDTH = 120;
 const PROJECT_VALUE_WIDTH = 150;
@@ -59,6 +62,7 @@ interface ColumnVisibility {
   client: boolean;
   description: boolean;
   hours: boolean;
+  hoursWeek: boolean;
   hoursMonth: boolean;
   hoursQuarter: boolean;
   projectValue: boolean;
@@ -70,6 +74,12 @@ const ProjectTableViewScreen = () => {
   const { currentColors } = useTheme();
   const { user } = useAuth();
   const navigation = useNavigation();
+  const { getColorForElement } = useCustomColorTheme();
+
+  // Get custom colors for table header
+  const tableHeaderBg = getColorForElement('projects', 'tableHeaderBackground');
+  const tableHeaderText = getColorForElement('projects', 'tableHeaderText');
+
   const styles = getStyles(currentColors);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,12 +108,25 @@ const ProjectTableViewScreen = () => {
     client: true,
     description: true,
     hours: true,
+    hoursWeek: true,
     hoursMonth: true,
     hoursQuarter: true,
     projectValue: true,
     billableAmount: true,
     progress: true,
   });
+
+  // Dialog states
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [errorTitle, setErrorTitle] = useState('Error');
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [successTitle, setSuccessTitle] = useState('Success');
+  const [showPermissionDialog, setShowPermissionDialog] = useState(false);
+  const [permissionMessage, setPermissionMessage] = useState('');
+  const [showValidationDialog, setShowValidationDialog] = useState(false);
+  const [validationMessage, setValidationMessage] = useState('');
 
   useFocusEffect(
     React.useCallback(() => {
@@ -153,28 +176,37 @@ const ProjectTableViewScreen = () => {
     try {
       await settingsAPI.user.set('project_table_columns', columnVisibility);
       console.log('[ProjectTableView] Saved user column visibility to database');
-      Alert.alert('Success', 'Column visibility saved to your profile');
+      setSuccessTitle('Success');
+      setSuccessMessage('Column visibility saved to your profile');
+      setShowSuccessDialog(true);
       setShowSettingsModal(false);
     } catch (error) {
       console.error('[ProjectTableView] Error saving to profile:', error);
-      Alert.alert('Error', 'Failed to save column visibility');
+      setErrorTitle('Error');
+      setErrorMessage('Failed to save column visibility');
+      setShowErrorDialog(true);
     }
   };
 
   const saveAsDefault = async () => {
     try {
       if (user?.role !== 'ADMIN') {
-        Alert.alert('Permission Denied', 'Only administrators can set default column visibility for all users');
+        setPermissionMessage('Only administrators can set default column visibility for all users');
+        setShowPermissionDialog(true);
         return;
       }
 
       await settingsAPI.app.set('project_table_columns_default', columnVisibility);
       console.log('[ProjectTableView] Saved default column visibility to database');
-      Alert.alert('Success', 'Column visibility saved as default for all users');
+      setSuccessTitle('Success');
+      setSuccessMessage('Column visibility saved as default for all users');
+      setShowSuccessDialog(true);
       setShowSettingsModal(false);
     } catch (error) {
       console.error('[ProjectTableView] Error saving as default:', error);
-      Alert.alert('Error', 'Failed to save default column visibility');
+      setErrorTitle('Error');
+      setErrorMessage('Failed to save default column visibility');
+      setShowErrorDialog(true);
     }
   };
 
@@ -209,6 +241,31 @@ const ProjectTableViewScreen = () => {
 
     return project.planningTasks.reduce((total, task) => {
       return total + (task.span * 2); // Each cell = 2 hours, span = number of cells
+    }, 0);
+  };
+
+  const calculateHoursThisWeek = (project: Project): number => {
+    if (!project.planningTasks || project.planningTasks.length === 0) return 0;
+
+    const now = new Date();
+    // Get Monday of current week (week starts on Monday)
+    const dayOfWeek = now.getDay();
+    const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // If Sunday, go back 6 days, otherwise go to Monday
+    const startOfWeek = new Date(now);
+    startOfWeek.setDate(now.getDate() + diff);
+    startOfWeek.setHours(0, 0, 0, 0);
+
+    // Get Sunday of current week
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    return project.planningTasks.reduce((total, task) => {
+      const taskDate = new Date(task.date);
+      if (taskDate >= startOfWeek && taskDate <= endOfWeek) {
+        return total + (task.span * 2);
+      }
+      return total;
     }, 0);
   };
 
@@ -343,7 +400,9 @@ const ProjectTableViewScreen = () => {
         }
       } catch (error) {
         console.error('[ProjectTableView] Error updating project:', error);
-        Alert.alert('Error', 'Failed to update project. Please try again.');
+        setErrorTitle('Error');
+        setErrorMessage('Failed to update project. Please try again.');
+        setShowErrorDialog(true);
       }
     }
 
@@ -359,7 +418,9 @@ const ProjectTableViewScreen = () => {
       loadProjects();
     } catch (error) {
       console.error('[ProjectTableView] Error updating client:', error);
-      Alert.alert('Error', 'Failed to update client. Please try again.');
+      setErrorTitle('Error');
+      setErrorMessage('Failed to update client. Please try again.');
+      setShowErrorDialog(true);
     }
   };
 
@@ -380,7 +441,9 @@ const ProjectTableViewScreen = () => {
       loadProjects();
     } catch (error) {
       console.error('[ProjectTableView] Error creating client:', error);
-      Alert.alert('Error', 'Failed to create client. Please try again.');
+      setErrorTitle('Error');
+      setErrorMessage('Failed to create client. Please try again.');
+      setShowErrorDialog(true);
     }
   };
 
@@ -423,11 +486,13 @@ const ProjectTableViewScreen = () => {
 
   const handleSaveNewProject = async () => {
     if (!newProjectData.name.trim()) {
-      Alert.alert('Error', 'Project name is required');
+      setValidationMessage('Project name is required');
+      setShowValidationDialog(true);
       return;
     }
     if (!newProjectData.clientId) {
-      Alert.alert('Error', 'Client is required');
+      setValidationMessage('Client is required');
+      setShowValidationDialog(true);
       return;
     }
 
@@ -451,7 +516,9 @@ const ProjectTableViewScreen = () => {
       loadProjects();
     } catch (error) {
       console.error('[ProjectTableView] Error creating project:', error);
-      Alert.alert('Error', 'Failed to create project. Please try again.');
+      setErrorTitle('Error');
+      setErrorMessage('Failed to create project. Please try again.');
+      setShowErrorDialog(true);
     }
   };
 
@@ -485,7 +552,9 @@ const ProjectTableViewScreen = () => {
       loadClients();
     } catch (error) {
       console.error('[ProjectTableView] Error creating client:', error);
-      Alert.alert('Error', 'Failed to create client. Please try again.');
+      setErrorTitle('Error');
+      setErrorMessage('Failed to create client. Please try again.');
+      setShowErrorDialog(true);
     }
   };
 
@@ -526,6 +595,10 @@ const ProjectTableViewScreen = () => {
           valueA = calculateTotalHours(a);
           valueB = calculateTotalHours(b);
           break;
+        case 'hoursWeek':
+          valueA = calculateHoursThisWeek(a);
+          valueB = calculateHoursThisWeek(b);
+          break;
         case 'hoursMonth':
           valueA = calculateHoursThisMonth(a);
           valueB = calculateHoursThisMonth(b);
@@ -561,7 +634,7 @@ const ProjectTableViewScreen = () => {
   const renderSortIndicator = (column: string) => {
     if (sortColumn !== column) return null;
     return (
-      <Text style={[styles.sortIndicator, { color: currentColors.white }]}>
+      <Text style={[styles.sortIndicator, { color: tableHeaderText }]}>
         {sortDirection === 'asc' ? ' ▲' : ' ▼'}
       </Text>
     );
@@ -590,7 +663,7 @@ const ProjectTableViewScreen = () => {
         >
           <View style={styles.tableContainer}>
           {/* Header Row */}
-          <View style={[styles.headerRow, { backgroundColor: currentColors.primary }]}>
+          <View style={[styles.headerRow, { backgroundColor: tableHeaderBg, height: 75 }]}>
             {columnVisibility.projectNumber && (
               <TouchableOpacity
                 style={[styles.headerCell, { width: PROJECT_NUM_WIDTH }]}
@@ -598,7 +671,7 @@ const ProjectTableViewScreen = () => {
                 activeOpacity={0.7}
               >
                 <View style={styles.headerContent}>
-                  <Text style={[styles.headerText, { color: currentColors.white }]}>Project #</Text>
+                  <Text style={[styles.headerText, { color: tableHeaderText }]}>Project #</Text>
                   {renderSortIndicator('projectNumber')}
                 </View>
               </TouchableOpacity>
@@ -610,7 +683,7 @@ const ProjectTableViewScreen = () => {
                 activeOpacity={0.7}
               >
                 <View style={styles.headerContent}>
-                  <Text style={[styles.headerText, { color: currentColors.white }]}>Project Name</Text>
+                  <Text style={[styles.headerText, { color: tableHeaderText }]}>Project Name</Text>
                   {renderSortIndicator('name')}
                 </View>
               </TouchableOpacity>
@@ -622,7 +695,7 @@ const ProjectTableViewScreen = () => {
                 activeOpacity={0.7}
               >
                 <View style={styles.headerContent}>
-                  <Text style={[styles.headerText, { color: currentColors.white }]}>Client</Text>
+                  <Text style={[styles.headerText, { color: tableHeaderText }]}>Client</Text>
                   {renderSortIndicator('client')}
                 </View>
               </TouchableOpacity>
@@ -634,7 +707,7 @@ const ProjectTableViewScreen = () => {
                 activeOpacity={0.7}
               >
                 <View style={styles.headerContent}>
-                  <Text style={[styles.headerText, { color: currentColors.white }]}>Common Name</Text>
+                  <Text style={[styles.headerText, { color: tableHeaderText }]}>Common Name</Text>
                   {renderSortIndicator('description')}
                 </View>
               </TouchableOpacity>
@@ -646,8 +719,20 @@ const ProjectTableViewScreen = () => {
                 activeOpacity={0.7}
               >
                 <View style={styles.headerContent}>
-                  <Text style={[styles.headerText, { color: currentColors.white }]}>Hours</Text>
+                  <Text style={[styles.headerText, { color: tableHeaderText }]}>Hours</Text>
                   {renderSortIndicator('hours')}
+                </View>
+              </TouchableOpacity>
+            )}
+            {columnVisibility.hoursWeek && (
+              <TouchableOpacity
+                style={[styles.headerCell, { width: HOURS_WEEK_WIDTH }]}
+                onPress={() => handleHeaderClick('hoursWeek')}
+                activeOpacity={0.7}
+              >
+                <View style={styles.headerContent}>
+                  <Text style={[styles.headerText, { color: tableHeaderText }]}>This Week</Text>
+                  {renderSortIndicator('hoursWeek')}
                 </View>
               </TouchableOpacity>
             )}
@@ -658,7 +743,7 @@ const ProjectTableViewScreen = () => {
                 activeOpacity={0.7}
               >
                 <View style={styles.headerContent}>
-                  <Text style={[styles.headerText, { color: currentColors.white }]}>This Month</Text>
+                  <Text style={[styles.headerText, { color: tableHeaderText }]}>This Month</Text>
                   {renderSortIndicator('hoursMonth')}
                 </View>
               </TouchableOpacity>
@@ -670,7 +755,7 @@ const ProjectTableViewScreen = () => {
                 activeOpacity={0.7}
               >
                 <View style={styles.headerContent}>
-                  <Text style={[styles.headerText, { color: currentColors.white }]}>This Quarter</Text>
+                  <Text style={[styles.headerText, { color: tableHeaderText }]}>This Quarter</Text>
                   {renderSortIndicator('hoursQuarter')}
                 </View>
               </TouchableOpacity>
@@ -682,7 +767,7 @@ const ProjectTableViewScreen = () => {
                 activeOpacity={0.7}
               >
                 <View style={styles.headerContent}>
-                  <Text style={[styles.headerText, { color: currentColors.white }]}>Project Value</Text>
+                  <Text style={[styles.headerText, { color: tableHeaderText }]}>Project Value</Text>
                   {renderSortIndicator('projectValue')}
                 </View>
               </TouchableOpacity>
@@ -694,7 +779,7 @@ const ProjectTableViewScreen = () => {
                 activeOpacity={0.7}
               >
                 <View style={styles.headerContent}>
-                  <Text style={[styles.headerText, { color: currentColors.white }]}>Est. Billable</Text>
+                  <Text style={[styles.headerText, { color: tableHeaderText }]}>Est. Billable</Text>
                   {renderSortIndicator('billableAmount')}
                 </View>
               </TouchableOpacity>
@@ -706,19 +791,20 @@ const ProjectTableViewScreen = () => {
                 activeOpacity={0.7}
               >
                 <View style={styles.headerContent}>
-                  <Text style={[styles.headerText, { color: currentColors.white }]}>Progress %</Text>
+                  <Text style={[styles.headerText, { color: tableHeaderText }]}>Progress %</Text>
                   {renderSortIndicator('progress')}
                 </View>
               </TouchableOpacity>
             )}
             <View style={[styles.headerCell, { width: ACTIONS_WIDTH }]}>
-              <Text style={[styles.headerText, { color: currentColors.white }]}>Actions</Text>
+              <Text style={[styles.headerText, { color: tableHeaderText }]}>Actions</Text>
             </View>
           </View>
 
           {/* Data Rows */}
           {getSortedProjects().map((project, index) => {
             const totalHours = calculateTotalHours(project);
+            const hoursThisWeek = calculateHoursThisWeek(project);
             const hoursThisMonth = calculateHoursThisMonth(project);
             const hoursThisQuarter = calculateHoursThisQuarter(project);
             const estimatedBillableAmount = calculateEstimatedBillableAmount(project);
@@ -865,6 +951,13 @@ const ProjectTableViewScreen = () => {
                     </Text>
                   </View>
                 )}
+                {columnVisibility.hoursWeek && (
+                  <View style={[styles.dataCell, { width: HOURS_WEEK_WIDTH }]}>
+                    <Text style={[styles.cellText, { color: currentColors.text }]}>
+                      {hoursThisWeek.toFixed(2)}h
+                    </Text>
+                  </View>
+                )}
                 {columnVisibility.hoursMonth && (
                   <View style={[styles.dataCell, { width: HOURS_MONTH_WIDTH }]}>
                     <Text style={[styles.cellText, { color: currentColors.text }]}>
@@ -897,7 +990,7 @@ const ProjectTableViewScreen = () => {
                   <View style={[styles.dataCell, { width: PROGRESS_WIDTH }]}>
                     {project.projectValue ? (
                       <View style={styles.progressContainer}>
-                        <View style={[styles.progressBar, { backgroundColor: currentColors.background.bg500 }]}>
+                        <View style={[styles.progressBar, { backgroundColor: '#e0e0e0' }]}>
                           <View
                             style={[
                               styles.progressFill,
@@ -961,6 +1054,9 @@ const ProjectTableViewScreen = () => {
                 )}
                 {columnVisibility.hours && (
                   <View style={[styles.dataCell, { width: HOURS_WIDTH }]} />
+                )}
+                {columnVisibility.hoursWeek && (
+                  <View style={[styles.dataCell, { width: HOURS_WEEK_WIDTH }]} />
                 )}
                 {columnVisibility.hoursMonth && (
                   <View style={[styles.dataCell, { width: HOURS_MONTH_WIDTH }]} />
@@ -1078,6 +1174,11 @@ const ProjectTableViewScreen = () => {
                   <Text style={[styles.cellText, { color: currentColors.text }]}>0.00h</Text>
                 </View>
               )}
+              {columnVisibility.hoursWeek && (
+                <View style={[styles.dataCell, { width: HOURS_WEEK_WIDTH }]}>
+                  <Text style={[styles.cellText, { color: currentColors.text }]}>0.00h</Text>
+                </View>
+              )}
               {columnVisibility.hoursMonth && (
                 <View style={[styles.dataCell, { width: HOURS_MONTH_WIDTH }]}>
                   <Text style={[styles.cellText, { color: currentColors.text }]}>0.00h</Text>
@@ -1125,11 +1226,11 @@ const ProjectTableViewScreen = () => {
 
       {/* Settings Icon */}
       <TouchableOpacity
-        style={[styles.settingsButton, { backgroundColor: currentColors.primary }]}
+        style={[styles.settingsButton, { backgroundColor: currentColors.secondary }]}
         onPress={() => setShowSettingsModal(true)}
         activeOpacity={0.8}
       >
-        <HugeiconsIcon icon={Settings02Icon} size={24} color={currentColors.white} />
+        <HugeiconsIcon icon={Settings02Icon} size={24} color="#FFFFFF" />
       </TouchableOpacity>
 
       {/* Settings Modal */}
@@ -1150,6 +1251,7 @@ const ProjectTableViewScreen = () => {
                 client: 'Client',
                 description: 'Common Name',
                 hours: 'Hours',
+                hoursWeek: 'This Week',
                 hoursMonth: 'This Month',
                 hoursQuarter: 'This Quarter',
                 projectValue: 'Project Value',
@@ -1265,6 +1367,66 @@ const ProjectTableViewScreen = () => {
           </View>
         </Modal>
       )}
+
+      {/* Error Dialog */}
+      <CustomDialog
+        visible={showErrorDialog}
+        title={errorTitle}
+        message={errorMessage}
+        buttons={[
+          {
+            text: 'OK',
+            onPress: () => setShowErrorDialog(false),
+            style: 'default',
+          }
+        ]}
+        onDismiss={() => setShowErrorDialog(false)}
+      />
+
+      {/* Success Dialog */}
+      <CustomDialog
+        visible={showSuccessDialog}
+        title={successTitle}
+        message={successMessage}
+        buttons={[
+          {
+            text: 'OK',
+            onPress: () => setShowSuccessDialog(false),
+            style: 'default',
+          }
+        ]}
+        onDismiss={() => setShowSuccessDialog(false)}
+      />
+
+      {/* Permission Dialog */}
+      <CustomDialog
+        visible={showPermissionDialog}
+        title="Permission Denied"
+        message={permissionMessage}
+        buttons={[
+          {
+            text: 'OK',
+            onPress: () => setShowPermissionDialog(false),
+            style: 'default',
+          }
+        ]}
+        onDismiss={() => setShowPermissionDialog(false)}
+      />
+
+      {/* Validation Dialog */}
+      <CustomDialog
+        visible={showValidationDialog}
+        title="Validation Error"
+        message={validationMessage}
+        buttons={[
+          {
+            text: 'OK',
+            onPress: () => setShowValidationDialog(false),
+            style: 'default',
+          }
+        ]}
+        onDismiss={() => setShowValidationDialog(false)}
+      />
     </View>
   );
 };

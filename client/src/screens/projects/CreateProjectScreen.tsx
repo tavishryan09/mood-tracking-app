@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView } from 'react-native';
 import { TextInput, Button, Title, SegmentedButtons, Menu, Divider, Card, IconButton, Chip, Paragraph, List } from 'react-native-paper';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { UserAdd02Icon, Delete02Icon } from '@hugeicons/core-free-icons';
 import { projectsAPI, clientsAPI, usersAPI } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
+import { CustomDialog } from '../../components/CustomDialog';
 
 const CreateProjectScreen = ({ navigation }: any) => {
   const { currentColors } = useTheme();
@@ -21,6 +22,12 @@ const CreateProjectScreen = ({ navigation }: any) => {
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
   const [showUserPicker, setShowUserPicker] = useState(false);
+
+  // Dialog states
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   useEffect(() => {
     loadData();
@@ -68,12 +75,14 @@ const CreateProjectScreen = ({ navigation }: any) => {
 
   const handleSubmit = async () => {
     if (!name) {
-      Alert.alert('Error', 'Please enter a project name');
+      setErrorMessage('Please enter a project name');
+      setShowErrorDialog(true);
       return;
     }
 
     if (!selectedClient) {
-      Alert.alert('Error', 'Please select a client');
+      setErrorMessage('Please select a client');
+      setShowErrorDialog(true);
       return;
     }
 
@@ -95,17 +104,18 @@ const CreateProjectScreen = ({ navigation }: any) => {
 
       await Promise.race([projectsAPI.create(projectData), timeout]);
 
-      Alert.alert('Success', 'Project created successfully');
-      navigation.goBack();
+      setSuccessMessage('Project created successfully');
+      setShowSuccessDialog(true);
     } catch (error: any) {
       console.error('Project creation error:', error);
 
       // Show detailed error message
-      const errorMessage = error.message === 'Request timeout'
+      const message = error.message === 'Request timeout'
         ? 'Unable to connect to server. Please check your connection and try again.'
         : error.response?.data?.error || 'Failed to create project';
 
-      Alert.alert('Error', errorMessage);
+      setErrorMessage(message);
+      setShowErrorDialog(true);
     } finally {
       setLoading(false);
     }
@@ -272,6 +282,40 @@ const CreateProjectScreen = ({ navigation }: any) => {
           Cancel
         </Button>
       </View>
+
+      <CustomDialog
+        visible={showErrorDialog}
+        title="Error"
+        message={errorMessage}
+        buttons={[
+          {
+            label: 'OK',
+            onPress: () => setShowErrorDialog(false),
+            style: 'default',
+          },
+        ]}
+        onDismiss={() => setShowErrorDialog(false)}
+      />
+
+      <CustomDialog
+        visible={showSuccessDialog}
+        title="Success"
+        message={successMessage}
+        buttons={[
+          {
+            label: 'OK',
+            onPress: () => {
+              setShowSuccessDialog(false);
+              navigation.goBack();
+            },
+            style: 'default',
+          },
+        ]}
+        onDismiss={() => {
+          setShowSuccessDialog(false);
+          navigation.goBack();
+        }}
+      />
     </ScrollView>
   );
 };

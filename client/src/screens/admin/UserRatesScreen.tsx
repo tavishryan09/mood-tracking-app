@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView } from 'react-native';
 import { List, TextInput, Button, ActivityIndicator, Card, Title, Paragraph, IconButton } from 'react-native-paper';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { Edit02Icon } from '@hugeicons/core-free-icons';
 import { usersAPI } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
+import { CustomDialog } from '../../components/CustomDialog';
 
 const UserRatesScreen = ({ navigation }: any) => {
   const { currentColors } = useTheme();
@@ -12,6 +13,12 @@ const UserRatesScreen = ({ navigation }: any) => {
   const [loading, setLoading] = useState(true);
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [editRate, setEditRate] = useState('');
+
+  // Dialog states
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   useEffect(() => {
     loadUsers();
@@ -24,7 +31,8 @@ const UserRatesScreen = ({ navigation }: any) => {
       setUsers(response.data);
     } catch (error) {
       console.error('Error loading users:', error);
-      Alert.alert('Error', 'Failed to load users');
+      setErrorMessage('Failed to load users');
+      setShowErrorDialog(true);
     } finally {
       setLoading(false);
     }
@@ -40,7 +48,8 @@ const UserRatesScreen = ({ navigation }: any) => {
       const rate = editRate ? parseFloat(editRate) : null;
 
       if (editRate && isNaN(rate as number)) {
-        Alert.alert('Error', 'Please enter a valid number');
+        setErrorMessage('Please enter a valid number');
+        setShowErrorDialog(true);
         return;
       }
 
@@ -55,9 +64,11 @@ const UserRatesScreen = ({ navigation }: any) => {
 
       setEditingUserId(null);
       setEditRate('');
-      Alert.alert('Success', 'User rate updated successfully');
+      setSuccessMessage('User rate updated successfully');
+      setShowSuccessDialog(true);
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to update user rate');
+      setErrorMessage(error.response?.data?.error || 'Failed to update user rate');
+      setShowErrorDialog(true);
     }
   };
 
@@ -155,6 +166,36 @@ const UserRatesScreen = ({ navigation }: any) => {
           ))
         )}
       </View>
+
+      {/* Error Dialog */}
+      <CustomDialog
+        visible={showErrorDialog}
+        title="Error"
+        message={errorMessage}
+        onDismiss={() => setShowErrorDialog(false)}
+        buttons={[
+          {
+            text: 'OK',
+            onPress: () => setShowErrorDialog(false),
+            style: 'default',
+          },
+        ]}
+      />
+
+      {/* Success Dialog */}
+      <CustomDialog
+        visible={showSuccessDialog}
+        title="Success"
+        message={successMessage}
+        onDismiss={() => setShowSuccessDialog(false)}
+        buttons={[
+          {
+            text: 'OK',
+            onPress: () => setShowSuccessDialog(false),
+            style: 'default',
+          },
+        ]}
+      />
     </ScrollView>
   );
 };

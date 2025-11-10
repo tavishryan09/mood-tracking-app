@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import prisma from '../config/database';
+import { outlookCalendarService } from '../services/outlookCalendarService';
 
 // Get deadline tasks for a date range
 export const getDeadlineTasks = async (req: AuthRequest, res: Response) => {
@@ -29,6 +30,7 @@ export const getDeadlineTasks = async (req: AuthRequest, res: Response) => {
           select: {
             id: true,
             name: true,
+            description: true,
             projectNumber: true,
           },
         },
@@ -96,10 +98,16 @@ export const createDeadlineTask = async (req: AuthRequest, res: Response) => {
           select: {
             id: true,
             name: true,
+            description: true,
             projectNumber: true,
           },
         },
       },
+    });
+
+    // Sync to ALL users' Outlook calendars (non-blocking)
+    outlookCalendarService.syncDeadlineTaskToAllUsers(deadlineTask.id).catch((error) => {
+      console.error('[Outlook] Failed to sync deadline task to all users:', error);
     });
 
     res.status(201).json(deadlineTask);
@@ -113,7 +121,8 @@ export const createDeadlineTask = async (req: AuthRequest, res: Response) => {
 export const updateDeadlineTask = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { clientId, description, deadlineType } = req.body;
+    const { clientId, description, deadlineType, projectId } = req.body;
+    const userId = req.user?.userId;
 
     const deadlineTask = await prisma.deadlineTask.update({
       where: { id },
@@ -121,6 +130,7 @@ export const updateDeadlineTask = async (req: AuthRequest, res: Response) => {
         clientId: clientId || undefined,
         description: description !== undefined ? description : undefined,
         deadlineType: deadlineType || undefined,
+        projectId: projectId !== undefined ? projectId : undefined,
       },
       include: {
         client: {
@@ -133,10 +143,16 @@ export const updateDeadlineTask = async (req: AuthRequest, res: Response) => {
           select: {
             id: true,
             name: true,
+            description: true,
             projectNumber: true,
           },
         },
       },
+    });
+
+    // Sync to ALL users' Outlook calendars (non-blocking)
+    outlookCalendarService.syncDeadlineTaskToAllUsers(deadlineTask.id).catch((error) => {
+      console.error('[Outlook] Failed to sync deadline task to all users:', error);
     });
 
     res.json(deadlineTask);
@@ -150,10 +166,24 @@ export const updateDeadlineTask = async (req: AuthRequest, res: Response) => {
 export const deleteDeadlineTask = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
+    const userId = req.user?.userId;
+
+    // Get task before deleting (to get createdBy for Outlook sync)
+    const task = await prisma.deadlineTask.findUnique({
+      where: { id },
+      select: { createdBy: true }
+    });
 
     await prisma.deadlineTask.delete({
       where: { id },
     });
+
+    // Delete from ALL users' Outlook calendars (non-blocking)
+    if (task) {
+      outlookCalendarService.deleteDeadlineTaskFromAllUsers(id).catch((error) => {
+        console.error('[Outlook] Failed to delete deadline task from all users:', error);
+      });
+    }
 
     res.json({ message: 'Deadline task deleted successfully' });
   } catch (error) {
@@ -233,6 +263,11 @@ export const syncProjectDueDates = async (req: AuthRequest, res: Response) => {
                 slotIndex: availableSlot,
               },
             });
+
+            // Sync updated deadline to ALL users' Outlook calendars (non-blocking)
+            outlookCalendarService.syncDeadlineTaskToAllUsers(existing.id).catch((error) => {
+              console.error('[Outlook] Failed to sync updated auto-generated deadline to all users:', error);
+            });
           } else {
             errors.push(`No available slot for project: ${project.name}`);
           }
@@ -286,6 +321,11 @@ export const syncProjectDueDates = async (req: AuthRequest, res: Response) => {
             },
           },
         },
+      });
+
+      // Sync to ALL users' Outlook calendars (non-blocking)
+      outlookCalendarService.syncDeadlineTaskToAllUsers(deadlineTask.id).catch((error) => {
+        console.error('[Outlook] Failed to sync auto-generated deadline task to all users:', error);
       });
 
       createdTasks.push(deadlineTask);

@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Alert, Text } from 'react-native';
+import { View, StyleSheet, ScrollView, Text } from 'react-native';
 import { Button, Title, Menu } from 'react-native-paper';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { usePlanningColors } from '../../contexts/PlanningColorsContext';
 import { colorPalettes } from '../../theme/colorPalettes';
+import { CustomDialog } from '../../components/CustomDialog';
 
 const PlanningColorsScreen = ({ navigation }: any) => {
   const { currentColors, selectedPalette } = useTheme();
@@ -22,6 +23,7 @@ const PlanningColorsScreen = ({ navigation }: any) => {
   const [weekendHeaderBg, setWeekendHeaderBg] = useState<string>('');
   const [weekendHeaderFont, setWeekendHeaderFont] = useState<string>('');
   const [weekendCellBg, setWeekendCellBg] = useState<string>('');
+  const [currentDayBg, setCurrentDayBg] = useState<string>('');
   const [projectTaskBg, setProjectTaskBg] = useState<string>('');
   const [projectTaskFont, setProjectTaskFont] = useState<string>('');
   const [adminTaskBg, setAdminTaskBg] = useState<string>('');
@@ -44,6 +46,12 @@ const PlanningColorsScreen = ({ navigation }: any) => {
   const [openColorMenu, setOpenColorMenu] = useState<string | null>(null);
   const [saving, setSaving] = useState<boolean>(false);
 
+  // Dialog states
+  const [showSuccessDialog, setShowSuccessDialog] = useState<boolean>(false);
+  const [successMessage, setSuccessMessage] = useState<string>('');
+  const [showErrorDialog, setShowErrorDialog] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string>('');
+
   // Load saved colors from context on mount
   useEffect(() => {
     setCalendarHeaderBg(planningColors.calendarHeaderBg);
@@ -56,6 +64,7 @@ const PlanningColorsScreen = ({ navigation }: any) => {
     setWeekendHeaderBg(planningColors.weekendHeaderBg);
     setWeekendHeaderFont(planningColors.weekendHeaderFont);
     setWeekendCellBg(planningColors.weekendCellBg);
+    setCurrentDayBg(planningColors.currentDayBg);
     setProjectTaskBg(planningColors.projectTaskBg);
     setProjectTaskFont(planningColors.projectTaskFont);
     setAdminTaskBg(planningColors.adminTaskBg);
@@ -141,6 +150,7 @@ const PlanningColorsScreen = ({ navigation }: any) => {
         weekendHeaderBg,
         weekendHeaderFont,
         weekendCellBg,
+        currentDayBg,
         projectTaskBg,
         projectTaskFont,
         adminTaskBg,
@@ -165,10 +175,12 @@ const PlanningColorsScreen = ({ navigation }: any) => {
       console.log('[PlanningColorsScreen] Saving colors:', colors);
       await savePlanningColors(colors, false);
       console.log('[PlanningColorsScreen] Colors saved successfully');
-      Alert.alert('Success', 'Your planning page colors have been saved and will appear on the planning page.');
+      setSuccessMessage('Your planning page colors have been saved and will appear on the planning page.');
+      setShowSuccessDialog(true);
     } catch (error) {
       console.error('Error saving colors:', error);
-      Alert.alert('Error', 'Failed to save colors. Please try again.');
+      setErrorMessage('Failed to save colors. Please try again.');
+      setShowErrorDialog(true);
     } finally {
       setSaving(false);
     }
@@ -188,6 +200,7 @@ const PlanningColorsScreen = ({ navigation }: any) => {
         weekendHeaderBg,
         weekendHeaderFont,
         weekendCellBg,
+        currentDayBg,
         projectTaskBg,
         projectTaskFont,
         adminTaskBg,
@@ -210,10 +223,12 @@ const PlanningColorsScreen = ({ navigation }: any) => {
       };
 
       await savePlanningColors(colors, true);
-      Alert.alert('Success', 'Default planning page colors have been saved for all users who haven\'t customized their own colors.');
+      setSuccessMessage('Default planning page colors have been saved for all users who haven\'t customized their own colors.');
+      setShowSuccessDialog(true);
     } catch (error) {
       console.error('Error saving default colors:', error);
-      Alert.alert('Error', 'Failed to save default colors. Please try again.');
+      setErrorMessage('Failed to save default colors. Please try again.');
+      setShowErrorDialog(true);
     } finally {
       setSaving(false);
     }
@@ -248,6 +263,10 @@ const PlanningColorsScreen = ({ navigation }: any) => {
         {/* Weekend Cells */}
         <Text style={[styles.sectionTitle, { color: currentColors.text, marginTop: 20 }]}>Weekend Cells</Text>
         {renderColorPicker('Background', weekendCellBg, setWeekendCellBg, currentColors.background.bg300, 'weekendCellBg')}
+
+        {/* Current Day */}
+        <Text style={[styles.sectionTitle, { color: currentColors.text, marginTop: 20 }]}>Current Day</Text>
+        {renderColorPicker('Background', currentDayBg, setCurrentDayBg, currentColors.primary, 'currentDayBg')}
 
         {/* Task Type Colors */}
         <Text style={[styles.sectionTitle, { color: currentColors.text, marginTop: 20 }]}>Task Colors</Text>
@@ -332,6 +351,32 @@ const PlanningColorsScreen = ({ navigation }: any) => {
           Cancel
         </Button>
       </View>
+
+      <CustomDialog
+        visible={showSuccessDialog}
+        title="Success"
+        message={successMessage}
+        buttons={[
+          {
+            text: 'OK',
+            onPress: () => setShowSuccessDialog(false),
+            style: 'default',
+          },
+        ]}
+      />
+
+      <CustomDialog
+        visible={showErrorDialog}
+        title="Error"
+        message={errorMessage}
+        buttons={[
+          {
+            text: 'OK',
+            onPress: () => setShowErrorDialog(false),
+            style: 'default',
+          },
+        ]}
+      />
     </ScrollView>
   );
 };

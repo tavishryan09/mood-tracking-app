@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { Banner, Text, Button } from 'react-native-paper';
+import { HugeiconsIcon } from '@hugeicons/react-native';
+import { DownloadSquare02Icon } from '@hugeicons/core-free-icons';
 import {
   canInstall,
   promptInstall,
@@ -97,7 +99,13 @@ const InstallPrompt: React.FC = () => {
           onPress: handleInstall,
         },
       ]}
-      icon="download"
+      icon={() => (
+        <HugeiconsIcon
+          icon={DownloadSquare02Icon}
+          size={24}
+          color={currentColors.icon}
+        />
+      )}
       style={[styles.banner, {
         backgroundColor: currentColors.background.bg500,
         borderBottomColor: currentColors.border

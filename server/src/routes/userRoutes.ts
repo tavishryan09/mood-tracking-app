@@ -1,13 +1,33 @@
 import { Router } from 'express';
 import { body } from 'express-validator';
+import multer from 'multer';
 import {
   getAllUsers,
   inviteUser,
   updateUser,
   deleteUser,
   resetUserPassword,
+  uploadAvatar,
 } from '../controllers/userController';
 import { authenticate, authorizeRoles } from '../middleware/auth';
+
+// Configure multer for memory storage with security constraints
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB limit
+    files: 1, // Only allow 1 file upload at a time
+  },
+  fileFilter: (req, file, cb) => {
+    // Only allow image files
+    const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (allowedMimeTypes.includes(file.mimetype)) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only JPEG, PNG, GIF, and WebP images are allowed.'));
+    }
+  },
+});
 
 const router = Router();
 
@@ -40,6 +60,9 @@ const resetPasswordValidation = [
 
 // GET / - All authenticated users can view the user list (for team planning)
 router.get('/', authenticate, getAllUsers);
+
+// POST /avatar - Upload avatar (authenticated users can upload their own avatar)
+router.post('/avatar', authenticate, upload.single('avatar'), uploadAvatar);
 
 // All other routes require authentication and ADMIN role
 router.post('/invite', authenticate, authorizeRoles('ADMIN'), inviteUserValidation, inviteUser);

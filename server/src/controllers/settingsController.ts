@@ -2,6 +2,16 @@ import { Request, Response, NextFunction } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import prisma from '../config/database';
 
+// Get all app settings
+export const getAppSettings = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const settings = await prisma.appSetting.findMany();
+    res.json(settings);
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Get a setting by key
 export const getSetting = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -56,6 +66,37 @@ export const setSetting = async (req: AuthRequest, res: Response, next: NextFunc
     });
 
     res.json(setting);
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Batch update app settings (admin only)
+export const batchSetAppSettings = async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { settings } = req.body;
+    const userRole = req.user?.role;
+
+    if (userRole !== 'ADMIN') {
+      return res.status(403).json({ error: 'Only admins can batch update app settings' });
+    }
+
+    if (!Array.isArray(settings)) {
+      return res.status(400).json({ error: 'Settings must be an array' });
+    }
+
+    // Use a transaction to update all settings atomically
+    const result = await prisma.$transaction(
+      settings.map(({ key, value }) =>
+        prisma.appSetting.upsert({
+          where: { key },
+          update: { value },
+          create: { key, value },
+        })
+      )
+    );
+
+    res.json(result);
   } catch (error) {
     next(error);
   }
@@ -131,14 +172,19 @@ export const setUserSetting = async (req: AuthRequest, res: Response, next: Next
     const { value } = req.body;
     const userId = req.user?.userId;
 
+    console.log('[setUserSetting] Received request:', { userId, key, valueType: typeof value, hasValue: value !== undefined });
+
     if (!userId) {
+      console.log('[setUserSetting] ERROR: No userId');
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
     if (value === undefined) {
+      console.log('[setUserSetting] ERROR: Value is undefined');
       return res.status(400).json({ error: 'Value is required' });
     }
 
+    console.log('[setUserSetting] Attempting upsert...');
     const setting = await prisma.userSetting.upsert({
       where: {
         userId_key: {
@@ -154,8 +200,10 @@ export const setUserSetting = async (req: AuthRequest, res: Response, next: Next
       },
     });
 
+    console.log('[setUserSetting] SUCCESS: Saved setting');
     res.json(setting);
   } catch (error) {
+    console.error('[setUserSetting] ERROR:', error);
     next(error);
   }
 };

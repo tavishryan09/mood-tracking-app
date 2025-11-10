@@ -4,12 +4,40 @@ import { Platform } from 'react-native';
 import { offlineManager } from '../utils/offlineManager';
 
 // For Vercel deployment: use relative path on production, full URL for local dev
-const API_URL = process.env.EXPO_PUBLIC_API_URL ||
-  (typeof window !== 'undefined' && window.location.hostname !== 'localhost'
-    ? '/api'
-    : 'http://localhost:3000/api');
+// For mobile and other devices: use the computer's IP address instead of localhost
+const getApiUrl = () => {
+  // If explicitly set via environment variable, use that
+  if (process.env.EXPO_PUBLIC_API_URL) {
+    return process.env.EXPO_PUBLIC_API_URL;
+  }
 
+  // For production (Vercel), use relative path
+  if (typeof window !== 'undefined' &&
+      window.location.hostname !== 'localhost' &&
+      !window.location.hostname.match(/^192\.168\./)) {
+    return '/api';
+  }
+
+  // For web platform
+  if (Platform.OS === 'web') {
+    // If accessing via IP address (from another device), use that IP for API calls
+    if (typeof window !== 'undefined' && window.location.hostname.match(/^192\.168\./)) {
+      return `http://${window.location.hostname}:3000/api`;
+    }
+    // Otherwise use localhost
+    return 'http://localhost:3000/api';
+  }
+
+  // For mobile platforms (iOS/Android), always use the computer's IP
+  return 'http://192.168.100.117:3000/api';
+};
+
+const API_URL = getApiUrl();
+
+console.log('[API] Platform:', Platform.OS);
+console.log('[API] Hostname:', typeof window !== 'undefined' ? window.location?.hostname : 'N/A');
 console.log('[API] Using API URL:', API_URL);
+console.log('[API] Full config loaded - timestamp:', new Date().toISOString());
 
 const api = axios.create({
   baseURL: API_URL,
@@ -30,6 +58,12 @@ const isOnline = () => {
 // Request interceptor to add auth token
 api.interceptors.request.use(
   async (config) => {
+    console.log('[API] Request:', {
+      method: config.method,
+      url: config.url,
+      baseURL: config.baseURL,
+      fullURL: `${config.baseURL}${config.url}`
+    });
     const token = await AsyncStorage.getItem('authToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -37,14 +71,29 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
+    console.error('[API] Request error:', error);
     return Promise.reject(error);
   }
 );
 
 // Response interceptor to handle errors and offline mode
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log('[API] Response:', {
+      status: response.status,
+      url: response.config.url
+    });
+    return response;
+  },
   async (error) => {
+    console.error('[API] Response error:', {
+      message: error.message,
+      status: error.response?.status,
+      data: error.response?.data,
+      url: error.config?.url,
+      baseURL: error.config?.baseURL
+    });
+
     // Handle auth errors
     if (error.response?.status === 401) {
       await AsyncStorage.removeItem('authToken');
@@ -128,17 +177,6 @@ export const projectsAPI = {
   removeMember: (id: string, memberId: string) => api.delete(`/projects/${id}/members/${memberId}`),
 };
 
-// Time Entries API
-export const timeEntriesAPI = {
-  getAll: (params?: any) => api.get('/time-entries', { params }),
-  getById: (id: string) => api.get(`/time-entries/${id}`),
-  create: (data: any) => api.post('/time-entries', data),
-  update: (id: string, data: any) => api.put(`/time-entries/${id}`, data),
-  delete: (id: string) => api.delete(`/time-entries/${id}`),
-  stopTimer: (id: string) => api.post(`/time-entries/${id}/stop`),
-  getRunningTimer: () => api.get('/time-entries/running'),
-};
-
 // Users API
 export const usersAPI = {
   getAll: () => api.get('/users'),
@@ -187,8 +225,11 @@ export const planningTasksAPI = {
 export const settingsAPI = {
   // App-wide settings (admin only)
   app: {
+    getAll: () => api.get('/settings/app'),
     get: (key: string) => api.get(`/settings/app/${key}`),
     set: (key: string, value: any) => api.put(`/settings/app/${key}`, { value }),
+    batchSet: (settings: Array<{ key: string; value: any }>) =>
+      api.post('/settings/app/batch', { settings }),
     delete: (key: string) => api.delete(`/settings/app/${key}`),
   },
   // User-specific settings
@@ -209,4 +250,12 @@ export const deadlineTasksAPI = {
   update: (id: string, data: any) => api.put(`/deadline-tasks/${id}`, data),
   delete: (id: string) => api.delete(`/deadline-tasks/${id}`),
   syncDueDates: () => api.post('/deadline-tasks/sync-due-dates'),
+};
+
+// Outlook Calendar API
+export const outlookAPI = {
+  getStatus: () => api.get('/outlook/status'),
+  connect: () => api.post('/outlook/connect'),
+  disconnect: () => api.post('/outlook/disconnect'),
+  sync: () => api.post('/outlook/sync'),
 };

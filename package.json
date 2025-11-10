@@ -6,6 +6,9 @@
   "scripts": {
     "postinstall": "cd server && npm install"
   },
-  "dependencies": {},
-  "devDependencies": {}
+  "dependencies": {
+    "express-mongo-sanitize": "^2.2.0",
+    "hpp": "^0.2.3",
+    "xss-clean": "^0.1.4"
+  }
 }

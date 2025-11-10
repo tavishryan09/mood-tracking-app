@@ -2,105 +2,34 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import prisma from '../config/database';
-import * as XLSX from 'xlsx';
 
-export const exportTimeReport = async (req: AuthRequest, res: Response) => {
-  try {
-    const { startDate, endDate, projectId, userId, groupBy } = req.query;
+// Helper function to convert data to CSV
+function convertToCSV(data: any[]): string {
+  if (data.length === 0) return '';
 
-    const where: any = {};
+  const headers = Object.keys(data[0]);
+  const csvRows = [];
 
-    if (startDate) {
-      where.startTime = { ...where.startTime, gte: new Date(startDate as string) };
-    }
+  // Add header row
+  csvRows.push(headers.join(','));
 
-    if (endDate) {
-      where.startTime = { ...where.startTime, lte: new Date(endDate as string) };
-    }
-
-    if (projectId) {
-      where.projectId = projectId as string;
-    }
-
-    if (userId) {
-      where.userId = userId as string;
-    }
-
-    const timeEntries = await prisma.timeEntry.findMany({
-      where,
-      include: {
-        user: {
-          select: {
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-        project: {
-          include: {
-            client: {
-              select: {
-                name: true,
-              },
-            },
-          },
-        },
-      },
-      orderBy: { startTime: 'desc' },
+  // Add data rows
+  for (const row of data) {
+    const values = headers.map(header => {
+      const value = row[header];
+      // Escape values that contain commas, quotes, or newlines
+      if (value === null || value === undefined) return '';
+      const stringValue = String(value);
+      if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+        return `"${stringValue.replace(/"/g, '""')}"`;
+      }
+      return stringValue;
     });
-
-    // Prepare data for Excel
-    const excelData = timeEntries.map((entry) => ({
-      Date: entry.startTime.toLocaleDateString(),
-      'Start Time': entry.startTime.toLocaleTimeString(),
-      'End Time': entry.endTime?.toLocaleTimeString() || 'Running',
-      'Duration (minutes)': entry.durationMinutes || 0,
-      'Duration (hours)': entry.durationMinutes ? (entry.durationMinutes / 60).toFixed(2) : 0,
-      User: `${entry.user.firstName} ${entry.user.lastName}`,
-      Project: entry.project.name,
-      Client: entry.project.client.name,
-      Description: entry.description || '',
-      Billable: entry.isBillable ? 'Yes' : 'No',
-    }));
-
-    // Calculate totals
-    const totalMinutes = timeEntries.reduce((sum, entry) => sum + (entry.durationMinutes || 0), 0);
-    const totalHours = (totalMinutes / 60).toFixed(2);
-
-    // Add totals row
-    excelData.push({
-      Date: '',
-      'Start Time': '',
-      'End Time': '',
-      'Duration (minutes)': totalMinutes,
-      'Duration (hours)': totalHours,
-      User: 'TOTAL',
-      Project: '',
-      Client: '',
-      Description: '',
-      Billable: '',
-    });
-
-    // Create workbook
-    const workbook = XLSX.utils.book_new();
-    const worksheet = XLSX.utils.json_to_sheet(excelData);
-
-    // Add worksheet to workbook
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Time Report');
-
-    // Generate buffer
-    const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
-
-    // Set headers
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename=time-report-${Date.now()}.xlsx`);
-
-    res.send(excelBuffer);
-  } catch (error) {
-    console.error('Export time report error:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    csvRows.push(values.join(','));
   }
-};
+
+  return csvRows.join('\n');
+}
 
 export const exportProjectSummary = async (req: AuthRequest, res: Response) => {
   try {
@@ -111,7 +40,6 @@ export const exportProjectSummary = async (req: AuthRequest, res: Response) => {
             name: true,
           },
         },
-        timeEntries: true,
         _count: {
           select: {
             members: true,
@@ -121,16 +49,31 @@ export const exportProjectSummary = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    const excelData = projects.map((project) => {
-      const totalMinutes = project.timeEntries.reduce(
-        (sum, entry) => sum + (entry.durationMinutes || 0),
-        0
-      );
-      const totalHours = (totalMinutes / 60).toFixed(2);
-      const billableMinutes = project.timeEntries
-        .filter((entry) => entry.isBillable)
-        .reduce((sum, entry) => sum + (entry.durationMinutes || 0), 0);
-      const billableHours = (billableMinutes / 60).toFixed(2);
+    // Use aggregation to calculate time entry totals efficiently
+    const projectTimeStats = await Promise.all(
+      projects.map(async (project) => {
+        const totalStats = await prisma.timeEntry.aggregate({
+          where: { projectId: project.id },
+          _sum: { durationMinutes: true },
+        });
+
+        const billableStats = await prisma.timeEntry.aggregate({
+          where: { projectId: project.id, isBillable: true },
+          _sum: { durationMinutes: true },
+        });
+
+        return {
+          projectId: project.id,
+          totalMinutes: totalStats._sum.durationMinutes || 0,
+          billableMinutes: billableStats._sum.durationMinutes || 0,
+        };
+      })
+    );
+
+    const csvData = projects.map((project) => {
+      const stats = projectTimeStats.find(s => s.projectId === project.id);
+      const totalHours = ((stats?.totalMinutes || 0) / 60).toFixed(2);
+      const billableHours = ((stats?.billableMinutes || 0) / 60).toFixed(2);
 
       return {
         Project: project.name,
@@ -147,16 +90,13 @@ export const exportProjectSummary = async (req: AuthRequest, res: Response) => {
       };
     });
 
-    const workbook = XLSX.utils.book_new();
-    const worksheet = XLSX.utils.json_to_sheet(excelData);
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Project Summary');
+    // Generate CSV
+    const csv = convertToCSV(csvData);
 
-    const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=project-summary-${Date.now()}.csv`);
 
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename=project-summary-${Date.now()}.xlsx`);
-
-    res.send(excelBuffer);
+    res.send(csv);
   } catch (error) {
     console.error('Export project summary error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -211,7 +151,7 @@ export const exportTravelReport = async (req: AuthRequest, res: Response) => {
       orderBy: { startDate: 'desc' },
     });
 
-    const excelData = travelEntries.map((entry) => ({
+    const csvData = travelEntries.map((entry) => ({
       User: `${entry.user.firstName} ${entry.user.lastName}`,
       Purpose: entry.purpose,
       Destination: entry.destination,
@@ -237,7 +177,7 @@ export const exportTravelReport = async (req: AuthRequest, res: Response) => {
       0
     );
 
-    excelData.push({
+    csvData.push({
       User: 'TOTAL',
       Purpose: '',
       Destination: '',
@@ -253,16 +193,13 @@ export const exportTravelReport = async (req: AuthRequest, res: Response) => {
       Notes: '',
     });
 
-    const workbook = XLSX.utils.book_new();
-    const worksheet = XLSX.utils.json_to_sheet(excelData);
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Travel Report');
+    // Generate CSV
+    const csv = convertToCSV(csvData);
 
-    const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=travel-report-${Date.now()}.csv`);
 
-    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename=travel-report-${Date.now()}.xlsx`);
-
-    res.send(excelBuffer);
+    res.send(csv);
   } catch (error) {
     console.error('Export travel report error:', error);
     res.status(500).json({ error: 'Internal server error' });

@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Alert, Platform, TouchableOpacity, FlatList, Text, Modal } from 'react-native';
+import { View, StyleSheet, ScrollView, Platform, TouchableOpacity, FlatList, Text, Modal, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { TextInput, Button, Title, List, SegmentedButtons, ActivityIndicator, Card, Paragraph, Switch } from 'react-native-paper';
 import { projectsAPI, clientsAPI, usersAPI } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
+import { CustomDialog } from './CustomDialog';
 
 interface EditProjectModalProps {
   visible: boolean;
@@ -44,6 +45,12 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
 
   // Delete confirmation state
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  // Dialog state
+  const [dialogVisible, setDialogVisible] = useState(false);
+  const [dialogTitle, setDialogTitle] = useState('');
+  const [dialogMessage, setDialogMessage] = useState('');
+  const [dialogButtons, setDialogButtons] = useState<any[]>([]);
 
   useEffect(() => {
     if (visible && projectId) {
@@ -95,7 +102,10 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
       setClients([]);
       setAllUsers([]);
       setTeamMembers([]);
-      Alert.alert('Error', 'Failed to load project. You may be offline.');
+      setDialogTitle('Error');
+      setDialogMessage('Failed to load project. You may be offline.');
+      setDialogButtons([{ text: 'OK', onPress: () => {} }]);
+      setDialogVisible(true);
     } finally {
       setLoading(false);
     }
@@ -132,7 +142,10 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
       setClients(clientsResponse.data);
     } catch (error) {
       console.error('Error creating client:', error);
-      Alert.alert('Error', 'Failed to create client. Please try again.');
+      setDialogTitle('Error');
+      setDialogMessage('Failed to create client. Please try again.');
+      setDialogButtons([{ text: 'OK', onPress: () => {} }]);
+      setDialogVisible(true);
     }
   };
 
@@ -140,12 +153,18 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
     if (!projectId) return;
 
     if (!name) {
-      Alert.alert('Error', 'Please enter a project name');
+      setDialogTitle('Error');
+      setDialogMessage('Please enter a project name');
+      setDialogButtons([{ text: 'OK', onPress: () => {} }]);
+      setDialogVisible(true);
       return;
     }
 
     if (!selectedClient) {
-      Alert.alert('Error', 'Please select a client');
+      setDialogTitle('Error');
+      setDialogMessage('Please select a client');
+      setDialogButtons([{ text: 'OK', onPress: () => {} }]);
+      setDialogVisible(true);
       return;
     }
 
@@ -159,10 +178,10 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
         const missingNames = membersWithoutRates
           .map((member) => `${member.user.firstName} ${member.user.lastName}`)
           .join(', ');
-        Alert.alert(
-          'Missing Hourly Rates',
-          `Please enter hourly rates for the following team members:\n${missingNames}`
-        );
+        setDialogTitle('Missing Hourly Rates');
+        setDialogMessage(`Please enter hourly rates for the following team members:\n${missingNames}`);
+        setDialogButtons([{ text: 'OK', onPress: () => {} }]);
+        setDialogVisible(true);
         return;
       }
     }
@@ -194,11 +213,18 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
         );
       }
 
-      Alert.alert('Success', 'Project updated successfully');
-      onSuccess();
-      onDismiss();
+      setDialogTitle('Success');
+      setDialogMessage('Project updated successfully');
+      setDialogButtons([{ text: 'OK', onPress: () => {
+        onSuccess();
+        onDismiss();
+      } }]);
+      setDialogVisible(true);
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to update project');
+      setDialogTitle('Error');
+      setDialogMessage(error.response?.data?.error || 'Failed to update project');
+      setDialogButtons([{ text: 'OK', onPress: () => {} }]);
+      setDialogVisible(true);
     } finally {
       setSaving(false);
     }
@@ -210,35 +236,46 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
     try {
       await projectsAPI.addMember(projectId, { userId });
       await loadData(); // Reload to get updated members list
-      Alert.alert('Success', 'Team member added successfully');
+      setDialogTitle('Success');
+      setDialogMessage('Team member added successfully');
+      setDialogButtons([{ text: 'OK', onPress: () => {} }]);
+      setDialogVisible(true);
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to add team member');
+      setDialogTitle('Error');
+      setDialogMessage(error.response?.data?.error || 'Failed to add team member');
+      setDialogButtons([{ text: 'OK', onPress: () => {} }]);
+      setDialogVisible(true);
     }
   };
 
   const handleRemoveMember = async (memberId: string) => {
     if (!projectId) return;
 
-    Alert.alert(
-      'Remove Team Member',
-      'Are you sure you want to remove this team member from the project?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await projectsAPI.removeMember(projectId, memberId);
-              await loadData(); // Reload to get updated members list
-              Alert.alert('Success', 'Team member removed successfully');
-            } catch (error: any) {
-              Alert.alert('Error', error.response?.data?.error || 'Failed to remove team member');
-            }
-          },
+    setDialogTitle('Remove Team Member');
+    setDialogMessage('Are you sure you want to remove this team member from the project?');
+    setDialogButtons([
+      { text: 'Cancel', onPress: () => {}, style: 'cancel' },
+      {
+        text: 'Remove',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await projectsAPI.removeMember(projectId, memberId);
+            await loadData(); // Reload to get updated members list
+            setDialogTitle('Success');
+            setDialogMessage('Team member removed successfully');
+            setDialogButtons([{ text: 'OK', onPress: () => {} }]);
+            setDialogVisible(true);
+          } catch (error: any) {
+            setDialogTitle('Error');
+            setDialogMessage(error.response?.data?.error || 'Failed to remove team member');
+            setDialogButtons([{ text: 'OK', onPress: () => {} }]);
+            setDialogVisible(true);
+          }
         },
-      ]
-    );
+      },
+    ]);
+    setDialogVisible(true);
   };
 
   const handleDeleteClick = () => {
@@ -273,16 +310,27 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
       animationType="fade"
       onRequestClose={onDismiss}
     >
-      <View style={styles.modalOverlay}>
-        <View
-          style={[
-            styles.modalContainer,
-            { backgroundColor: currentColors.background.bg700 }
-          ]}
-        >
-          <ScrollView style={styles.scrollView}>
-            <Card style={{ backgroundColor: currentColors.background.bg600, borderRadius: 8 }}>
-              <Card.Content>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardAvoid}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View
+                style={[
+                  styles.modalContainer,
+                  { backgroundColor: currentColors.background.bg700 }
+                ]}
+              >
+                <ScrollView
+                  style={styles.scrollView}
+                  contentContainerStyle={{ paddingBottom: 0 }}
+                  keyboardShouldPersistTaps="handled"
+                  showsVerticalScrollIndicator={true}
+                >
+                  <Card style={{ backgroundColor: currentColors.background.bg600, borderRadius: 8, elevation: 0, borderWidth: 0 }}>
+                    <Card.Content style={{ paddingBottom: 0 }}>
                 <Title style={{ color: currentColors.text }}>Edit Project</Title>
 
                 {loading ? (
@@ -598,26 +646,49 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
                     </View>
                   </>
                 )}
-              </Card.Content>
-            </Card>
-          </ScrollView>
-        </View>
-      </View>
+                    </Card.Content>
+                  </Card>
+                </ScrollView>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
+
+      <CustomDialog
+        visible={dialogVisible}
+        title={dialogTitle}
+        message={dialogMessage}
+        buttons={dialogButtons}
+        onDismiss={() => setDialogVisible(false)}
+      />
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
+  keyboardAvoid: {
+    flex: 1,
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+    paddingVertical: Platform.select({
+      ios: 40,
+      android: 20,
+      web: 20,
+    }),
+    paddingHorizontal: 10,
   },
   modalContainer: {
-    width: '90%',
+    width: '100%',
+    minWidth: 280,
     maxWidth: 800,
-    maxHeight: '90%',
+    maxHeight: '85%',
+    borderRadius: 12,
+    overflow: 'hidden',
   },
   scrollView: {
     flex: 1,
@@ -716,6 +787,7 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     marginTop: 15,
+    marginBottom: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',

@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { View, StyleSheet, FlatList, TouchableOpacity, Modal, Text } from 'react-native';
 import { Card, Title, Paragraph, FAB, ActivityIndicator, Searchbar, IconButton, Menu, Divider } from 'react-native-paper';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { HugeiconsIcon } from '@hugeicons/react-native';
+import { Search01Icon } from '@hugeicons/core-free-icons';
 import { clientsAPI } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -190,6 +192,7 @@ const ClientsListScreen = () => {
         onChangeText={setSearchQuery}
         value={searchQuery}
         style={styles.searchbar}
+        icon={() => <HugeiconsIcon icon={Search01Icon} size={24} color={currentColors.icon} />}
       />
 
       {filteredClients.length === 0 ? (

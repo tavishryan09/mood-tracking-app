@@ -7,6 +7,7 @@ import { Provider as PaperProvider } from 'react-native-paper';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './src/contexts/AuthContext';
 import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
+import { CustomColorThemeProvider } from './src/contexts/CustomColorThemeContext';
 import { PlanningColorsProvider } from './src/contexts/PlanningColorsContext';
 import AppNavigator from './src/navigation/AppNavigator';
 import { createThemedIOSTheme } from './src/theme/iosTheme';
@@ -25,12 +26,12 @@ const ThemedApp = () => {
       <PaperProvider theme={theme}>
         <View style={{ flex: 1, height: '100%', width: '100%', position: 'relative' }}>
           <OfflineIndicator />
-          <AuthProvider>
+          <CustomColorThemeProvider>
             <PlanningColorsProvider>
               <AppNavigator />
               <StatusBar style="dark" />
             </PlanningColorsProvider>
-          </AuthProvider>
+          </CustomColorThemeProvider>
           <InstallPrompt />
         </View>
       </PaperProvider>
@@ -80,25 +81,36 @@ export default function App() {
         [dir="auto"] {
           font-family: 'Josefin Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
         }
+
+        /* Override for Juana font - must come after Josefin Sans rules */
+        .juana-font,
+        .juana-font * {
+          font-family: 'Juana', 'Josefin Sans', sans-serif !important;
+        }
       `;
       document.head.appendChild(style);
 
-      // Register service worker for PWA functionality
-      serviceWorkerRegistration.register({
-        onSuccess: (registration) => {
-          console.log('[PWA] Service Worker registered successfully');
-        },
-        onUpdate: (registration) => {
-          console.log('[PWA] New version available. Please close all tabs to update.');
-          // You could show a notification to the user here
-          if (window.confirm('A new version is available! Reload to update?')) {
-            if (registration.waiting) {
-              registration.waiting.postMessage({ type: 'SKIP_WAITING' });
-              window.location.reload();
-            }
-          }
-        },
-      });
+      // TEMPORARILY UNREGISTER service worker for development
+      // This prevents aggressive caching during development
+      serviceWorkerRegistration.unregister();
+      console.log('[PWA] Service Worker UNREGISTERED for development');
+
+      // TODO: Re-enable for production by changing unregister() back to register()
+      // serviceWorkerRegistration.register({
+      //   onSuccess: (registration) => {
+      //     console.log('[PWA] Service Worker registered successfully');
+      //   },
+      //   onUpdate: (registration) => {
+      //     console.log('[PWA] New version available. Please close all tabs to update.');
+      //     // You could show a notification to the user here
+      //     if (window.confirm('A new version is available! Reload to update?')) {
+      //       if (registration.waiting) {
+      //         registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+      //         window.location.reload();
+      //       }
+      //     }
+      //   },
+      // });
 
       // Initialize offline support (IndexedDB, event listeners)
       serviceWorkerRegistration.initOfflineSupport();
@@ -111,16 +123,18 @@ export default function App() {
   if (!fontsLoaded) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF' }}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color="#dd3e7f" />
       </View>
     );
   }
 
   return (
     <SafeAreaProvider style={{ flex: 1, height: '100%', width: '100%' }}>
-      <ThemeProvider>
-        <ThemedApp />
-      </ThemeProvider>
+      <AuthProvider>
+        <ThemeProvider>
+          <ThemedApp />
+        </ThemeProvider>
+      </AuthProvider>
     </SafeAreaProvider>
   );
 }

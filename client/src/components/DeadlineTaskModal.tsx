@@ -1,8 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Modal, ScrollView, Alert, TextInput as RNTextInput } from 'react-native';
+import { View, StyleSheet, Modal, ScrollView, TextInput as RNTextInput, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { TextInput, Button, Title, RadioButton, Text, Card } from 'react-native-paper';
+import { HugeiconsIcon } from '@hugeicons/react-native';
+import { Search01Icon } from '@hugeicons/core-free-icons';
 import { projectsAPI, clientsAPI } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
+import { CustomDialog } from './CustomDialog';
 
 interface DeadlineTaskModalProps {
   visible: boolean;
@@ -18,7 +21,7 @@ export interface DeadlineTask {
   id: string;
   date: Date;
   slotIndex: number;
-  clientId: string;
+  clientId?: string;
   description?: string;
   deadlineType: 'DEADLINE' | 'INTERNAL_DEADLINE' | 'MILESTONE';
   projectId?: string;
@@ -36,7 +39,7 @@ export interface DeadlineTask {
 }
 
 export interface DeadlineTaskData {
-  clientId: string;
+  clientId?: string;
   description?: string;
   deadlineType: 'DEADLINE' | 'INTERNAL_DEADLINE' | 'MILESTONE';
   projectId?: string;
@@ -64,6 +67,12 @@ const DeadlineTaskModal: React.FC<DeadlineTaskModalProps> = ({
   const [deadlineType, setDeadlineType] = useState<'DEADLINE' | 'INTERNAL_DEADLINE' | 'MILESTONE'>('DEADLINE');
   const [loading, setLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  // Dialog state
+  const [dialogVisible, setDialogVisible] = useState(false);
+  const [dialogTitle, setDialogTitle] = useState('');
+  const [dialogMessage, setDialogMessage] = useState('');
+  const [dialogButtons, setDialogButtons] = useState<any[]>([]);
 
   useEffect(() => {
     if (visible) {
@@ -101,7 +110,10 @@ const DeadlineTaskModal: React.FC<DeadlineTaskModalProps> = ({
       setFilteredProjects(response.data);
     } catch (error) {
       console.error('Error loading projects:', error);
-      Alert.alert('Error', 'Failed to load projects');
+      setDialogTitle('Error');
+      setDialogMessage('Failed to load projects');
+      setDialogButtons([{ text: 'OK', onPress: () => setDialogVisible(false) }]);
+      setDialogVisible(true);
     }
   };
 
@@ -112,7 +124,10 @@ const DeadlineTaskModal: React.FC<DeadlineTaskModalProps> = ({
       setFilteredClients(response.data);
     } catch (error) {
       console.error('Error loading clients:', error);
-      Alert.alert('Error', 'Failed to load clients');
+      setDialogTitle('Error');
+      setDialogMessage('Failed to load clients');
+      setDialogButtons([{ text: 'OK', onPress: () => setDialogVisible(false) }]);
+      setDialogVisible(true);
     }
   };
 
@@ -160,34 +175,28 @@ const DeadlineTaskModal: React.FC<DeadlineTaskModalProps> = ({
   };
 
   const handleSubmit = () => {
-    // For DEADLINE type, project is required
-    if (deadlineType === 'DEADLINE' && !selectedProjectId) {
-      Alert.alert('Error', 'Please select a project for Deadline type');
+    // Require either a description or project
+    if (!description.trim() && !selectedProjectId) {
+      setDialogTitle('Error');
+      setDialogMessage('Please provide either a description or select a project');
+      setDialogButtons([{ text: 'OK', onPress: () => setDialogVisible(false) }]);
+      setDialogVisible(true);
       return;
     }
 
-    // For INTERNAL_DEADLINE and MILESTONE, either project or client is required
-    if ((deadlineType === 'INTERNAL_DEADLINE' || deadlineType === 'MILESTONE') && !selectedProjectId && !selectedClientId) {
-      Alert.alert('Error', 'Please select either a project or a client');
-      return;
-    }
+    let clientId: string | undefined = undefined;
 
-    let clientId = selectedClientId;
-
-    // If project is selected, get client from project
+    // If project is selected, get clientId from project
     if (selectedProjectId) {
       const selectedProject = projects.find((p) => p.id === selectedProjectId);
       if (!selectedProject) {
-        Alert.alert('Error', 'Selected project not found');
+        setDialogTitle('Error');
+        setDialogMessage('Selected project not found');
+        setDialogButtons([{ text: 'OK', onPress: () => setDialogVisible(false) }]);
+        setDialogVisible(true);
         return;
       }
       clientId = selectedProject.clientId;
-    }
-
-    // Ensure we have a clientId
-    if (!clientId) {
-      Alert.alert('Error', 'Client is required');
-      return;
     }
 
     onSave({
@@ -236,16 +245,26 @@ const DeadlineTaskModal: React.FC<DeadlineTaskModalProps> = ({
       animationType="fade"
       onRequestClose={onDismiss}
     >
-      <View style={styles.modalOverlay}>
-        <View
-          style={[
-            styles.modalContainer,
-            { backgroundColor: currentColors.background.bg700 }
-          ]}
-        >
-          <ScrollView>
-            <Card style={{ backgroundColor: currentColors.background.bg600, borderRadius: 8 }}>
-              <Card.Content>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        style={styles.keyboardAvoid}
+      >
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View
+                style={[
+                  styles.modalContainer,
+                  { backgroundColor: currentColors.background.bg700 }
+                ]}
+              >
+                <ScrollView
+                  contentContainerStyle={{ paddingBottom: 0 }}
+                  keyboardShouldPersistTaps="handled"
+                  showsVerticalScrollIndicator={true}
+                >
+                  <Card style={{ backgroundColor: currentColors.background.bg600, borderRadius: 8, elevation: 0, borderWidth: 0 }}>
+                    <Card.Content style={{ paddingBottom: 0 }}>
               <Title style={{ color: currentColors.text }}>
                 {existingTask ? 'Edit Deadline / Milestone' : 'Add Deadline / Milestone'}
               </Title>
@@ -281,21 +300,22 @@ const DeadlineTaskModal: React.FC<DeadlineTaskModalProps> = ({
                 <Text style={[styles.label, { color: currentColors.text }]}>
                   Project (by common name) {deadlineType === 'DEADLINE' ? '*' : '(optional)'}
                 </Text>
-                <RNTextInput
-                  style={[
-                    styles.searchInput,
-                    {
-                      backgroundColor: currentColors.background.bg700,
-                      color: currentColors.text,
-                      borderColor: currentColors.border,
-                    }
-                  ]}
-                  placeholder="Search by common name..."
-                  placeholderTextColor={currentColors.textTertiary}
-                  value={projectSearch}
-                  onChangeText={handleProjectSearch}
-                  onFocus={() => setFilteredProjects(projects)}
-                />
+                <View style={[styles.searchInputContainer, { backgroundColor: currentColors.background.bg700, borderColor: currentColors.border }]}>
+                  <HugeiconsIcon icon={Search01Icon} size={20} color={currentColors.icon} />
+                  <RNTextInput
+                    style={[
+                      styles.searchInput,
+                      {
+                        color: currentColors.text,
+                      }
+                    ]}
+                    placeholder="Search by common name..."
+                    placeholderTextColor={currentColors.textTertiary}
+                    value={projectSearch}
+                    onChangeText={handleProjectSearch}
+                    onFocus={() => setFilteredProjects(projects)}
+                  />
+                </View>
 
                 {filteredProjects.length > 0 && projectSearch !== '' && (
                   <ScrollView
@@ -324,54 +344,6 @@ const DeadlineTaskModal: React.FC<DeadlineTaskModalProps> = ({
                 )}
               </View>
 
-              {/* Client Selection - Only show if no project selected and type is not DEADLINE */}
-              {!selectedProjectId && deadlineType !== 'DEADLINE' && (
-                <View style={styles.section}>
-                  <Text style={[styles.label, { color: currentColors.text }]}>Client *</Text>
-                  <RNTextInput
-                    style={[
-                      styles.searchInput,
-                      {
-                        backgroundColor: currentColors.background.bg700,
-                        color: currentColors.text,
-                        borderColor: currentColors.border,
-                      }
-                    ]}
-                    placeholder="Search by client name..."
-                    placeholderTextColor={currentColors.textTertiary}
-                    value={clientSearch}
-                    onChangeText={handleClientSearch}
-                    onFocus={() => setFilteredClients(clients)}
-                  />
-
-                  {filteredClients.length > 0 && clientSearch !== '' && (
-                    <ScrollView
-                      style={[
-                        styles.projectList,
-                        {
-                          backgroundColor: currentColors.background.bg500,
-                          borderColor: currentColors.border,
-                        }
-                      ]}
-                      nestedScrollEnabled
-                    >
-                      {filteredClients.map((client) => (
-                        <Button
-                          key={client.id}
-                          mode="text"
-                          onPress={() => handleClientSelect(client)}
-                          style={styles.projectItem}
-                          contentStyle={{ justifyContent: 'flex-start' }}
-                          labelStyle={{ color: currentColors.text, textAlign: 'left' }}
-                        >
-                          {client.name}
-                        </Button>
-                      ))}
-                    </ScrollView>
-                  )}
-                </View>
-              )}
-
               {/* Task Description */}
               <TextInput
                 label="Task Description (Optional)"
@@ -380,7 +352,8 @@ const DeadlineTaskModal: React.FC<DeadlineTaskModalProps> = ({
                 mode="outlined"
                 multiline
                 numberOfLines={2}
-                style={styles.input}
+                style={[styles.input, { marginBottom: 20 }]}
+                outlineStyle={{ borderWidth: 1 }}
               />
 
               {/* Delete Confirmation */}
@@ -447,26 +420,49 @@ const DeadlineTaskModal: React.FC<DeadlineTaskModalProps> = ({
                   </Button>
                 </View>
               </View>
-            </Card.Content>
-          </Card>
-          </ScrollView>
-        </View>
-      </View>
+                    </Card.Content>
+                  </Card>
+                </ScrollView>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </KeyboardAvoidingView>
+
+      <CustomDialog
+        visible={dialogVisible}
+        title={dialogTitle}
+        message={dialogMessage}
+        buttons={dialogButtons}
+        onDismiss={() => setDialogVisible(false)}
+      />
     </Modal>
   );
 };
 
 const styles = StyleSheet.create({
+  keyboardAvoid: {
+    flex: 1,
+  },
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
+    paddingVertical: Platform.select({
+      ios: 40,
+      android: 20,
+      web: 20,
+    }),
+    paddingHorizontal: 10,
   },
   modalContainer: {
-    width: '90%',
+    width: '100%',
+    minWidth: 280,
     maxWidth: 600,
-    maxHeight: '80%',
+    maxHeight: '85%',
+    borderRadius: 12,
+    overflow: 'hidden',
   },
   dateText: {
     fontSize: 14,
@@ -480,12 +476,19 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 8,
   },
-  searchInput: {
+  searchInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     borderWidth: 1,
     borderRadius: 4,
+    paddingHorizontal: 12,
+    marginBottom: 8,
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
     padding: 12,
     fontSize: 16,
-    marginBottom: 8,
   },
   projectList: {
     maxHeight: 200,
@@ -498,7 +501,7 @@ const styles = StyleSheet.create({
     borderRadius: 0,
   },
   input: {
-    marginBottom: 0,
+    marginBottom: 15,
   },
   radioItem: {
     flexDirection: 'row',
@@ -507,6 +510,7 @@ const styles = StyleSheet.create({
   },
   buttonContainer: {
     marginTop: 15,
+    marginBottom: 20,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',

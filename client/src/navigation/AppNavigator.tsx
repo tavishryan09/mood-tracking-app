@@ -4,16 +4,17 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-import { Home09Icon, Calendar03Icon, StopWatchIcon, Folder01Icon, UserCircleIcon, Calendar04Icon } from '@hugeicons/core-free-icons';
+import { Home09Icon, Folder01Icon, UserCircleIcon, Calendar04Icon } from '@hugeicons/core-free-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import { useCustomColorTheme } from '../contexts/CustomColorThemeContext';
 import { iOSColors } from '../theme/iosTheme';
 import { settingsAPI } from '../services/api';
 
 // Suspense fallback component
 const LoadingFallback = () => (
   <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: iOSColors.systemBackground }}>
-    <ActivityIndicator size="large" color={iOSColors.systemBlue} />
+    <ActivityIndicator size="large" color="#dd3e7f" />
   </View>
 );
 
@@ -34,21 +35,17 @@ const LoginScreen = Platform.OS === 'web'
   ? lazy(() => import('../screens/auth/LoginScreen'))
   : require('../screens/auth/LoginScreen').default;
 
+const OAuthCallbackScreen = Platform.OS === 'web'
+  ? lazy(() => import('../screens/auth/OAuthCallbackScreen'))
+  : require('../screens/auth/OAuthCallbackScreen').default;
+
 const DashboardScreen = Platform.OS === 'web'
   ? lazy(() => import('../screens/dashboard/DashboardScreen'))
   : require('../screens/dashboard/DashboardScreen').default;
 
-const CalendarScreen = Platform.OS === 'web'
-  ? lazy(() => import('../screens/calendar/CalendarScreen'))
-  : require('../screens/calendar/CalendarScreen').default;
-
 const PlanningScreen = Platform.OS === 'web'
   ? lazy(() => import('../screens/planning/PlanningScreen'))
   : require('../screens/planning/PlanningScreen').default;
-
-const TimeTrackingScreen = Platform.OS === 'web'
-  ? lazy(() => import('../screens/time/TimeTrackingScreen'))
-  : require('../screens/time/TimeTrackingScreen').default;
 
 const ProjectsScreen = Platform.OS === 'web'
   ? lazy(() => import('../screens/projects/ProjectsScreen'))
@@ -69,18 +66,6 @@ const CreateEventScreen = Platform.OS === 'web'
 const EditEventScreen = Platform.OS === 'web'
   ? lazy(() => import('../screens/events/EditEventScreen'))
   : require('../screens/events/EditEventScreen').default;
-
-const DayViewScreen = Platform.OS === 'web'
-  ? lazy(() => import('../screens/calendar/DayViewScreen'))
-  : require('../screens/calendar/DayViewScreen').default;
-
-const StartTimerScreen = Platform.OS === 'web'
-  ? lazy(() => import('../screens/time/StartTimerScreen'))
-  : require('../screens/time/StartTimerScreen').default;
-
-const EditTimeEntryScreen = Platform.OS === 'web'
-  ? lazy(() => import('../screens/time/EditTimeEntryScreen'))
-  : require('../screens/time/EditTimeEntryScreen').default;
 
 const CreateProjectScreen = Platform.OS === 'web'
   ? lazy(() => import('../screens/projects/CreateProjectScreen'))
@@ -126,9 +111,17 @@ const PlanningColorsScreen = Platform.OS === 'web'
   ? lazy(() => import('../screens/profile/PlanningColorsScreen'))
   : require('../screens/profile/PlanningColorsScreen').default;
 
-const ColorPaletteEditorScreen = Platform.OS === 'web'
-  ? lazy(() => import('../screens/profile/ColorPaletteEditorScreen'))
-  : require('../screens/profile/ColorPaletteEditorScreen').default;
+const CustomColorManagerScreen = Platform.OS === 'web'
+  ? lazy(() => import('../screens/profile/CustomColorManagerScreen'))
+  : require('../screens/profile/CustomColorManagerScreen').default;
+
+const ElementColorMapperScreen = Platform.OS === 'web'
+  ? lazy(() => import('../screens/profile/ElementColorMapperScreen'))
+  : require('../screens/profile/ElementColorMapperScreen').default;
+
+const ManageCustomThemesScreen = Platform.OS === 'web'
+  ? lazy(() => import('../screens/profile/ManageCustomThemesScreen'))
+  : require('../screens/profile/ManageCustomThemesScreen').default;
 
 const DesktopNavigator = Platform.OS === 'web'
   ? lazy(() => import('./DesktopNavigator'))
@@ -152,6 +145,9 @@ const AuthNavigator = () => {
     <Stack.Navigator screenOptions={{ headerShown: false }}>
       <Stack.Screen name="Login">
         {(props) => <SuspenseWrapper component={LoginScreen} {...props} />}
+      </Stack.Screen>
+      <Stack.Screen name="OAuthCallback">
+        {(props) => <SuspenseWrapper component={OAuthCallbackScreen} {...props} />}
       </Stack.Screen>
       {/* Register screen removed - users must be invited by admins */}
       {/* <Stack.Screen name="Register" component={RegisterScreen} /> */}
@@ -188,7 +184,7 @@ const SmartProjectsScreen = (props: any) => {
           }
         }
 
-        // Fall back to role-based setting
+        // Fall back to role-based team setting (app-wide)
         let defaultTableViewKey = 'team_view_user_default_projects_table';
         if (user.role === 'ADMIN') {
           defaultTableViewKey = 'team_view_admin_default_projects_table';
@@ -197,7 +193,7 @@ const SmartProjectsScreen = (props: any) => {
         }
 
         try {
-          const roleDefaultResponse = await settingsAPI.user.get(defaultTableViewKey);
+          const roleDefaultResponse = await settingsAPI.app.get(defaultTableViewKey);
           if (roleDefaultResponse.data?.value !== undefined) {
             setUseTableView(roleDefaultResponse.data.value === true);
           }
@@ -230,6 +226,7 @@ const SmartProjectsScreen = (props: any) => {
 const MainTabs = () => {
   const { user } = useAuth();
   const { currentColors } = useTheme();
+  const { getColorForElement } = useCustomColorTheme();
   const [visibleTabs, setVisibleTabs] = useState<string[]>([]);
   const [tabsLoaded, setTabsLoaded] = useState(false);
 
@@ -240,7 +237,7 @@ const MainTabs = () => {
   const loadTabSettings = async () => {
     try {
       if (!user || !user.role) {
-        setVisibleTabs(['Dashboard', 'Calendar', 'Planning', 'Time', 'Projects', 'Profile']);
+        setVisibleTabs(['Dashboard', 'Planning', 'Projects', 'Profile']);
         setTabsLoaded(true);
         return;
       }
@@ -253,35 +250,40 @@ const MainTabs = () => {
         settingsKey = 'team_view_manager_page_access';
       }
 
-      // Load settings from database
-      const response = await settingsAPI.user.getAll();
-      const settings = response.data;
+      // Load settings from app-wide settings (team settings)
+      try {
+        const response = await settingsAPI.app.get(settingsKey);
+        const pageAccess = response.data?.value;
 
-      const pageAccessSetting = settings.find((s: any) => s.key === settingsKey);
+        if (pageAccess) {
+          console.log('[AppNavigator] Loaded page access for', user.role, ':', pageAccess);
 
-      if (pageAccessSetting) {
-        const pageAccess = pageAccessSetting.value;
-        console.log('[AppNavigator] Loaded page access for', user.role, ':', pageAccess);
+          // Filter tabs based on page access
+          const tabs = [];
+          if (pageAccess.Dashboard) tabs.push('Dashboard');
+          if (pageAccess.Planning) tabs.push('Planning');
+          if (pageAccess.Projects) tabs.push('Projects');
+          if (pageAccess.Profile) tabs.push('Profile');
 
-        // Filter tabs based on page access
-        const tabs = [];
-        if (pageAccess.Dashboard) tabs.push('Dashboard');
-        if (pageAccess.Calendar) tabs.push('Calendar');
-        if (pageAccess.Planning) tabs.push('Planning');
-        if (pageAccess.Time) tabs.push('Time');
-        if (pageAccess.Projects) tabs.push('Projects');
-        if (pageAccess.Profile) tabs.push('Profile');
-
-        console.log('[AppNavigator] Filtered tabs:', tabs);
-        setVisibleTabs(tabs);
-      } else {
-        // If no settings saved, show all tabs
-        console.log('[AppNavigator] No saved settings, showing all tabs');
-        setVisibleTabs(['Dashboard', 'Calendar', 'Planning', 'Time', 'Projects', 'Profile']);
+          console.log('[AppNavigator] Filtered tabs:', tabs);
+          setVisibleTabs(tabs);
+        } else {
+          // If no settings saved, show all tabs
+          console.log('[AppNavigator] No saved settings, showing all tabs');
+          setVisibleTabs(['Dashboard', 'Planning', 'Projects', 'Profile']);
+        }
+      } catch (error: any) {
+        // If 404, no settings exist yet - show all tabs
+        if (error.response?.status === 404) {
+          console.log('[AppNavigator] No saved settings (404), showing all tabs');
+          setVisibleTabs(['Dashboard', 'Planning', 'Projects', 'Profile']);
+        } else {
+          throw error;
+        }
       }
     } catch (error) {
       console.error('[AppNavigator] Error loading tab settings:', error);
-      setVisibleTabs(['Dashboard', 'Calendar', 'Planning', 'Time', 'Projects', 'Profile']);
+      setVisibleTabs(['Dashboard', 'Planning', 'Projects', 'Profile']);
     } finally {
       setTabsLoaded(true);
     }
@@ -304,12 +306,8 @@ const MainTabs = () => {
 
           if (route.name === 'Dashboard') {
             iconObject = Home09Icon;
-          } else if (route.name === 'Calendar') {
-            iconObject = Calendar03Icon;
           } else if (route.name === 'Planning') {
             iconObject = Calendar04Icon;
-          } else if (route.name === 'Time') {
-            iconObject = StopWatchIcon;
           } else if (route.name === 'Projects') {
             iconObject = Folder01Icon;
           } else if (route.name === 'Profile') {
@@ -319,23 +317,16 @@ const MainTabs = () => {
           return <HugeiconsIcon icon={iconObject} size={size} color={color} strokeWidth={focused ? 2 : 1.5} />;
         },
         // iOS-style tab bar with theme colors
-        tabBarActiveTintColor: currentColors.primary,
-        tabBarInactiveTintColor: iOSColors.systemGray,
+        tabBarShowLabel: false, // Hide labels completely
+        tabBarActiveTintColor: getColorForElement('navigation', 'tabBarActiveIcon'),
+        tabBarInactiveTintColor: getColorForElement('navigation', 'tabBarInactiveIcon'),
         tabBarStyle: {
-          backgroundColor: iOSColors.systemBackground,
+          backgroundColor: getColorForElement('navigation', 'tabBarBackground'),
           borderTopColor: iOSColors.separator,
           borderTopWidth: 0.5,
           height: Platform.OS === 'web' ? 65 : Platform.OS === 'ios' ? 88 : 60,
           paddingBottom: Platform.OS === 'web' ? 10 : Platform.OS === 'ios' ? 34 : 8,
           paddingTop: 8,
-        },
-        tabBarLabelStyle: {
-          fontSize: 10,
-          fontWeight: '500',
-          marginBottom: Platform.OS === 'web' ? 4 : 0,
-          display: Platform.OS === 'web' ? 'flex' : 'none',
-          height: Platform.OS === 'web' ? undefined : 0,
-          overflow: 'hidden',
         },
         tabBarIconStyle: {
           marginTop: Platform.OS === 'web' ? 4 : 0,
@@ -360,17 +351,12 @@ const MainTabs = () => {
       {visibleTabs.includes('Dashboard') && (
         <Tab.Screen
           name="Dashboard"
-          options={{ title: 'Dashboard' }}
+          options={{
+            title: 'Dashboard',
+            headerShown: false, // Hide header completely
+          }}
         >
           {(props) => <SuspenseWrapper component={DashboardScreen} {...props} />}
-        </Tab.Screen>
-      )}
-      {visibleTabs.includes('Calendar') && (
-        <Tab.Screen
-          name="Calendar"
-          options={{ headerShown: false }}
-        >
-          {(props) => <SuspenseWrapper component={CalendarScreen} {...props} />}
         </Tab.Screen>
       )}
       {visibleTabs.includes('Planning') && (
@@ -379,14 +365,6 @@ const MainTabs = () => {
           options={{ title: 'Planning', headerShown: false }}
         >
           {(props) => <SuspenseWrapper component={PlanningScreen} {...props} />}
-        </Tab.Screen>
-      )}
-      {visibleTabs.includes('Time') && (
-        <Tab.Screen
-          name="Time"
-          options={{ title: 'Time Tracking' }}
-        >
-          {(props) => <SuspenseWrapper component={TimeTrackingScreen} {...props} />}
         </Tab.Screen>
       )}
       {visibleTabs.includes('Projects') && (
@@ -400,7 +378,10 @@ const MainTabs = () => {
       {visibleTabs.includes('Profile') && (
         <Tab.Screen
           name="Profile"
-          options={{ title: 'Profile' }}
+          options={{
+            title: 'Profile',
+            headerShown: false, // Hide header completely
+          }}
         >
           {(props) => <SuspenseWrapper component={ProfileScreen} {...props} />}
         </Tab.Screen>
@@ -443,28 +424,10 @@ const MainStack = () => {
         {(props) => <SuspenseWrapper component={EditEventScreen} {...props} />}
       </Stack.Screen>
       <Stack.Screen
-        name="DayView"
-        options={{ title: 'Calendar', headerShown: false }}
-      >
-        {(props) => <SuspenseWrapper component={DayViewScreen} {...props} />}
-      </Stack.Screen>
-      <Stack.Screen
         name="Planning"
         options={{ title: 'Planning', headerShown: false }}
       >
         {(props) => <SuspenseWrapper component={PlanningScreen} {...props} />}
-      </Stack.Screen>
-      <Stack.Screen
-        name="StartTimer"
-        options={{ title: 'Start Timer' }}
-      >
-        {(props) => <SuspenseWrapper component={StartTimerScreen} {...props} />}
-      </Stack.Screen>
-      <Stack.Screen
-        name="EditTimeEntry"
-        options={{ title: 'Edit Time Entry' }}
-      >
-        {(props) => <SuspenseWrapper component={EditTimeEntryScreen} {...props} />}
       </Stack.Screen>
       <Stack.Screen
         name="CreateProject"
@@ -533,10 +496,22 @@ const MainStack = () => {
         {(props) => <SuspenseWrapper component={PlanningColorsScreen} {...props} />}
       </Stack.Screen>
       <Stack.Screen
-        name="ColorPaletteEditor"
-        options={{ title: 'Color Palette Editor' }}
+        name="CustomColorManager"
+        options={{ title: 'Custom Color Manager' }}
       >
-        {(props) => <SuspenseWrapper component={ColorPaletteEditorScreen} {...props} />}
+        {(props) => <SuspenseWrapper component={CustomColorManagerScreen} {...props} />}
+      </Stack.Screen>
+      <Stack.Screen
+        name="ElementColorMapper"
+        options={{ title: 'Map Colors to Elements', headerShown: false }}
+      >
+        {(props) => <SuspenseWrapper component={ElementColorMapperScreen} {...props} />}
+      </Stack.Screen>
+      <Stack.Screen
+        name="ManageCustomThemes"
+        options={{ title: 'Manage Custom Themes', headerShown: false }}
+      >
+        {(props) => <SuspenseWrapper component={ManageCustomThemesScreen} {...props} />}
       </Stack.Screen>
     </Stack.Navigator>
   );
@@ -548,7 +523,8 @@ const AppNavigator = () => {
   const [previousIsDesktop, setPreviousIsDesktop] = React.useState<boolean | null>(null);
 
   // Explicitly convert to booleans to avoid type issues
-  const isAuthenticated = Boolean(authContext.isAuthenticated);
+  // Also directly check token and user to ensure we react to state changes
+  const isAuthenticated = Boolean(authContext.isAuthenticated && authContext.token && authContext.user);
   const loading = Boolean(authContext.loading);
 
   // Use desktop layout for web and screens wider than 768px
@@ -578,8 +554,51 @@ const AppNavigator = () => {
   // Don't block rendering while auth is loading - show auth screen instead
   // This prevents the infinite loading issue on web
 
+  // Linking configuration for URL routing
+  const linking = {
+    prefixes: ['http://localhost:8081', 'http://localhost:3000', 'https://your-domain.com'],
+    config: {
+      screens: {
+        Auth: {
+          screens: {
+            Login: 'login',
+            Register: 'register',
+            OAuthCallback: 'auth/callback',
+          },
+        },
+        MainDrawer: {
+          path: '',
+          screens: {
+            Dashboard: 'dashboard',
+            Planning: 'planning',
+            Projects: 'projects',
+            Profile: 'profile',
+            Clients: 'clients',
+            CreateClient: 'clients/create',
+            EditClient: 'clients/edit/:clientId',
+            CreateProject: 'projects/create',
+            EditProject: 'projects/edit/:projectId',
+            ProjectTableView: 'projects/table',
+            CreateEvent: 'events/create',
+            EditEvent: 'events/edit/:eventId',
+            ManageUsers: 'admin/users',
+            InviteUser: 'admin/users/invite',
+            EditUser: 'admin/users/edit/:userId',
+            TeamViewSettings: 'admin/settings/team-view',
+            UserRates: 'admin/users/rates',
+            PlanningColors: 'profile/planning-colors',
+            CustomColorManager: 'profile/colors/manager',
+            ElementColorMapper: 'profile/colors/mapper',
+            ManageCustomThemes: 'profile/colors/themes',
+            ColorPaletteEditor: 'profile/colors/editor',
+          },
+        },
+      },
+    },
+  };
+
   return (
-    <NavigationContainer>
+    <NavigationContainer linking={linking}>
       {!loading && isAuthenticated ? (
         isDesktop ? (
           Platform.OS === 'web' ? (

@@ -1,7 +1,7 @@
 /* eslint-disable no-restricted-globals */
 
 // Use timestamp to force cache update on each deployment
-const CACHE_VERSION = '2025-11-03-23-21';
+const CACHE_VERSION = '2025-11-05-icon-fix';
 const CACHE_NAME = `mood-tracker-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `mood-tracker-runtime-${CACHE_VERSION}`;
 

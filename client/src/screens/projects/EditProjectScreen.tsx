@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Alert, Platform, TouchableOpacity, FlatList, Text } from 'react-native';
+import { View, StyleSheet, ScrollView, Platform, TouchableOpacity, FlatList, Text } from 'react-native';
 import { TextInput, Button, Title, List, RadioButton, SegmentedButtons, ActivityIndicator, Card, Paragraph, Switch } from 'react-native-paper';
 import { projectsAPI, clientsAPI, usersAPI } from '../../services/api';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useTheme } from '../../contexts/ThemeContext';
+import { CustomDialog } from '../../components/CustomDialog';
 
 const EditProjectScreen = ({ route, navigation }: any) => {
   const { projectId } = route.params;
@@ -20,6 +21,17 @@ const EditProjectScreen = ({ route, navigation }: any) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+  // Dialog states
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [errorDialogTitle, setErrorDialogTitle] = useState('Error');
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showConfirmationDialog, setShowConfirmationDialog] = useState(false);
+  const [confirmationMessage, setConfirmationMessage] = useState('');
+  const [confirmationAction, setConfirmationAction] = useState<(() => void) | null>(null);
+  const [confirmationTitle, setConfirmationTitle] = useState('Confirm');
 
   // Billing rate state
   const [useStandardRate, setUseStandardRate] = useState(true);
@@ -82,7 +94,9 @@ const EditProjectScreen = ({ route, navigation }: any) => {
       setClients([]);
       setAllUsers([]);
       setTeamMembers([]);
-      Alert.alert('Error', 'Failed to load project. You may be offline.');
+      setErrorDialogTitle('Error');
+      setErrorMessage('Failed to load project. You may be offline.');
+      setShowErrorDialog(true);
     } finally {
       setLoading(false);
     }
@@ -119,18 +133,24 @@ const EditProjectScreen = ({ route, navigation }: any) => {
       setClients(clientsResponse.data);
     } catch (error) {
       console.error('Error creating client:', error);
-      Alert.alert('Error', 'Failed to create client. Please try again.');
+      setErrorDialogTitle('Error');
+      setErrorMessage('Failed to create client. Please try again.');
+      setShowErrorDialog(true);
     }
   };
 
   const handleUpdate = async () => {
     if (!name) {
-      Alert.alert('Error', 'Please enter a project name');
+      setErrorDialogTitle('Error');
+      setErrorMessage('Please enter a project name');
+      setShowErrorDialog(true);
       return;
     }
 
     if (!selectedClient) {
-      Alert.alert('Error', 'Please select a client');
+      setErrorDialogTitle('Error');
+      setErrorMessage('Please select a client');
+      setShowErrorDialog(true);
       return;
     }
 
@@ -144,10 +164,9 @@ const EditProjectScreen = ({ route, navigation }: any) => {
         const missingNames = membersWithoutRates
           .map((member) => `${member.user.firstName} ${member.user.lastName}`)
           .join(', ');
-        Alert.alert(
-          'Missing Hourly Rates',
-          `Please enter hourly rates for the following team members:\n${missingNames}`
-        );
+        setErrorDialogTitle('Missing Hourly Rates');
+        setErrorMessage(`Please enter hourly rates for the following team members:\n${missingNames}`);
+        setShowErrorDialog(true);
         return;
       }
     }
@@ -179,10 +198,13 @@ const EditProjectScreen = ({ route, navigation }: any) => {
         );
       }
 
-      Alert.alert('Success', 'Project updated successfully');
-      navigation.goBack();
+      setSuccessMessage('Project updated successfully');
+      setShowSuccessDialog(true);
+      setTimeout(() => navigation.goBack(), 500);
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to update project');
+      setErrorDialogTitle('Error');
+      setErrorMessage(error.response?.data?.error || 'Failed to update project');
+      setShowErrorDialog(true);
     } finally {
       setSaving(false);
     }
@@ -193,33 +215,31 @@ const EditProjectScreen = ({ route, navigation }: any) => {
       await projectsAPI.addMember(projectId, { userId });
       setShowUserPicker(false);
       await loadData(); // Reload to get updated members list
-      Alert.alert('Success', 'Team member added successfully');
+      setSuccessMessage('Team member added successfully');
+      setShowSuccessDialog(true);
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to add team member');
+      setErrorDialogTitle('Error');
+      setErrorMessage(error.response?.data?.error || 'Failed to add team member');
+      setShowErrorDialog(true);
     }
   };
 
   const handleRemoveMember = async (memberId: string) => {
-    Alert.alert(
-      'Remove Team Member',
-      'Are you sure you want to remove this team member from the project?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Remove',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await projectsAPI.removeMember(projectId, memberId);
-              await loadData(); // Reload to get updated members list
-              Alert.alert('Success', 'Team member removed successfully');
-            } catch (error: any) {
-              Alert.alert('Error', error.response?.data?.error || 'Failed to remove team member');
-            }
-          },
-        },
-      ]
-    );
+    setConfirmationTitle('Remove Team Member');
+    setConfirmationMessage('Are you sure you want to remove this team member from the project?');
+    setConfirmationAction(() => async () => {
+      try {
+        await projectsAPI.removeMember(projectId, memberId);
+        await loadData(); // Reload to get updated members list
+        setSuccessMessage('Team member removed successfully');
+        setShowSuccessDialog(true);
+      } catch (error: any) {
+        setErrorDialogTitle('Error');
+        setErrorMessage(error.response?.data?.error || 'Failed to remove team member');
+        setShowErrorDialog(true);
+      }
+    });
+    setShowConfirmationDialog(true);
   };
 
   const handleDeleteClick = () => {
@@ -609,6 +629,65 @@ const EditProjectScreen = ({ route, navigation }: any) => {
         >
           Cancel
         </Button>
+
+        {/* Error Dialog */}
+        <CustomDialog
+          visible={showErrorDialog}
+          title={errorDialogTitle}
+          message={errorMessage}
+          buttons={[
+            {
+              text: 'OK',
+              label: 'OK',
+              onPress: () => setShowErrorDialog(false),
+              style: 'default',
+            },
+          ]}
+          onDismiss={() => setShowErrorDialog(false)}
+        />
+
+        {/* Success Dialog */}
+        <CustomDialog
+          visible={showSuccessDialog}
+          title="Success"
+          message={successMessage}
+          buttons={[
+            {
+              text: 'OK',
+              label: 'OK',
+              onPress: () => setShowSuccessDialog(false),
+              style: 'default',
+            },
+          ]}
+          onDismiss={() => setShowSuccessDialog(false)}
+        />
+
+        {/* Confirmation Dialog */}
+        <CustomDialog
+          visible={showConfirmationDialog}
+          title={confirmationTitle}
+          message={confirmationMessage}
+          buttons={[
+            {
+              text: 'Cancel',
+              label: 'Cancel',
+              onPress: () => setShowConfirmationDialog(false),
+              style: 'cancel',
+            },
+            {
+              text: 'Remove',
+              label: 'Remove',
+              onPress: () => {
+                setShowConfirmationDialog(false);
+                if (confirmationAction) {
+                  confirmationAction();
+                }
+              },
+              style: 'destructive',
+            },
+          ]}
+          onDismiss={() => setShowConfirmationDialog(false)}
+        />
       </View>
     </ScrollView>
   );

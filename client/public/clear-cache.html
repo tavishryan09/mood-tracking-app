@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Clear Cache</title>
+  <style>
+    body {
+      font-family: system-ui;
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #1a1a1a;
+      color: #fff;
+    }
+    .status {
+      padding: 15px;
+      margin: 10px 0;
+      border-radius: 8px;
+      background: #2a2a2a;
+    }
+    button {
+      padding: 12px 24px;
+      font-size: 16px;
+      background: #0066cc;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin: 10px 5px;
+    }
+    button:hover {
+      background: #0052a3;
+    }
+    .success { color: #4caf50; }
+    .error { color: #f44336; }
+  </style>
+</head>
+<body>
+  <h1>Cache Clearer</h1>
+  <div id="status"></div>
+
+  <button onclick="clearEverything()">Clear Everything</button>
+  <button onclick="location.href='/'">Go to App</button>
+
+  <script>
+    const log = (msg, isError = false) => {
+      const div = document.createElement('div');
+      div.className = `status ${isError ? 'error' : 'success'}`;
+      div.textContent = msg;
+      document.getElementById('status').appendChild(div);
+    };
+
+    async function clearEverything() {
+      document.getElementById('status').innerHTML = '';
+
+      try {
+        // Unregister all service workers
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (let registration of registrations) {
+          await registration.unregister();
+          log(`✓ Service Worker unregistered: ${registration.scope}`);
+        }
+
+        // Clear all caches
+        const cacheNames = await caches.keys();
+        for (let name of cacheNames) {
+          await caches.delete(name);
+          log(`✓ Cache deleted: ${name}`);
+        }
+
+        // Clear IndexedDB
+        const databases = await indexedDB.databases();
+        for (let db of databases) {
+          indexedDB.deleteDatabase(db.name);
+          log(`✓ IndexedDB deleted: ${db.name}`);
+        }
+
+        // Clear localStorage
+        localStorage.clear();
+        log('✓ localStorage cleared');
+
+        // Clear sessionStorage
+        sessionStorage.clear();
+        log('✓ sessionStorage cleared');
+
+        log('🎉 All caches cleared! Reloading in 2 seconds...', false);
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 2000);
+
+      } catch (error) {
+        log(`✗ Error: ${error.message}`, true);
+      }
+    }
+
+    // Auto-run on load
+    window.addEventListener('load', () => {
+      log('Ready to clear all caches. Click the button above.');
+    });
+  </script>
+</body>
+</html>

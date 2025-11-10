@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView } from 'react-native';
 import { TextInput, Button, Title, Card, IconButton, Divider, Paragraph, ActivityIndicator } from 'react-native-paper';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { UserAdd02Icon } from '@hugeicons/core-free-icons';
 import { clientsAPI } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
+import { CustomDialog } from '../../components/CustomDialog';
 
 interface Contact {
   id: string;
@@ -35,6 +36,12 @@ const EditClientScreen = ({ route, navigation }: any) => {
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
+  // Dialog states
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   useEffect(() => {
     loadClient();
@@ -77,8 +84,8 @@ const EditClientScreen = ({ route, navigation }: any) => {
       }
     } catch (error) {
       console.error('Error loading client:', error);
-      Alert.alert('Error', 'Failed to load client details');
-      navigation.goBack();
+      setErrorMessage('Failed to load client details');
+      setShowErrorDialog(true);
     } finally {
       setLoading(false);
     }
@@ -109,12 +116,14 @@ const EditClientScreen = ({ route, navigation }: any) => {
 
   const handleSubmit = async () => {
     if (!businessName) {
-      Alert.alert('Error', 'Please enter a business name');
+      setErrorMessage('Please enter a business name');
+      setShowErrorDialog(true);
       return;
     }
 
     if (!primaryContactName) {
-      Alert.alert('Error', 'Please enter a primary contact name');
+      setErrorMessage('Please enter a primary contact name');
+      setShowErrorDialog(true);
       return;
     }
 
@@ -158,16 +167,17 @@ const EditClientScreen = ({ route, navigation }: any) => {
 
       await Promise.race([clientsAPI.update(clientId, clientData), timeout]);
 
-      Alert.alert('Success', 'Client updated successfully');
-      navigation.goBack();
+      setSuccessMessage('Client updated successfully');
+      setShowSuccessDialog(true);
     } catch (error: any) {
       console.error('Client update error:', error);
 
-      const errorMessage = error.message === 'Request timeout'
+      const message = error.message === 'Request timeout'
         ? 'Unable to connect to server. Please check your connection and try again.'
         : error.response?.data?.error || 'Failed to update client';
 
-      Alert.alert('Error', errorMessage);
+      setErrorMessage(message);
+      setShowErrorDialog(true);
     } finally {
       setSaving(false);
     }
@@ -354,6 +364,48 @@ const EditClientScreen = ({ route, navigation }: any) => {
 
         <View style={styles.bottomSpacer} />
       </View>
+
+      {/* Error Dialog */}
+      <CustomDialog
+        visible={showErrorDialog}
+        title="Error"
+        message={errorMessage}
+        buttons={[
+          {
+            text: 'OK',
+            onPress: () => {
+              setShowErrorDialog(false);
+              // Navigate back only on load error
+              if (errorMessage === 'Failed to load client details') {
+                navigation.goBack();
+              }
+            },
+            style: 'default',
+          },
+        ]}
+        onDismiss={() => setShowErrorDialog(false)}
+      />
+
+      {/* Success Dialog */}
+      <CustomDialog
+        visible={showSuccessDialog}
+        title="Success"
+        message={successMessage}
+        buttons={[
+          {
+            text: 'OK',
+            onPress: () => {
+              setShowSuccessDialog(false);
+              navigation.goBack();
+            },
+            style: 'default',
+          },
+        ]}
+        onDismiss={() => {
+          setShowSuccessDialog(false);
+          navigation.goBack();
+        }}
+      />
     </ScrollView>
   );
 };

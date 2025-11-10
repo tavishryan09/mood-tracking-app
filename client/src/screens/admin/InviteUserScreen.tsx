@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView } from 'react-native';
 import { TextInput, Button, Title, SegmentedButtons } from 'react-native-paper';
 import { userManagementAPI } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
+import { CustomDialog } from '../../components/CustomDialog';
 
 const InviteUserScreen = ({ navigation }: any) => {
   const { currentColors } = useTheme();
@@ -14,14 +15,21 @@ const InviteUserScreen = ({ navigation }: any) => {
   const [defaultHourlyRate, setDefaultHourlyRate] = useState('');
   const [loading, setLoading] = useState(false);
 
+  // Dialog states
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+
   const handleInviteUser = async () => {
     if (!email || !password || !firstName || !lastName) {
-      Alert.alert('Error', 'Please fill in all required fields');
+      setErrorMessage('Please fill in all required fields');
+      setShowErrorDialog(true);
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters long');
+      setErrorMessage('Password must be at least 6 characters long');
+      setShowErrorDialog(true);
       return;
     }
 
@@ -40,14 +48,10 @@ const InviteUserScreen = ({ navigation }: any) => {
       }
 
       await userManagementAPI.inviteUser(data);
-      Alert.alert('Success', 'User invited successfully', [
-        {
-          text: 'OK',
-          onPress: () => navigation.goBack(),
-        },
-      ]);
+      setShowSuccessDialog(true);
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to invite user');
+      setErrorMessage(error.response?.data?.error || 'Failed to invite user');
+      setShowErrorDialog(true);
     } finally {
       setLoading(false);
     }
@@ -147,6 +151,42 @@ const InviteUserScreen = ({ navigation }: any) => {
           Cancel
         </Button>
       </View>
+
+      {/* Error Dialog */}
+      <CustomDialog
+        visible={showErrorDialog}
+        title="Error"
+        message={errorMessage}
+        buttons={[
+          {
+            text: 'OK',
+            onPress: () => setShowErrorDialog(false),
+            style: 'default',
+          },
+        ]}
+        onDismiss={() => setShowErrorDialog(false)}
+      />
+
+      {/* Success Dialog */}
+      <CustomDialog
+        visible={showSuccessDialog}
+        title="Success"
+        message="User invited successfully"
+        buttons={[
+          {
+            text: 'OK',
+            onPress: () => {
+              setShowSuccessDialog(false);
+              navigation.goBack();
+            },
+            style: 'default',
+          },
+        ]}
+        onDismiss={() => {
+          setShowSuccessDialog(false);
+          navigation.goBack();
+        }}
+      />
     </ScrollView>
   );
 };

@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView } from 'react-native';
 import { TextInput, Button, Title, Card, IconButton, Divider, Paragraph } from 'react-native-paper';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { UserAdd02Icon } from '@hugeicons/core-free-icons';
 import { clientsAPI } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
+import { CustomDialog } from '../../components/CustomDialog';
 
 interface Contact {
   id: string;
@@ -32,6 +33,11 @@ const CreateClientScreen = ({ navigation }: any) => {
 
   const [loading, setLoading] = useState(false);
 
+  // Dialog states
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+
   const addContact = () => {
     const newContact: Contact = {
       id: Date.now().toString(),
@@ -57,12 +63,14 @@ const CreateClientScreen = ({ navigation }: any) => {
 
   const handleSubmit = async () => {
     if (!businessName) {
-      Alert.alert('Error', 'Please enter a business name');
+      setErrorMessage('Please enter a business name');
+      setShowErrorDialog(true);
       return;
     }
 
     if (!primaryContactName) {
-      Alert.alert('Error', 'Please enter a primary contact name');
+      setErrorMessage('Please enter a primary contact name');
+      setShowErrorDialog(true);
       return;
     }
 
@@ -109,17 +117,17 @@ const CreateClientScreen = ({ navigation }: any) => {
 
       await Promise.race([clientsAPI.create(clientData), timeout]);
 
-      Alert.alert('Success', 'Client created successfully');
-      navigation.goBack();
+      setShowSuccessDialog(true);
     } catch (error: any) {
       console.error('Client creation error:', error);
 
       // Show detailed error message
-      const errorMessage = error.message === 'Request timeout'
+      const message = error.message === 'Request timeout'
         ? 'Unable to connect to server. Please check your connection and try again.'
         : error.response?.data?.error || 'Failed to create client';
 
-      Alert.alert('Error', errorMessage);
+      setErrorMessage(message);
+      setShowErrorDialog(true);
     } finally {
       setLoading(false);
     }
@@ -298,6 +306,42 @@ const CreateClientScreen = ({ navigation }: any) => {
 
         <View style={styles.bottomSpacer} />
       </View>
+
+      {/* Error Dialog */}
+      <CustomDialog
+        visible={showErrorDialog}
+        title="Error"
+        message={errorMessage}
+        buttons={[
+          {
+            text: 'OK',
+            onPress: () => setShowErrorDialog(false),
+            style: 'default',
+          },
+        ]}
+        onDismiss={() => setShowErrorDialog(false)}
+      />
+
+      {/* Success Dialog */}
+      <CustomDialog
+        visible={showSuccessDialog}
+        title="Success"
+        message="Client created successfully"
+        buttons={[
+          {
+            text: 'OK',
+            onPress: () => {
+              setShowSuccessDialog(false);
+              navigation.goBack();
+            },
+            style: 'default',
+          },
+        ]}
+        onDismiss={() => {
+          setShowSuccessDialog(false);
+          navigation.goBack();
+        }}
+      />
     </ScrollView>
   );
 };

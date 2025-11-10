@@ -1,28 +1,23 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, StyleSheet, ScrollView, Dimensions, Platform, Text, TouchableOpacity, Alert, Modal, PanResponder, TextInput as RNTextInput, FlatList, Pressable } from 'react-native';
+import { View, StyleSheet, ScrollView, Dimensions, Platform, Text, TouchableOpacity, Modal, PanResponder, TextInput as RNTextInput, FlatList, Pressable, TouchableWithoutFeedback, KeyboardAvoidingView, Keyboard } from 'react-native';
 import { Title, ActivityIndicator, IconButton, Button, Checkbox, TextInput, Menu, Divider, Portal, Switch } from 'react-native-paper';
 import { useFocusEffect } from '@react-navigation/native';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-import { Settings01Icon, DragDropIcon, ArrowLeft01Icon, ArrowRight01Icon, CheckmarkCircle02Icon, CircleIcon } from '@hugeicons/core-free-icons';
+import { Settings01Icon, DragDropIcon, ArrowLeft01Icon, ArrowRight01Icon, CheckmarkCircle02Icon, CircleIcon, Search01Icon } from '@hugeicons/core-free-icons';
 import { usersAPI, projectsAPI, planningTasksAPI, settingsAPI, deadlineTasksAPI } from '../../services/api';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { usePlanningColors } from '../../contexts/PlanningColorsContext';
+import { useCustomColorTheme } from '../../contexts/CustomColorThemeContext';
 import { colorPalettes } from '../../theme/colorPalettes';
 import DeadlineTaskModal, { DeadlineTask, DeadlineTaskData } from '../../components/DeadlineTaskModal';
+import { CustomDialog } from '../../components/CustomDialog';
 
 const { width } = Dimensions.get('window');
 const WEEK_WIDTH = width > 1200 ? 1200 : width - 40; // Max width for week view
 const DAY_CELL_WIDTH = 180; // Fixed width for each day column
 const USER_COLUMN_WIDTH = 100; // Fixed width for user names column
 const TIME_BLOCK_HEIGHT = 48; // Height for each 2-hour block
-
-// AsyncStorage keys
-const STORAGE_KEYS = {
-  USER_ORDER: '@planning_user_order',
-  VISIBLE_USERS: '@planning_visible_users',
-};
 
 const PlanningScreen = () => {
   const { currentColors, selectedPalette } = useTheme();
@@ -63,6 +58,7 @@ const PlanningScreen = () => {
 
   // Project assignment modal state
   const [showProjectModal, setShowProjectModal] = useState(false);
+  const [showDeletePlanningDialog, setShowDeletePlanningDialog] = useState(false);
   const [projects, setProjects] = useState<any[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<any[]>([]);
   const [selectedBlock, setSelectedBlock] = useState<{
@@ -122,19 +118,68 @@ const PlanningScreen = () => {
     projectName: string;
     task?: string;
     span: number;
+    sourceId?: string; // ID of the original task (for reposition mode)
+    sourceBlockKey?: string; // Block key of source cell (for reposition mode)
   } | null>(null);
 
-  // Get planning page colors from context
-  const calendarHeaderBg = planningColors.calendarHeaderBg || currentColors.background.bg500;
-  const calendarHeaderFont = planningColors.calendarHeaderFont || currentColors.text;
-  const prevNextIconColor = planningColors.prevNextIconColor || currentColors.icon;
-  const teamMemberColBg = planningColors.teamMemberColBg || currentColors.background.bg300;
-  const teamMemberColText = planningColors.teamMemberColText || currentColors.text;
-  const weekdayHeaderBg = planningColors.weekdayHeaderBg || currentColors.background.bg500;
-  const weekdayHeaderFont = planningColors.weekdayHeaderFont || currentColors.text;
-  const weekendHeaderBg = planningColors.weekendHeaderBg || currentColors.background.bg700;
-  const weekendHeaderFont = planningColors.weekendHeaderFont || currentColors.textSecondary;
-  const weekendCellBg = planningColors.weekendCellBg || currentColors.background.bg300;
+  // Mobile gesture state
+  const [lastTapTime, setLastTapTime] = useState<number>(0);
+  const [lastTapBlock, setLastTapBlock] = useState<string | null>(null);
+  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
+  const [showCopyConfirmation, setShowCopyConfirmation] = useState(false);
+  const [longPressAction, setLongPressAction] = useState<{
+    userId: string;
+    date: string;
+    blockIndex: number;
+    assignment: { id?: string; projectId: string; projectName: string; task?: string; span: number };
+  } | null>(null);
+  const [repositionMode, setRepositionMode] = useState(false);
+
+  // CustomDialog states
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null);
+  const [deleteTaskBlockKey, setDeleteTaskBlockKey] = useState<string | null>(null);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [showNoticeDialog, setShowNoticeDialog] = useState(false);
+  const [noticeMessage, setNoticeMessage] = useState('');
+  const [showWarningDialog, setShowWarningDialog] = useState(false);
+  const [warningMessage, setWarningMessage] = useState('');
+  const [showDeleteDeadlineDialog, setShowDeleteDeadlineDialog] = useState(false);
+  const [deleteDeadlineTaskId, setDeleteDeadlineTaskId] = useState<string | null>(null);
+
+  // Missing state variable for color menu
+  const [openColorMenu, setOpenColorMenu] = useState<string | null>(null);
+
+  // Get planning page colors from Element Color Mapper
+  const { getColorForElement } = useCustomColorTheme();
+
+  // Planning Grid colors from Element Color Mapper
+  const headerBg = getColorForElement('planningGrid', 'headerBackground');
+  const headerText = getColorForElement('planningGrid', 'headerText');
+  const headerIcon = getColorForElement('planningGrid', 'headerIcon');
+  const settingsIconColor = getColorForElement('planningGrid', 'settingsIconColor');
+  const dateCellBg = getColorForElement('planningGrid', 'dateCellBackground');
+  const dateCellText = getColorForElement('planningGrid', 'dateCellText');
+  const deadlinesRowBg = getColorForElement('planningGrid', 'deadlinesRowBackground');
+  const deadlinesRowText = getColorForElement('planningGrid', 'deadlinesRowText');
+  const teamMemberColBg = getColorForElement('planningGrid', 'teamMemberCellBackground');
+  const teamMemberColText = getColorForElement('planningGrid', 'teamMemberCellText');
+  const weekdayHeaderBg = getColorForElement('planningGrid', 'weekdayHeaderBackground');
+  const weekdayHeaderFont = getColorForElement('planningGrid', 'weekdayHeaderText');
+  const weekendHeaderBg = getColorForElement('planningGrid', 'weekendHeaderBackground');
+  const weekendHeaderFont = getColorForElement('planningGrid', 'weekendHeaderText');
+  const weekdayCellBg = getColorForElement('planningGrid', 'weekdayCellBackground');
+  const weekendCellBg = getColorForElement('planningGrid', 'weekendCellBackground');
+  const headerBorderColor = getColorForElement('planningGrid', 'headerBorderColor');
+  const cellBorderColor = getColorForElement('planningGrid', 'cellBorderColor');
+
+  // Legacy color mappings (for backward compatibility)
+  const calendarHeaderBg = planningColors.calendarHeaderBg || headerBg;
+  const calendarHeaderFont = planningColors.calendarHeaderFont || headerText;
+  const prevNextIconColor = planningColors.prevNextIconColor || headerIcon;
   const projectTaskBg = planningColors.projectTaskBg || currentColors.primary;
   const projectTaskFont = planningColors.projectTaskFont || currentColors.white;
   const adminTaskBg = planningColors.adminTaskBg || currentColors.secondary;
@@ -281,23 +326,10 @@ const PlanningScreen = () => {
           return;
         }
 
-        // Prompt for confirmation
-        if (confirm('Are you sure you want to delete this planning task?')) {
-          try {
-            await planningTasksAPI.delete(existing.id);
-
-            // Remove from local state
-            const newAssignments = { ...blockAssignments };
-            delete newAssignments[blockKey];
-            setBlockAssignments(newAssignments);
-            setSelectedCell(null);
-
-            alert('Planning task deleted successfully');
-          } catch (error: any) {
-            console.error('Delete planning task error:', error);
-            alert(error.response?.data?.error || 'Failed to delete planning task');
-          }
-        }
+        // Show confirmation dialog instead of using confirm()
+        setDeleteTaskId(existing.id);
+        setDeleteTaskBlockKey(blockKey);
+        setShowDeleteDialog(true);
       }
     };
 
@@ -622,7 +654,8 @@ const PlanningScreen = () => {
       if (prev.includes(userId)) {
         // Don't allow hiding all users - at least one must be visible
         if (prev.length === 1) {
-          Alert.alert('Notice', 'At least one team member must be visible in the planning view.');
+          setNoticeMessage('At least one team member must be visible in the planning view.');
+          setShowNoticeDialog(true);
           return prev;
         }
         return prev.filter((id) => id !== userId);
@@ -770,7 +803,8 @@ const PlanningScreen = () => {
     const span = draggedTask.span;
     if (targetBlockIndex + span > 4) {
       console.log('[DRAG TASK] Target would exceed block limit');
-      Alert.alert('Error', 'Cannot move task here - would exceed available blocks');
+      setErrorMessage('Cannot move task here - would exceed available blocks');
+      setShowErrorDialog(true);
       setDraggedTask(null);
       setDragOverCell(null);
       return;
@@ -788,7 +822,8 @@ const PlanningScreen = () => {
       const existingAssignment = blockAssignments[checkBlockKey];
       if (existingAssignment) {
         console.log('[DRAG TASK] Target cells are not all empty', { blockKey: checkBlockKey });
-        Alert.alert('Error', 'Cannot move task here - target cells are not empty');
+        setErrorMessage('Cannot move task here - target cells are not empty');
+        setShowErrorDialog(true);
         setDraggedTask(null);
         setDragOverCell(null);
         return;
@@ -830,7 +865,8 @@ const PlanningScreen = () => {
       console.log('[DRAG TASK] Task moved successfully');
     } catch (error) {
       console.error('[DRAG TASK] Error moving task:', error);
-      Alert.alert('Error', 'Failed to move task');
+      setErrorMessage('Failed to move task');
+      setShowErrorDialog(true);
       // Reload to restore correct state
       await loadData();
     }
@@ -971,15 +1007,17 @@ const PlanningScreen = () => {
 
     let lastBlocksMoved = 0;
 
-    const handleMouseMove = (e: MouseEvent) => {
+    const handleMouseMove = (e: MouseEvent | TouchEvent) => {
       e.preventDefault();
       e.stopPropagation();
 
-      const deltaY = e.clientY - draggingEdge.startY;
+      // Get clientY from either mouse or touch event
+      const clientY = 'clientY' in e ? e.clientY : e.touches[0].clientY;
+      const deltaY = clientY - draggingEdge.startY;
       const blocksMoved = Math.round(deltaY / TIME_BLOCK_HEIGHT);
 
       console.log('[DRAG DEBUG] handleMouseMove', {
-        clientY: e.clientY,
+        clientY,
         startY: draggingEdge.startY,
         deltaY,
         TIME_BLOCK_HEIGHT,
@@ -1080,8 +1118,8 @@ const PlanningScreen = () => {
       });
     };
 
-    const handleMouseUp = async (e: MouseEvent) => {
-      console.log('[DRAG DEBUG] Mouse up - ending drag');
+    const handleMouseUp = async (e: MouseEvent | TouchEvent) => {
+      console.log('[DRAG DEBUG] Mouse/touch up - ending drag');
       e.preventDefault();
       e.stopPropagation();
 
@@ -1129,9 +1167,29 @@ const PlanningScreen = () => {
               span: newSpan,
             });
 
+            // For status events (no projectId), the status name is in projectName, not task
+            // For Out of Office events, we need to preserve the [OUT_OF_OFFICE] marker
+            // We need to send it as the task field to preserve it in the database
+            const isStatusEvent = !currentAssignment.projectId;
+            const isOutOfOffice = currentAssignment.projectName?.includes('(Out of Office)');
+
+            let taskValue: string | undefined;
+            if (isStatusEvent) {
+              // Pure status event - use projectName as task
+              taskValue = currentAssignment.projectName;
+            } else if (isOutOfOffice) {
+              // Project with Out of Office - add marker back
+              taskValue = currentAssignment.task
+                ? `[OUT_OF_OFFICE]${currentAssignment.task}`
+                : '[OUT_OF_OFFICE]';
+            } else {
+              // Regular project task
+              taskValue = currentAssignment.task;
+            }
+
             await planningTasksAPI.update(currentAssignment.id, {
               projectId: currentAssignment.projectId,
-              task: currentAssignment.task,
+              task: taskValue,
               span: newSpan,
               blockIndex: currentBlockIndex,
             });
@@ -1150,12 +1208,18 @@ const PlanningScreen = () => {
       setDraggingEdge(null);
     };
 
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
+    // Add both mouse and touch event listeners for cross-platform support
+    document.addEventListener('mousemove', handleMouseMove as EventListener);
+    document.addEventListener('mouseup', handleMouseUp as EventListener);
+    // Use { passive: false } for touch events to allow preventDefault() to work
+    document.addEventListener('touchmove', handleMouseMove as EventListener, { passive: false });
+    document.addEventListener('touchend', handleMouseUp as EventListener, { passive: false });
 
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      document.removeEventListener('mouseup', handleMouseUp);
+      document.removeEventListener('mousemove', handleMouseMove as EventListener);
+      document.removeEventListener('mouseup', handleMouseUp as EventListener);
+      document.removeEventListener('touchmove', handleMouseMove as EventListener, { passive: false } as any);
+      document.removeEventListener('touchend', handleMouseUp as EventListener, { passive: false } as any);
     };
   }, [draggingEdge, blockAssignments]);
 
@@ -1171,6 +1235,252 @@ const PlanningScreen = () => {
       setHoveredBlock(null);
     }
   };
+
+  // Mobile gesture handlers
+  const handleMobileCellTap = (userId: string, date: string, blockIndex: number, e: any) => {
+    // Allow on mobile web browsers too, not just native apps
+    // if (Platform.OS === 'web') return;
+
+    const blockKey = `${userId}-${date}-${blockIndex}`;
+    const existing = blockAssignments[blockKey];
+    const now = Date.now();
+
+    // Set this cell as selected
+    setSelectedCell(blockKey);
+
+    // Check for double-tap (300ms window)
+    if (lastTapBlock === blockKey && now - lastTapTime < 300) {
+      // Double-tap detected - open modal for edit/delete or create
+      console.log('[MOBILE TAP] Double-tap detected - opening modal');
+      setLastTapTime(0);
+      setLastTapBlock(null);
+
+      if (existing) {
+        // Open modal for edit/delete
+        setSelectedBlock({ userId, date, blockIndex });
+
+        // Detect status events and set checkbox states
+        const taskName = existing.projectName || '';
+
+        if (taskName === 'Out of Office') {
+          setProjectSearch('');
+          setIsOutOfOffice(true);
+          setIsTimeOff(false);
+          setIsUnavailable(false);
+        } else if (taskName.includes('(Out of Office)')) {
+          const projectNameOnly = taskName.replace(' (Out of Office)', '');
+          setProjectSearch(projectNameOnly);
+          setIsOutOfOffice(true);
+          setIsTimeOff(false);
+          setIsUnavailable(false);
+        } else if (taskName === 'Time Off') {
+          setProjectSearch('');
+          setIsOutOfOffice(false);
+          setIsTimeOff(true);
+          setIsUnavailable(false);
+        } else if (taskName === 'Unavailable') {
+          setProjectSearch('');
+          setIsOutOfOffice(false);
+          setIsTimeOff(false);
+          setIsUnavailable(true);
+        } else {
+          setProjectSearch(existing.projectName || '');
+          setIsOutOfOffice(false);
+          setIsTimeOff(false);
+          setIsUnavailable(false);
+        }
+
+        setTaskDescription(existing.task || '');
+        setShowProjectModal(true);
+      } else {
+        // Open modal for new assignment
+        setSelectedBlock({ userId, date, blockIndex });
+        setProjectSearch('');
+        setTaskDescription('');
+        setIsOutOfOffice(false);
+        setIsTimeOff(false);
+        setIsUnavailable(false);
+        setShowProjectModal(true);
+      }
+    } else {
+      // Single tap - check if we should paste
+      if (!existing && copiedCell) {
+        // Empty cell with copied data - paste it
+        handleMobilePaste(userId, date, blockIndex);
+      }
+
+      // Update last tap time and block
+      setLastTapTime(now);
+      setLastTapBlock(blockKey);
+    }
+  };
+
+  const handleMobileLongPressStart = (userId: string, date: string, blockIndex: number, e: any) => {
+    const blockKey = `${userId}-${date}-${blockIndex}`;
+    const existing = blockAssignments[blockKey];
+
+    if (!existing) return; // Only allow long press on filled cells
+
+    console.log('[MOBILE LONG PRESS] Starting long press timer');
+
+    // Start 800ms timer to show action menu
+    const timer = setTimeout(() => {
+      console.log('[MOBILE LONG PRESS] Timer completed - showing action menu');
+      setLongPressAction({
+        userId,
+        date,
+        blockIndex,
+        assignment: existing,
+      });
+    }, 800);
+
+    setLongPressTimer(timer);
+  };
+
+  const handleMobileLongPressEnd = () => {
+    // Allow on mobile web browsers too
+    // if (Platform.OS === 'web') return;
+
+    // Cancel timer if released early
+    if (longPressTimer) {
+      console.log('[MOBILE LONG PRESS] Cancelled - released early');
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+  };
+
+  const handleMobilePaste = async (userId: string, date: string, blockIndex: number) => {
+    if (!copiedCell) return;
+
+    const blockKey = `${userId}-${date}-${blockIndex}`;
+    const existing = blockAssignments[blockKey];
+
+    if (existing) {
+      console.log('[MOBILE PASTE] Cannot paste - cell is not empty');
+      // Clear success state before showing error
+      setShowSuccessDialog(false);
+      setSuccessMessage('');
+      setErrorMessage('Cannot paste to a non-empty cell');
+      setShowErrorDialog(true);
+      return;
+    }
+
+    console.log('[MOBILE PASTE] Pasting to cell:', blockKey, 'Reposition mode:', repositionMode);
+
+    try {
+      // Detect what type of event this is
+      const isProjectWithOutOfOffice = copiedCell.projectId && copiedCell.projectName.includes('(Out of Office)');
+      const isPureStatusEvent = !copiedCell.projectId && (
+        copiedCell.projectName === 'Out of Office' ||
+        copiedCell.projectName === 'Time Off' ||
+        copiedCell.projectName === 'Unavailable'
+      );
+
+      // Reconstruct the task field with proper markers
+      let taskToStore = copiedCell.task;
+      if (isProjectWithOutOfOffice) {
+        taskToStore = copiedCell.task ? `[OUT_OF_OFFICE]${copiedCell.task}` : '[OUT_OF_OFFICE]';
+      } else if (isPureStatusEvent) {
+        taskToStore = copiedCell.projectName;
+      }
+
+      // Create the new task
+      const response = await planningTasksAPI.create({
+        userId,
+        projectId: copiedCell.projectId,
+        date,
+        blockIndex,
+        task: taskToStore,
+        span: copiedCell.span,
+      });
+
+      setBlockAssignments(prev => ({
+        ...prev,
+        [blockKey]: {
+          id: response.data.id,
+          projectId: copiedCell.projectId,
+          projectName: copiedCell.projectName,
+          task: copiedCell.task,
+          span: copiedCell.span,
+        },
+      }));
+
+      // If in reposition mode, delete the original task
+      if (repositionMode && copiedCell.sourceId && copiedCell.sourceBlockKey) {
+        console.log('[MOBILE PASTE] Deleting source task:', copiedCell.sourceId);
+        try {
+          await planningTasksAPI.delete(copiedCell.sourceId);
+
+          // Remove from block assignments
+          setBlockAssignments(prev => {
+            const updated = { ...prev };
+            delete updated[copiedCell.sourceBlockKey!];
+            return updated;
+          });
+
+          console.log('[MOBILE PASTE] Reposition successful');
+          // Use setTimeout to ensure success dialog shows after any potential error dialogs are cleared
+          setTimeout(() => {
+            setShowErrorDialog(false);
+            setErrorMessage('');
+            setSuccessMessage('Task repositioned successfully');
+            setShowSuccessDialog(true);
+          }, 0);
+        } catch (deleteError) {
+          console.error('[MOBILE PASTE] Error deleting source task:', deleteError);
+          setWarningMessage('Task copied but original could not be deleted');
+          setShowWarningDialog(true);
+        }
+      } else {
+        console.log('[MOBILE PASTE] Copy successful');
+        // Use setTimeout to ensure success dialog shows after any potential error dialogs are cleared
+        setTimeout(() => {
+          setShowErrorDialog(false);
+          setErrorMessage('');
+          setSuccessMessage('Task copied successfully');
+          setShowSuccessDialog(true);
+        }, 0);
+      }
+
+      // Clear copied cell and reposition mode
+      setCopiedCell(null);
+      setRepositionMode(false);
+    } catch (error) {
+      console.error('[MOBILE PASTE] Error pasting:', error);
+      setErrorMessage('Failed to paste task');
+      setShowErrorDialog(true);
+    }
+  };
+
+  const handleMobilePanStart = (userId: string, date: string, blockIndex: number, e: any) => {
+    // Allow on mobile web browsers too
+    // if (Platform.OS === 'web') return;
+
+    const blockKey = `${userId}-${date}-${blockIndex}`;
+    const existing = blockAssignments[blockKey];
+
+    if (!existing) return; // Only allow dragging filled cells
+
+    // Get touch from either native or web event
+    const touch = e.nativeEvent?.touches?.[0] || e.touches?.[0];
+    if (!touch) return;
+
+    console.log('[MOBILE PAN] Starting drag', { blockKey, x: touch.pageX, y: touch.pageY });
+
+    setMobileDragging({
+      blockKey,
+      userId,
+      date,
+      blockIndex,
+      assignment: existing,
+      initialX: touch.pageX,
+      initialY: touch.pageY,
+      currentX: touch.pageX,
+      currentY: touch.pageY,
+    });
+  };
+
+  // Mobile pan handlers removed - using long-press menu instead
 
   // Handle delete planning task
   const handleDeletePlanningTask = async () => {
@@ -1189,19 +1499,48 @@ const PlanningScreen = () => {
       delete newAssignments[blockKey];
       setBlockAssignments(newAssignments);
 
+      setShowDeletePlanningDialog(false);
       setShowProjectModal(false);
       setProjectSearch('');
       setTaskDescription('');
       setSelectedBlock(null);
 
-      if (Platform.OS === 'web') {
-        alert('Planning task deleted successfully');
-      } else {
-        Alert.alert('Success', 'Planning task deleted successfully');
-      }
+      setSuccessMessage('Planning task deleted successfully');
+      setShowSuccessDialog(true);
     } catch (error: any) {
       console.error('Delete planning task error:', error);
-      Alert.alert('Error', error.response?.data?.error || 'Failed to delete planning task');
+      setShowDeletePlanningDialog(false);
+      setErrorMessage(error.response?.data?.error || 'Failed to delete planning task');
+      setShowErrorDialog(true);
+    }
+  };
+
+  // Handle confirm delete from keyboard shortcut
+  const handleConfirmKeyboardDelete = async () => {
+    if (!deleteTaskId || !deleteTaskBlockKey) return;
+
+    try {
+      await planningTasksAPI.delete(deleteTaskId);
+
+      // Remove from local state
+      const newAssignments = { ...blockAssignments };
+      delete newAssignments[deleteTaskBlockKey];
+      setBlockAssignments(newAssignments);
+      setSelectedCell(null);
+
+      setShowDeleteDialog(false);
+      setDeleteTaskId(null);
+      setDeleteTaskBlockKey(null);
+
+      setSuccessMessage('Planning task deleted successfully');
+      setShowSuccessDialog(true);
+    } catch (error: any) {
+      console.error('Delete planning task error:', error);
+      setShowDeleteDialog(false);
+      setDeleteTaskId(null);
+      setDeleteTaskBlockKey(null);
+      setErrorMessage(error.response?.data?.error || 'Failed to delete planning task');
+      setShowErrorDialog(true);
     }
   };
 
@@ -1226,9 +1565,16 @@ const PlanningScreen = () => {
     console.log('projectSearch:', projectSearch);
     console.log('selectedBlock:', selectedBlock);
 
+    // Clear any existing error/success dialogs before starting
+    setShowErrorDialog(false);
+    setShowSuccessDialog(false);
+    setErrorMessage('');
+    setSuccessMessage('');
+
     if (!selectedBlock) {
       console.log('ERROR: No block selected');
-      Alert.alert('Error', 'No block selected');
+      setErrorMessage('No block selected');
+      setShowErrorDialog(true);
       return;
     }
 
@@ -1253,13 +1599,15 @@ const PlanningScreen = () => {
 
       if (!selectedProject) {
         console.log('ERROR: Project not found');
-        Alert.alert('Error', 'Project not found');
+        setErrorMessage('Project not found');
+        setShowErrorDialog(true);
         return;
       }
     } else if (requiresProject) {
       // No project provided, but one is required (not a status event)
       console.log('ERROR: No project search and not a status event');
-      Alert.alert('Error', 'Please select a project or check a status option');
+      setErrorMessage('Please select a project or check a status option');
+      setShowErrorDialog(true);
       return;
     }
 
@@ -1427,13 +1775,18 @@ const PlanningScreen = () => {
       setRepeatWeeklyDays([false, false, false, false, false, false, false]);
       setSelectedBlock(null);
 
-      // Reload planning tasks to refresh the view
-      await loadPlanningTasks();
+      // Reload planning tasks to refresh the view (handle errors separately)
+      try {
+        await loadPlanningTasks();
+      } catch (reloadError) {
+        console.warn('Failed to reload planning tasks, but save was successful:', reloadError);
+      }
     } catch (error: any) {
       console.error('Save planning task error:', error);
       console.error('Error response:', error.response?.data);
       console.error('Error status:', error.response?.status);
-      Alert.alert('Error', error.response?.data?.error || error.response?.data?.errors?.[0]?.msg || 'Failed to save planning task');
+      setErrorMessage(error.response?.data?.error || error.response?.data?.errors?.[0]?.msg || 'Failed to save planning task');
+      setShowErrorDialog(true);
     }
   };
 
@@ -1498,7 +1851,8 @@ const PlanningScreen = () => {
       setEditingDeadlineTask(null);
     } catch (error: any) {
       console.error('Error saving deadline task:', error);
-      Alert.alert('Error', error.response?.data?.error || 'Failed to save deadline task');
+      setErrorMessage(error.response?.data?.error || 'Failed to save deadline task');
+      setShowErrorDialog(true);
     }
   };
 
@@ -1512,14 +1866,16 @@ const PlanningScreen = () => {
       console.log('[PlanningScreen] State updated successfully');
     } catch (error: any) {
       console.error('[PlanningScreen] Error deleting deadline task:', error);
-      Alert.alert('Error', error.response?.data?.error || 'Failed to delete deadline task');
+      setErrorMessage(error.response?.data?.error || 'Failed to delete deadline task');
+      setShowErrorDialog(true);
     }
   };
 
   const handleSyncProjectDueDates = async () => {
     try {
       const response = await deadlineTasksAPI.syncDueDates();
-      Alert.alert('Success', `Synced ${response.data.created} project due dates`);
+      setSuccessMessage(`Synced ${response.data.created} project due dates`);
+      setShowSuccessDialog(true);
 
       // Reload deadline tasks
       const quarterStart = new Date(currentQuarter.year, (currentQuarter.quarter - 1) * 3, 1);
@@ -1531,7 +1887,8 @@ const PlanningScreen = () => {
       setDeadlineTasks(deadlineTasksResponse.data);
     } catch (error: any) {
       console.error('Error syncing project due dates:', error);
-      Alert.alert('Error', error.response?.data?.error || 'Failed to sync project due dates');
+      setErrorMessage(error.response?.data?.error || 'Failed to sync project due dates');
+      setShowErrorDialog(true);
     }
   };
 
@@ -1549,13 +1906,15 @@ const PlanningScreen = () => {
       console.log('[PlanningScreen] Saved visible users to database:', visibleUserIds);
 
       // Show success message
-      Alert.alert('Success', 'Team view settings have been saved successfully.');
+      setSuccessMessage('Team view settings have been saved successfully.');
+      setShowSuccessDialog(true);
 
       // Close modal
       setShowManageModal(false);
     } catch (error) {
       console.error('[PlanningScreen] Error saving settings:', error);
-      Alert.alert('Error', 'Failed to save settings. Please try again.');
+      setErrorMessage('Failed to save settings. Please try again.');
+      setShowErrorDialog(true);
     }
   };
 
@@ -1576,11 +1935,13 @@ const PlanningScreen = () => {
       await settingsAPI.user.set(`planning_visible_users`, visibleUserIds);
       console.log('[PlanningScreen] Also saved to current user settings');
 
-      Alert.alert('Success', 'Default view saved for all users. New users will see this configuration by default.');
+      setSuccessMessage('Default view saved for all users. New users will see this configuration by default.');
+      setShowSuccessDialog(true);
       setShowManageModal(false);
     } catch (error) {
       console.error('[PlanningScreen] Error saving default settings:', error);
-      Alert.alert('Error', 'Failed to save default settings. Please try again.');
+      setErrorMessage('Failed to save default settings. Please try again.');
+      setShowErrorDialog(true);
     }
   };
 
@@ -1800,7 +2161,11 @@ const PlanningScreen = () => {
           const existing = blockAssignments[selectedCell];
           if (existing) {
             console.log('[PASTE] Cannot paste - cell is not empty');
-            Alert.alert('Error', 'Cannot paste to a non-empty cell');
+            // Clear success state before showing error
+            setShowSuccessDialog(false);
+            setSuccessMessage('');
+            setErrorMessage('Cannot paste to a non-empty cell');
+            setShowErrorDialog(true);
             return;
           }
 
@@ -1861,10 +2226,22 @@ const PlanningScreen = () => {
             }));
 
             console.log('[PASTE] Paste successful - copied cell remains for reuse');
+            // Clear error state and set success
+            setShowErrorDialog(false);
+            setErrorMessage('');
+            setSuccessMessage('Task pasted successfully');
+            setShowSuccessDialog(true);
+            console.log('[PASTE] Success dialog state set');
             // Note: We don't clear copiedCell, allowing multiple pastes
           } catch (error) {
             console.error('[PASTE] Error pasting:', error);
-            Alert.alert('Error', 'Failed to paste task');
+            console.error('[PASTE] Full error details:', JSON.stringify(error, null, 2));
+            // Clear success state before showing error
+            setShowSuccessDialog(false);
+            setSuccessMessage('');
+            setErrorMessage('Failed to paste task');
+            setShowErrorDialog(true);
+            console.log('[PASTE] Error dialog state set');
           }
         }
       }
@@ -1940,9 +2317,10 @@ const PlanningScreen = () => {
                       minWidth: `${USER_COLUMN_WIDTH}px`,
                       maxWidth: `${USER_COLUMN_WIDTH}px`,
                       height: '50px',
-                      borderBottom: `3px solid ${currentColors.text}`,
-                      borderRight: `3px solid ${currentColors.text}`,
-                      backgroundColor: currentColors.background.bg500,
+                      borderBottom: `3px solid ${headerBorderColor}`,
+                      borderRight: '0px',
+                      backgroundColor: dateCellBg,
+                      color: dateCellText,
                       fontWeight: 'bold',
                       fontSize: '12px',
                       textAlign: 'center',
@@ -1995,8 +2373,8 @@ const PlanningScreen = () => {
                           minWidth: `${DAY_CELL_WIDTH}px`,
                           maxWidth: `${DAY_CELL_WIDTH}px`,
                           height: '50px',
-                          borderBottom: `3px solid ${currentColors.text}`,
-                          borderRight: `1px solid ${currentColors.text}`,
+                          borderBottom: `3px solid ${headerBorderColor}`,
+                          borderRight: `1px solid ${cellBorderColor}`,
                           backgroundColor: headerBg,
                           textAlign: 'center',
                           padding: '4px',
@@ -2032,9 +2410,10 @@ const PlanningScreen = () => {
                         minWidth: `${USER_COLUMN_WIDTH}px`,
                         maxWidth: `${USER_COLUMN_WIDTH}px`,
                         height: `${TIME_BLOCK_HEIGHT}px`,
-                        borderBottom: `2px solid ${currentColors.text}`,
-                        borderRight: `2px solid ${currentColors.text}`,
-                        backgroundColor: deadlineRowBg,
+                        borderBottom: `3px solid ${headerBorderColor}`,
+                        borderRight: '0px',
+                        backgroundColor: deadlinesRowBg,
+                        color: deadlinesRowText,
                         verticalAlign: 'middle',
                         textAlign: 'center',
                         padding: '8px',
@@ -2043,7 +2422,6 @@ const PlanningScreen = () => {
                         position: 'sticky',
                         left: 0,
                         zIndex: 15,
-                        color: currentColors.text,
                       }}
                     >
                       DEADLINES & MILESTONES
@@ -2083,32 +2461,22 @@ const PlanningScreen = () => {
                           onContextMenu={(e) => {
                             if (deadlineTask) {
                               e.preventDefault();
-                              Alert.alert(
-                                'Delete Deadline Task',
-                                'Are you sure you want to delete this deadline task?',
-                                [
-                                  { text: 'Cancel', style: 'cancel' },
-                                  {
-                                    text: 'Delete',
-                                    style: 'destructive',
-                                    onPress: () => handleDeleteDeadlineTask(deadlineTask.id),
-                                  },
-                                ]
-                              );
+                              setDeleteDeadlineTaskId(deadlineTask.id);
+                              setShowDeleteDeadlineDialog(true);
                             }
                           }}
                           style={{
                             width: `${DAY_CELL_WIDTH}px`,
                             minWidth: `${DAY_CELL_WIDTH}px`,
                             maxWidth: `${DAY_CELL_WIDTH}px`,
-                            height: `${TIME_BLOCK_HEIGHT / 2}px`,
-                            borderRight: `1px solid ${currentColors.text}`,
-                            borderBottom: slotIndex === 1 ? `2px solid ${currentColors.text}` : `1px solid ${currentColors.text}`,
+                            height: slotIndex === 1 ? `${TIME_BLOCK_HEIGHT / 2 + 6.5}px` : `${TIME_BLOCK_HEIGHT / 2}px`,
+                            borderRight: `1px solid ${cellBorderColor}`,
+                            borderBottom: slotIndex === 1 ? `3px solid ${headerBorderColor}` : `1px solid ${cellBorderColor}`,
                             backgroundColor: deadlineTask
                               ? colors?.bg
                               : isWeekend
                               ? weekendCellBg
-                              : currentColors.background.bg700,
+                              : weekdayCellBg,
                             cursor: 'pointer',
                             padding: '4px',
                             fontSize: '10px',
@@ -2119,12 +2487,21 @@ const PlanningScreen = () => {
                           }}
                         >
                           {deadlineTask && (
-                            <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {deadlineTask.description
-                                ? deadlineTask.description
-                                : deadlineTask.project
-                                ? deadlineTask.project.name
-                                : deadlineTask.client?.name || 'Unknown'}
+                            <div style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '2px', height: '100%', justifyContent: 'center' }}>
+                              {deadlineTask.project && (
+                                <div style={{ fontWeight: '700', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {deadlineTask.project.description || deadlineTask.project.name}
+                                </div>
+                              )}
+                              {deadlineTask.description && (
+                                <div style={{ fontSize: '10px', opacity: 0.95, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {deadlineTask.description}
+                                </div>
+                              )}
+                              {!deadlineTask.project && !deadlineTask.description && (
+                                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                  {deadlineTask.client?.name || 'Unknown'}</div>
+                              )}
                             </div>
                           )}
                         </td>
@@ -2137,7 +2514,8 @@ const PlanningScreen = () => {
               {/* User rows - each user gets 4 rows (one per time block) */}
               {users
                 .filter((user) => visibleUserIds.includes(user.id))
-                .map((user) => {
+                .map((user, userIndex, visibleUsers) => {
+                  const isLastUser = userIndex === visibleUsers.length - 1;
                   return [0, 1, 2, 3].map((blockIndex) => {
                     return (
                       <tr key={`${user.id}-${blockIndex}`} style={{ height: `${TIME_BLOCK_HEIGHT}px` }}>
@@ -2151,9 +2529,10 @@ const PlanningScreen = () => {
                               minWidth: `${USER_COLUMN_WIDTH}px`,
                               maxWidth: `${USER_COLUMN_WIDTH}px`,
                               height: `${TIME_BLOCK_HEIGHT * 4}px`,
-                              borderBottom: `2px solid ${currentColors.text}`,
-                              borderRight: `2px solid ${currentColors.text}`,
+                              borderBottom: isLastUser ? '0px' : `3px solid ${cellBorderColor}`,
+                              borderRight: '0px',
                               backgroundColor: teamMemberColBg,
+                              color: teamMemberColText,
                               verticalAlign: 'middle',
                               textAlign: 'center',
                               padding: '12px',
@@ -2162,7 +2541,6 @@ const PlanningScreen = () => {
                               position: 'sticky',
                               left: 0,
                               zIndex: 15,
-                              color: teamMemberColText,
                             }}
                           >
                             {user.firstName.toUpperCase()}
@@ -2271,16 +2649,21 @@ const PlanningScreen = () => {
                                 rowSpan={span}
                                 onDragOver={(e) => handleTaskDragOver(e, user.id, dateString, blockIndex)}
                                 onDrop={(e) => handleTaskDrop(e, user.id, dateString, blockIndex)}
+                                onClick={() => {
+                                  // Desktop: no click-to-paste functionality
+                                  // Use keyboard shortcuts (Cmd+C, Cmd+V) only
+                                  // Mobile uses tap/long-press handlers instead
+                                }}
                                 style={{
                                   width: `${DAY_CELL_WIDTH}px`,
                                   minWidth: `${DAY_CELL_WIDTH}px`,
                                   maxWidth: `${DAY_CELL_WIDTH}px`,
                                   height: `${TIME_BLOCK_HEIGHT * span}px`,
-                                  borderBottom: isLastBlockForUser ? `3px solid ${currentColors.text}` : `1px solid ${currentColors.border}`,
-                                  borderRight: `1px solid ${currentColors.text}`,
+                                  borderBottom: (isLastBlockForUser && isLastUser) ? '0px' : (isLastBlockForUser ? `3px solid ${cellBorderColor}` : `1px solid ${cellBorderColor}`),
+                                  borderRight: `1px solid ${cellBorderColor}`,
                                   padding: assignment?.projectName === 'Unavailable' ? '0' : '2px',
                                   position: 'relative',
-                                  backgroundColor: isWeekend ? weekendCellBg : (isToday ? currentColors.background.bg300 : currentColors.background.white),
+                                  backgroundColor: isWeekend ? weekendCellBg : (isToday ? currentColors.background.bg300 : weekdayCellBg),
                                   verticalAlign: 'top',
                                   cursor: assignment ? 'pointer' : 'pointer',
                                 }}
@@ -2344,19 +2727,33 @@ const PlanningScreen = () => {
                                         console.log('[DRAG DEBUG] Top edge pressed', { blockIndex, span });
                                         handleEdgeDragStart(user.id, dateString, blockIndex, 'top', e, span);
                                       }}
+                                      onTouchStart={(e) => {
+                                        e.stopPropagation();
+                                        e.preventDefault(); // Prevent window scroll during edge drag
+                                        console.log('[DRAG DEBUG] Top edge touched', { blockIndex, span });
+                                        handleEdgeDragStart(user.id, dateString, blockIndex, 'top', e.touches[0], span);
+                                      }}
                                     />
                                   )}
                                   {assignment && (
                                     <>
-                                      {/* Drag handle for repositioning - fills center area between edges */}
+                                      {/* Center area for displaying task and long-press menu */}
                                       <div
-                                        draggable={true}
+                                        draggable={Platform.OS === 'web'}
                                         onDragStart={(e) => handleTaskDragStart(e, user.id, dateString, blockIndex)}
                                         onDragEnd={handleTaskDragEnd}
+                                        onTouchStart={(e) => {
+                                          e.stopPropagation();
+                                          handleMobileLongPressStart(user.id, dateString, blockIndex, e);
+                                        }}
+                                        onTouchEnd={(e) => {
+                                          handleMobileLongPressEnd();
+                                          handleMobileCellTap(user.id, dateString, blockIndex, e);
+                                        }}
                                         style={{
                                           position: 'absolute',
-                                          top: showTopEdge ? '10px' : '0',
-                                          bottom: showBottomEdge ? '10px' : '0',
+                                          top: '0',
+                                          bottom: '0',
                                           left: '4px',
                                           right: '4px',
                                           cursor: 'move',
@@ -2366,10 +2763,14 @@ const PlanningScreen = () => {
                                           justifyContent: 'center',
                                           alignItems: 'center',
                                           padding: '4px',
+                                          borderWidth: copiedCell && selectedCell === blockKey ? 3 : 0,
+                                          borderColor: copiedCell && selectedCell === blockKey ? currentColors.primary : 'transparent',
+                                          borderStyle: 'solid',
                                         }}
                                       >
                                         <div style={{
                                           fontSize: 11,
+                                          lineHeight: '1.2',
                                           color: (() => {
                                             const projectName = assignment.projectName || '';
                                             const projectNameLower = projectName.toLowerCase();
@@ -2396,7 +2797,7 @@ const PlanningScreen = () => {
                                             return projectTaskFont;
                                           })(),
                                           fontWeight: 700,
-                                          marginBottom: 2,
+                                          marginBottom: 0,
                                           overflow: 'hidden',
                                           textOverflow: 'ellipsis',
                                           display: '-webkit-box',
@@ -2411,6 +2812,8 @@ const PlanningScreen = () => {
                                         {assignment.task && (
                                           <div style={{
                                             fontSize: 9,
+                                            lineHeight: '1.2',
+                                            marginTop: 2,
                                             color: (() => {
                                               const projectName = assignment.projectName || '';
                                               const projectNameLower = projectName.toLowerCase();
@@ -2436,7 +2839,7 @@ const PlanningScreen = () => {
                                               // Regular projects use custom project font color
                                               return projectTaskFont;
                                             })(),
-                                            fontStyle: 'italic',
+                                            fontStyle: 'normal',
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',
                                             display: '-webkit-box',
@@ -2471,6 +2874,12 @@ const PlanningScreen = () => {
                                         console.log('[DRAG DEBUG] Bottom edge pressed', { blockIndex, span });
                                         handleEdgeDragStart(user.id, dateString, blockIndex, 'bottom', e, span);
                                       }}
+                                      onTouchStart={(e) => {
+                                        e.stopPropagation();
+                                        e.preventDefault(); // Prevent window scroll during edge drag
+                                        console.log('[DRAG DEBUG] Bottom edge touched', { blockIndex, span });
+                                        handleEdgeDragStart(user.id, dateString, blockIndex, 'bottom', e.touches[0], span);
+                                      }}
                                     />
                                   )}
                                 </div>
@@ -2482,49 +2891,6 @@ const PlanningScreen = () => {
                     );
                   });
                 })}
-
-              {/* Add/Remove team members row */}
-              <tr>
-                <td
-                  style={{
-                    width: `${USER_COLUMN_WIDTH}px`,
-                    height: `${TIME_BLOCK_HEIGHT * 4}px`,
-                    borderBottom: `1px solid ${currentColors.text}`,
-                    borderRight: `1px solid ${currentColors.text}`,
-                    backgroundColor: currentColors.background.bg300,
-                    textAlign: 'center',
-                    verticalAlign: 'middle',
-                    cursor: 'pointer',
-                    position: 'sticky',
-                    left: 0,
-                    zIndex: 15,
-                  }}
-                  onClick={() => {}}
-                  style={{ cursor: 'default' }}
-                >
-                </td>
-                {/* Empty cells for the days */}
-                {quarterWeeks.map((weekStart, weekIndex) => {
-                  const weekDays = [];
-                  for (let i = 0; i < 7; i++) {
-                    weekDays.push(i);
-                  }
-                  return weekDays.map((dayIndex) => (
-                    <td
-                      key={`${weekIndex}-${dayIndex}-empty`}
-                      style={{
-                        width: `${DAY_CELL_WIDTH}px`,
-                        minWidth: `${DAY_CELL_WIDTH}px`,
-                        maxWidth: `${DAY_CELL_WIDTH}px`,
-                        height: `${TIME_BLOCK_HEIGHT * 4}px`,
-                        borderBottom: `1px solid ${currentColors.text}`,
-                        borderRight: `1px solid ${currentColors.text}`,
-                        backgroundColor: currentColors.background.bg300,
-                      }}
-                    />
-                  ));
-                })}
-              </tr>
             </tbody>
           </table>
           </div>
@@ -2561,7 +2927,7 @@ const PlanningScreen = () => {
         onPress={handleManageTeamMembers}
         activeOpacity={0.8}
       >
-        <HugeiconsIcon icon={Settings01Icon} size={28} color={currentColors.white} />
+        <HugeiconsIcon icon={Settings01Icon} size={28} color={settingsIconColor} />
       </TouchableOpacity>
 
       {/* Team Members Management Modal */}
@@ -2571,7 +2937,7 @@ const PlanningScreen = () => {
         animationType="fade"
         onRequestClose={() => setShowManageModal(false)}
       >
-        <View style={[styles.modalOverlay, { backgroundColor: `${currentColors.background.bg700}CC` }]}>
+        <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0, 0, 0, 0.8)' }]}>
           <View style={[styles.modalContent, { backgroundColor: currentColors.background.bg300 }]}>
             <Title style={[styles.modalTitle, { color: currentColors.text }]}>Manage Team Members</Title>
             <Text style={[styles.modalSubtitle, { color: currentColors.text }]}>
@@ -2686,7 +3052,7 @@ const PlanningScreen = () => {
         animationType="fade"
         onRequestClose={() => setShowProjectModal(false)}
       >
-        <View style={[styles.modalOverlay, { backgroundColor: `${currentColors.background.bg700}CC` }]}>
+        <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0, 0, 0, 0.8)' }]}>
           <View style={[styles.modalContent, { backgroundColor: currentColors.background.bg300 }]}>
             <Title style={[styles.modalTitle, { color: currentColors.text }]}>Assign Project</Title>
 
@@ -2702,6 +3068,7 @@ const PlanningScreen = () => {
                     mode="outlined"
                     style={styles.input}
                     placeholder="Search by common name..."
+                    left={<TextInput.Icon icon={() => <HugeiconsIcon icon={Search01Icon} size={20} color={currentColors.icon} />} />}
                   />
 
                   {filteredProjects.length > 0 && projectSearch && (
@@ -2993,7 +3360,7 @@ const PlanningScreen = () => {
               {selectedBlock && blockAssignments[`${selectedBlock.userId}-${selectedBlock.date}-${selectedBlock.blockIndex}`]?.id && (
                 <Button
                   mode="outlined"
-                  onPress={handleDeletePlanningTask}
+                  onPress={() => setShowDeletePlanningDialog(true)}
                   style={styles.modalButton}
                   textColor={currentColors.secondary}
                 >
@@ -3012,6 +3379,162 @@ const PlanningScreen = () => {
         </View>
       </Modal>
 
+      {/* Long Press Action Menu */}
+      {longPressAction && (
+        <Modal
+          transparent
+          visible={!!longPressAction}
+          onRequestClose={() => setLongPressAction(null)}
+        >
+          <TouchableWithoutFeedback onPress={() => setLongPressAction(null)}>
+            <View style={{
+              flex: 1,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}>
+              <TouchableWithoutFeedback>
+                <View style={{
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: 12,
+                  padding: 20,
+                  width: 300,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.25,
+                  shadowRadius: 3.84,
+                  elevation: 5,
+                }}>
+                  <Text style={{
+                    fontSize: 18,
+                    fontWeight: 'bold',
+                    marginBottom: 16,
+                    color: currentColors.text,
+                    textAlign: 'center',
+                  }}>
+                    Task Action
+                  </Text>
+
+                  <TouchableOpacity
+                    style={{
+                      backgroundColor: currentColors.primary,
+                      padding: 16,
+                      borderRadius: 8,
+                      marginBottom: 12,
+                    }}
+                    onPress={() => {
+                      const blockKey = `${longPressAction.userId}-${longPressAction.date}-${longPressAction.blockIndex}`;
+                      setCopiedCell({
+                        projectId: longPressAction.assignment.projectId,
+                        projectName: longPressAction.assignment.projectName,
+                        task: longPressAction.assignment.task,
+                        span: longPressAction.assignment.span,
+                      });
+                      setLongPressAction(null);
+                      setSuccessMessage('Task copied! Tap an empty cell to paste.');
+                      setShowSuccessDialog(true);
+                    }}
+                  >
+                    <Text style={{
+                      color: '#FFFFFF',
+                      fontSize: 16,
+                      fontWeight: '600',
+                      textAlign: 'center',
+                    }}>
+                      Copy
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={{
+                      backgroundColor: currentColors.secondary || currentColors.primary,
+                      padding: 16,
+                      borderRadius: 8,
+                      marginBottom: 12,
+                    }}
+                    onPress={() => {
+                      const blockKey = `${longPressAction.userId}-${longPressAction.date}-${longPressAction.blockIndex}`;
+                      setCopiedCell({
+                        projectId: longPressAction.assignment.projectId,
+                        projectName: longPressAction.assignment.projectName,
+                        task: longPressAction.assignment.task,
+                        span: longPressAction.assignment.span,
+                        sourceId: longPressAction.assignment.id,
+                        sourceBlockKey: blockKey,
+                      });
+                      setRepositionMode(true);
+                      setLongPressAction(null);
+                      setSuccessMessage('Ready to reposition! Tap an empty cell to move the task.');
+                      setShowSuccessDialog(true);
+                    }}
+                  >
+                    <Text style={{
+                      color: '#FFFFFF',
+                      fontSize: 16,
+                      fontWeight: '600',
+                      textAlign: 'center',
+                    }}>
+                      Reposition
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={{
+                      backgroundColor: currentColors.background.bg300,
+                      padding: 16,
+                      borderRadius: 8,
+                    }}
+                    onPress={() => setLongPressAction(null)}
+                  >
+                    <Text style={{
+                      color: currentColors.text,
+                      fontSize: 16,
+                      fontWeight: '600',
+                      textAlign: 'center',
+                    }}>
+                      Cancel
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </TouchableWithoutFeedback>
+            </View>
+          </TouchableWithoutFeedback>
+        </Modal>
+      )}
+
+      {/* Copy Confirmation Toast */}
+      {showCopyConfirmation && Platform.OS === 'web' && (
+        <View
+          style={{
+            position: 'absolute',
+            bottom: 80,
+            left: '50%',
+            transform: [{translateX: -175}],
+            width: 350,
+            backgroundColor: currentColors.success || '#4CAF50',
+            borderRadius: 8,
+            padding: 16,
+            zIndex: 10000,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.25,
+            shadowRadius: 3.84,
+            elevation: 5,
+          }}
+        >
+          <Text
+            style={{
+              color: '#FFFFFF',
+              fontSize: 16,
+              fontWeight: '600',
+              textAlign: 'center',
+            }}
+          >
+            Task copied! Tap an empty cell to paste.
+          </Text>
+        </View>
+      )}
+
       {/* Deadline Task Modal */}
       <DeadlineTaskModal
         visible={showDeadlineModal}
@@ -3026,6 +3549,151 @@ const PlanningScreen = () => {
         slotIndex={selectedDeadlineSlot?.slotIndex || 0}
         existingTask={editingDeadlineTask}
       />
+
+      {/* Delete Planning Task Confirmation Dialog (from keyboard shortcut) */}
+      <CustomDialog
+        visible={showDeleteDialog}
+        title="Delete Planning Task"
+        message="Are you sure you want to delete this planning task?"
+        buttons={[
+          {
+            label: 'Cancel',
+            onPress: () => {
+              setShowDeleteDialog(false);
+              setDeleteTaskId(null);
+              setDeleteTaskBlockKey(null);
+            },
+            variant: 'outline',
+          },
+          {
+            label: 'Delete',
+            onPress: handleConfirmKeyboardDelete,
+            variant: 'solid',
+            color: currentColors.error,
+          },
+        ]}
+        onDismiss={() => {
+          setShowDeleteDialog(false);
+          setDeleteTaskId(null);
+          setDeleteTaskBlockKey(null);
+        }}
+      />
+
+      {/* Delete Deadline Task Confirmation Dialog */}
+      <CustomDialog
+        visible={showDeleteDeadlineDialog}
+        title="Delete Deadline Task"
+        message="Are you sure you want to delete this deadline task?"
+        buttons={[
+          {
+            label: 'Cancel',
+            onPress: () => {
+              setShowDeleteDeadlineDialog(false);
+              setDeleteDeadlineTaskId(null);
+            },
+            variant: 'outline',
+          },
+          {
+            label: 'Delete',
+            onPress: async () => {
+              if (deleteDeadlineTaskId) {
+                await handleDeleteDeadlineTask(deleteDeadlineTaskId);
+                setShowDeleteDeadlineDialog(false);
+                setDeleteDeadlineTaskId(null);
+              }
+            },
+            variant: 'solid',
+            color: currentColors.error,
+          },
+        ]}
+        onDismiss={() => {
+          setShowDeleteDeadlineDialog(false);
+          setDeleteDeadlineTaskId(null);
+        }}
+      />
+
+      {/* Success Dialog */}
+      <CustomDialog
+        visible={showSuccessDialog}
+        title="Success"
+        message={successMessage}
+        buttons={[
+          {
+            label: 'OK',
+            onPress: () => setShowSuccessDialog(false),
+            variant: 'solid',
+          },
+        ]}
+        onDismiss={() => setShowSuccessDialog(false)}
+      />
+
+      {/* Error Dialog */}
+      <CustomDialog
+        visible={showErrorDialog}
+        title="Error"
+        message={errorMessage}
+        buttons={[
+          {
+            label: 'OK',
+            onPress: () => setShowErrorDialog(false),
+            variant: 'solid',
+            color: currentColors.error,
+          },
+        ]}
+        onDismiss={() => setShowErrorDialog(false)}
+      />
+
+      {/* Delete Planning Task Confirmation Dialog */}
+      <CustomDialog
+        visible={showDeletePlanningDialog}
+        title="Delete Planning Task"
+        message="Are you sure you want to delete this planning task?"
+        buttons={[
+          {
+            label: 'Cancel',
+            onPress: () => setShowDeletePlanningDialog(false),
+            variant: 'outline',
+          },
+          {
+            label: 'Delete',
+            onPress: handleDeletePlanningTask,
+            variant: 'solid',
+            color: currentColors.error,
+          },
+        ]}
+        onDismiss={() => setShowDeletePlanningDialog(false)}
+      />
+
+      {/* Notice Dialog */}
+      <CustomDialog
+        visible={showNoticeDialog}
+        title="Notice"
+        message={noticeMessage}
+        buttons={[
+          {
+            label: 'OK',
+            onPress: () => setShowNoticeDialog(false),
+            variant: 'solid',
+          },
+        ]}
+        onDismiss={() => setShowNoticeDialog(false)}
+      />
+
+      {/* Warning Dialog */}
+      <CustomDialog
+        visible={showWarningDialog}
+        title="Warning"
+        message={warningMessage}
+        buttons={[
+          {
+            label: 'OK',
+            onPress: () => setShowWarningDialog(false),
+            variant: 'solid',
+            color: currentColors.warning || currentColors.secondary,
+          },
+        ]}
+        onDismiss={() => setShowWarningDialog(false)}
+      />
     </View>
   );
 };
@@ -3035,6 +3703,7 @@ const ROW_HEIGHT = 200; // Increased to fit 4 time blocks
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    ...(Platform.OS === 'web' && { userSelect: 'none' as any }),
   },
   centered: {
     flex: 1,
@@ -3042,7 +3711,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   header: {
-    padding: 15,
+    height: 75,
+    paddingHorizontal: 15,
+    justifyContent: 'center',
     borderBottomWidth: 1,
   },
   mainContent: {
@@ -3141,6 +3812,7 @@ const styles = StyleSheet.create({
     padding: 4,
     justifyContent: 'center',
     position: 'relative',
+    ...(Platform.OS === 'web' && { userSelect: 'none' as any }),
   },
   timeBlockFilled: {
   },
@@ -3188,10 +3860,12 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '700',
     marginBottom: 2,
+    ...(Platform.OS === 'web' && { userSelect: 'none' as any }),
   },
   taskText: {
     fontSize: 9,
-    fontStyle: 'italic',
+    fontStyle: 'normal',
+    ...(Platform.OS === 'web' && { userSelect: 'none' as any }),
   },
   input: {
     marginBottom: 15,
@@ -3239,12 +3913,21 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingVertical: Platform.select({
+      ios: 40,
+      android: 20,
+      web: 20,
+    }),
+    paddingHorizontal: 10,
   },
   modalContent: {
     borderRadius: 12,
     padding: 24,
-    width: Platform.OS === 'web' ? 600 : '95%',
-    maxHeight: '95%',
+    width: '100%',
+    minWidth: 280,
+    maxWidth: 600,
+    maxHeight: '75%',
+    overflow: 'hidden',
     ...Platform.select({
       ios: {
         shadowColor: '#000',
@@ -3259,7 +3942,7 @@ const styles = StyleSheet.create({
   },
   modalScrollView: {
     maxHeight: Platform.OS === 'web' ? 600 : 500,
-    marginBottom: 16,
+    marginBottom: 8,
   },
   modalTitle: {
     fontSize: 20,
@@ -3305,8 +3988,8 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'flex-end',
+    flexDirection: 'column',
+    alignItems: 'stretch',
   },
   modalButton: {
     minWidth: 100,

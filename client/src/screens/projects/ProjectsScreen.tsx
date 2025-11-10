@@ -4,7 +4,7 @@ import { Card, Title, Paragraph, Chip, FAB, ActivityIndicator, Searchbar, Button
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-import { UserGroupIcon, TaskDaily01Icon, GridTableIcon } from '@hugeicons/core-free-icons';
+import { UserGroupIcon, TaskDaily01Icon, GridTableIcon, Search01Icon } from '@hugeicons/core-free-icons';
 import { projectsAPI, settingsAPI } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -163,7 +163,7 @@ const ProjectsScreen = () => {
         onChangeText={setSearchQuery}
         value={searchQuery}
         style={styles.searchbar}
-        icon={() => <HugeiconsIcon icon={TaskDaily01Icon} size={24} color={currentColors.icon} />}
+        icon={() => <HugeiconsIcon icon={Search01Icon} size={24} color={currentColors.icon} />}
       />
 
       <View style={styles.buttonsRow}>

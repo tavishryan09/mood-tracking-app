@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import {
+  getAppSettings,
   getSetting,
   setSetting,
+  batchSetAppSettings,
   deleteSetting,
   getUserSetting,
   getUserSettings,
@@ -14,11 +16,17 @@ import { authenticate, authorizeRoles } from '../middleware/auth';
 const router = Router();
 
 // App-wide settings (admin only)
+// GET /app - Get all app settings
+router.get('/app', authenticate, getAppSettings);
+
 // GET /:key - All authenticated users can read settings
 router.get('/app/:key', authenticate, getSetting);
 
 // PUT /:key - All users can write their own settings, admins can write any setting
 router.put('/app/:key', authenticate, setSetting);
+
+// POST /app/batch - Batch update app settings (admin only)
+router.post('/app/batch', authenticate, authorizeRoles('ADMIN'), batchSetAppSettings);
 
 // DELETE /:key - Only admins can delete settings
 router.delete('/app/:key', authenticate, authorizeRoles('ADMIN'), deleteSetting);

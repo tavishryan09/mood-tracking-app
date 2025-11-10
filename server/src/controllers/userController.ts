@@ -4,6 +4,7 @@ import { validationResult } from 'express-validator';
 import prisma from '../config/database';
 import { AuthRequest } from '../middleware/auth';
 import { sendInviteEmail, sendPasswordResetEmail } from '../services/emailService';
+import { avatarStorageService } from '../services/avatarStorageService';
 
 // Admin-only: Get all users
 export const getAllUsers = async (req: AuthRequest, res: Response) => {
@@ -57,8 +58,8 @@ export const inviteUser = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Invalid role. Must be USER, MANAGER, or ADMIN' });
     }
 
-    // Hash password
-    const passwordHash = await bcrypt.hash(password, 10);
+    // Hash password with 12 salt rounds (OWASP recommended)
+    const passwordHash = await bcrypt.hash(password, 12);
 
     // Create user
     const user = await prisma.user.create({
@@ -187,7 +188,7 @@ export const resetUserPassword = async (req: AuthRequest, res: Response) => {
       return res.status(400).json({ error: 'Password must be at least 6 characters long' });
     }
 
-    const passwordHash = await bcrypt.hash(newPassword, 10);
+    const passwordHash = await bcrypt.hash(newPassword, 12);
 
     // Update password and get user details
     const user = await prisma.user.update({
@@ -216,5 +217,56 @@ export const resetUserPassword = async (req: AuthRequest, res: Response) => {
     }
     console.error('Reset password error:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+// Upload avatar image
+export const uploadAvatar = async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No image file provided' });
+    }
+
+    // Validate file type
+    const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedMimeTypes.includes(req.file.mimetype)) {
+      return res.status(400).json({ error: 'Invalid image format. Allowed: JPEG, PNG, GIF, WebP' });
+    }
+
+    // Upload avatar using storage service (optimizes and saves as file)
+    const avatarUrl = await avatarStorageService.uploadAvatar(req.file.buffer, req.file.mimetype);
+
+    // Delete old avatar if exists
+    const currentUser = await prisma.user.findUnique({
+      where: { id: req.userId },
+      select: { avatarUrl: true }
+    });
+
+    if (currentUser?.avatarUrl && !currentUser.avatarUrl.startsWith('data:')) {
+      await avatarStorageService.deleteAvatar(currentUser.avatarUrl);
+    }
+
+    // Update user's avatar URL (now just a path, not base64!)
+    const updatedUser = await prisma.user.update({
+      where: { id: req.userId },
+      data: { avatarUrl },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        avatarUrl: true,
+      },
+    });
+
+    console.log(`[Avatar] Uploaded avatar for user ${req.userId}: ${avatarUrl}`);
+    res.json({
+      message: 'Avatar uploaded successfully',
+      user: updatedUser,
+    });
+  } catch (error) {
+    console.error('Upload avatar error:', error);
+    res.status(500).json({ error: 'Failed to upload avatar' });
   }
 };

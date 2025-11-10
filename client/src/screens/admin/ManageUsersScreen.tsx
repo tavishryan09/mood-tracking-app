@@ -1,21 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Alert, Modal } from 'react-native';
+import { View, StyleSheet, ScrollView, Modal, TouchableOpacity, TextInput, Text } from 'react-native';
 import {
-  List,
   FAB,
   Chip,
   ActivityIndicator,
-  Searchbar,
-  Menu,
-  IconButton,
   Card,
   Paragraph,
   Button,
 } from 'react-native-paper';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-import { PencilEdit02Icon } from '@hugeicons/core-free-icons';
+import { Search01Icon } from '@hugeicons/core-free-icons';
 import { userManagementAPI } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
+import { CustomDialog } from '../../components/CustomDialog';
 
 interface User {
   id: string;
@@ -37,6 +34,15 @@ const ManageUsersScreen = ({ navigation }: any) => {
   const [menuVisible, setMenuVisible] = useState<{ [key: string]: boolean }>({});
   const [deletingUserId, setDeletingUserId] = useState<string | null>(null);
 
+  // Dialog state
+  const [dialogVisible, setDialogVisible] = useState(false);
+  const [dialogTitle, setDialogTitle] = useState('');
+  const [dialogMessage, setDialogMessage] = useState('');
+  const [dialogButtons, setDialogButtons] = useState<any[]>([]);
+
+  // DEBUG: Log to verify new code is loading
+  console.log('[ManageUsersScreen] NEW CODE LOADED WITH SVG ICONS - v2.0');
+
   useEffect(() => {
     loadUsers();
   }, []);
@@ -52,7 +58,10 @@ const ManageUsersScreen = ({ navigation }: any) => {
       setUsers(response.data);
     } catch (error: any) {
       console.error('Error loading users:', error);
-      Alert.alert('Error', 'Failed to load users');
+      setDialogTitle('Error');
+      setDialogMessage('Failed to load users');
+      setDialogButtons([{ text: 'OK', onPress: () => {} }]);
+      setDialogVisible(true);
     } finally {
       setLoading(false);
     }
@@ -118,10 +127,16 @@ const ManageUsersScreen = ({ navigation }: any) => {
       await userManagementAPI.updateUser(user.id, {
         isActive: !user.isActive,
       });
-      Alert.alert('Success', `User ${!user.isActive ? 'activated' : 'deactivated'} successfully`);
+      setDialogTitle('Success');
+      setDialogMessage(`User ${!user.isActive ? 'activated' : 'deactivated'} successfully`);
+      setDialogButtons([{ text: 'OK', onPress: () => {} }]);
+      setDialogVisible(true);
       loadUsers();
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.error || 'Failed to update user');
+      setDialogTitle('Error');
+      setDialogMessage(error.response?.data?.error || 'Failed to update user');
+      setDialogButtons([{ text: 'OK', onPress: () => {} }]);
+      setDialogVisible(true);
     }
   };
 
@@ -135,12 +150,26 @@ const ManageUsersScreen = ({ navigation }: any) => {
 
   return (
     <View style={[styles.container, { backgroundColor: currentColors.background.bg700 }]}>
-      <Searchbar
-        placeholder="Search users..."
-        onChangeText={setSearchQuery}
-        value={searchQuery}
-        style={styles.searchbar}
-      />
+      {/* DEBUG BANNER - REMOVE THIS WHEN CONFIRMED */}
+      <View style={{ backgroundColor: '#FF0000', padding: 20, alignItems: 'center' }}>
+        <Text style={{ color: '#FFFFFF', fontSize: 24, fontWeight: 'bold' }}>
+          ✓ NEW CODE LOADED - TEXT LABELS ACTIVE
+        </Text>
+        <Text style={{ color: '#FFFFFF', fontSize: 14, marginTop: 5 }}>
+          If you see this banner, the latest code is running
+        </Text>
+      </View>
+
+      <View style={[styles.searchContainer, { backgroundColor: currentColors.background.bg300 }]}>
+        <HugeiconsIcon icon={Search01Icon} size={20} color={currentColors.icon} />
+        <TextInput
+          placeholder="Search users..."
+          placeholderTextColor={currentColors.textSecondary}
+          onChangeText={setSearchQuery}
+          value={searchQuery}
+          style={[styles.searchInput, { color: currentColors.text }]}
+        />
+      </View>
 
       <ScrollView style={styles.list}>
         {filteredUsers.length === 0 ? (
@@ -151,46 +180,54 @@ const ManageUsersScreen = ({ navigation }: any) => {
           </Card>
         ) : (
           filteredUsers.map((user) => (
-            <List.Item
+            <View
               key={user.id}
-              title={`${user.firstName} ${user.lastName}`}
-              description={user.email}
-              right={(props) => (
-                <View style={styles.rightContent}>
-                  <Chip
-                    mode="outlined"
-                    style={[styles.roleChip, { borderColor: getRoleColor(user.role) }]}
-                    textStyle={{ color: getRoleColor(user.role), fontSize: 12 }}
-                  >
-                    {user.role}
-                  </Chip>
-                  <IconButton
-                    icon={() => <HugeiconsIcon icon={PencilEdit02Icon} size={24} color={currentColors.icon} />}
-                    onPress={() => navigation.navigate('EditUser', { userId: user.id })}
-                  />
-                  <IconButton
-                    icon="delete"
-                    iconColor={currentColors.error}
-                    onPress={() => handleDeleteClick(user.id)}
-                  />
-                </View>
-              )}
               style={[
                 styles.userItem,
                 { backgroundColor: currentColors.background.bg300 },
                 !user.isActive && styles.inactiveUser
               ]}
-            />
+            >
+              <View style={styles.userInfo}>
+                <Paragraph style={[styles.userName, { color: currentColors.text }]}>
+                  {`${user.firstName} ${user.lastName}`}
+                </Paragraph>
+                <Paragraph style={[styles.userEmail, { color: currentColors.textSecondary }]}>
+                  {user.email}
+                </Paragraph>
+              </View>
+              <View style={styles.rightContent}>
+                <Chip
+                  mode="outlined"
+                  style={[styles.roleChip, { borderColor: getRoleColor(user.role) }]}
+                  textStyle={{ color: getRoleColor(user.role), fontSize: 12 }}
+                >
+                  {user.role}
+                </Chip>
+                <TouchableOpacity
+                  onPress={() => navigation.navigate('EditUser', { userId: user.id })}
+                  style={styles.textButton}
+                >
+                  <Text style={[styles.buttonText, { color: currentColors.primary }]}>Edit</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => handleDeleteClick(user.id)}
+                  style={styles.textButton}
+                >
+                  <Text style={[styles.buttonText, { color: currentColors.error }]}>Delete</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           ))
         )}
       </ScrollView>
 
-      <FAB
-        icon="account-plus"
-        style={[styles.fab, { backgroundColor: currentColors.secondary }]}
+      <TouchableOpacity
+        style={[styles.inviteButton, { backgroundColor: currentColors.secondary }]}
         onPress={() => navigation.navigate('InviteUser')}
-        label="Invite User"
-      />
+      >
+        <Text style={styles.inviteButtonText}>Invite User</Text>
+      </TouchableOpacity>
 
       <Modal
         visible={deletingUserId !== null}
@@ -199,9 +236,14 @@ const ManageUsersScreen = ({ navigation }: any) => {
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: currentColors.background.bg300 }]}>
-            <Paragraph style={[styles.modalTitle, { color: currentColors.text }]}>
-              Delete User
-            </Paragraph>
+            <View style={styles.modalHeader}>
+              <Paragraph style={[styles.modalTitle, { color: currentColors.text }]}>
+                Delete User
+              </Paragraph>
+              <TouchableOpacity onPress={handleDeleteCancel} style={styles.closeButton}>
+                <Text style={[styles.closeButtonText, { color: currentColors.text }]}>✕</Text>
+              </TouchableOpacity>
+            </View>
             <Paragraph style={[styles.modalMessage, { color: currentColors.textSecondary }]}>
               Are you sure you want to delete {deletingUserId ? users.find(u => u.id === deletingUserId)?.firstName : ''} {deletingUserId ? users.find(u => u.id === deletingUserId)?.lastName : ''}?
             </Paragraph>
@@ -228,6 +270,14 @@ const ManageUsersScreen = ({ navigation }: any) => {
           </View>
         </View>
       </Modal>
+
+      <CustomDialog
+        visible={dialogVisible}
+        title={dialogTitle}
+        message={dialogMessage}
+        buttons={dialogButtons}
+        onDismiss={() => setDialogVisible(false)}
+      />
     </View>
   );
 };
@@ -241,9 +291,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  searchbar: {
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
     margin: 10,
-    elevation: 2,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    padding: 0,
+    outlineStyle: 'none',
   },
   list: {
     flex: 1,
@@ -253,17 +314,66 @@ const styles = StyleSheet.create({
     marginVertical: 5,
     borderRadius: 8,
     elevation: 1,
+    padding: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   inactiveUser: {
     opacity: 0.6,
+  },
+  userInfo: {
+    flex: 1,
+  },
+  userName: {
+    fontSize: 16,
+    fontWeight: '500',
+    marginBottom: 4,
+  },
+  userEmail: {
+    fontSize: 14,
   },
   rightContent: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
   },
+  iconButton: {
+    padding: 8,
+  },
+  textButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 4,
+  },
+  buttonText: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
   roleChip: {
     height: 28,
+  },
+  inviteButton: {
+    position: 'absolute',
+    right: 16,
+    bottom: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderRadius: 28,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+  },
+  inviteButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  closeButtonText: {
+    fontSize: 24,
+    fontWeight: '300',
   },
   emptyCard: {
     margin: 20,
@@ -291,10 +401,19 @@ const styles = StyleSheet.create({
     maxWidth: 400,
     elevation: 8,
   },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
   modalTitle: {
     fontSize: 18,
     fontWeight: '600',
-    marginBottom: 12,
+    marginBottom: 0,
+  },
+  closeButton: {
+    padding: 4,
   },
   modalMessage: {
     fontSize: 14,
