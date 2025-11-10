@@ -325,9 +325,9 @@ export const syncProjectDueDates = async (req: AuthRequest, res: Response) => {
       });
 
       // Sync to ALL users' Outlook calendars (non-blocking)
-      outlookCalendarService.syncDeadlineTaskToAllUsers(deadlineTask.id).catch((error) => {
-        console.error('[Outlook] Failed to sync auto-generated deadline task to all users:', error);
-      });
+      // outlookCalendarService.syncDeadlineTaskToAllUsers(deadlineTask.id).catch((error) => {
+      //   console.error('[Outlook] Failed to sync auto-generated deadline task to all users:', error);
+      // });
 
       createdTasks.push(deadlineTask);
     }
