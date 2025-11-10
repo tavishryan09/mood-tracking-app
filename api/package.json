@@ -18,10 +18,9 @@
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.5",
     "@types/jsonwebtoken": "^9.0.10",
-    "@types/node": "^24.9.2",
-    "typescript": "^5.7.2"
+    "@types/node": "^24.9.2"
   },
   "scripts": {
-    "postinstall": "npx prisma generate --schema=../server/prisma/schema.prisma || echo 'Prisma generate failed'"
+    "postinstall": "npx prisma generate --schema=../server/prisma/schema.prisma"
   }
 }
