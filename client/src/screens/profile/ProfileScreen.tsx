@@ -257,7 +257,10 @@ const ProfileScreen = ({ navigation }: any) => {
       console.error('[ProfileScreen] Error during sync:', error);
       setOutlookSyncing(false);
       setSyncProgress(null);
-      setErrorMessage(error.response?.data?.error || 'Failed to complete sync');
+
+      // Extract error message properly
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to complete sync';
+      setErrorMessage(String(errorMessage));
       setShowErrorDialog(true);
     }
   };
