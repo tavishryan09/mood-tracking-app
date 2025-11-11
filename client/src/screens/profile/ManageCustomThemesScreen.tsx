@@ -102,6 +102,16 @@ const ManageCustomThemesScreen = ({ navigation }: any) => {
         await settingsAPI.app.set('custom_color_palettes', { [paletteId]: palettes[paletteId] });
       }
 
+      // Also save the element mapping to app settings
+      try {
+        const mappingsResponse = await settingsAPI.user.get('element_color_mapping');
+        if (mappingsResponse?.data?.value?.[paletteId]) {
+          await settingsAPI.app.set('element_color_mapping', { [paletteId]: mappingsResponse.data.value[paletteId] });
+        }
+      } catch (error) {
+        console.error('Error saving element mapping to app settings:', error);
+      }
+
       setDefaultThemeId(paletteId);
       setSuccessMessage('This theme is now set as the default for all users who haven\'t selected their own theme');
       setShowSuccessDialog(true);

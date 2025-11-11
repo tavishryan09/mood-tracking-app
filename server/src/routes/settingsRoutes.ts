@@ -23,6 +23,7 @@ router.get('/app', authenticate, getAppSettings);
 // Exceptions: these are public so they can be loaded before login
 router.get('/app/default_custom_theme', getSetting);
 router.get('/app/custom_color_palettes', getSetting);
+router.get('/app/element_color_mapping', getSetting);
 router.get('/app/:key', authenticate, getSetting);
 
 // PUT /:key - All users can write their own settings, admins can write any setting
