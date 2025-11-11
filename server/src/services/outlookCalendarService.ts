@@ -772,15 +772,10 @@ class OutlookCalendarService {
    * @returns Sync progress information
    */
   /**
-   * Fast sync for planning task (optimized for serverless)
-   * Takes task data directly to avoid extra DB queries
-   * Uses update-or-create pattern to minimize API calls
+   * Build Outlook event object from planning task data
+   * Extracted for reuse in batch API calls
    */
-  private async syncPlanningTaskFast(
-    task: any,
-    client: Client,
-    calendarId: string
-  ): Promise<boolean> {
+  private buildPlanningTaskEvent(task: any): OutlookEvent | null {
     try {
       // Build date strings
       const taskDate = new Date(task.date);
@@ -823,7 +818,7 @@ class OutlookCalendarService {
           bodyContent = `${statusName}\n\nAdded by MoodTracker`;
         }
       } else if (!task.project) {
-        return false;
+        return null;
       } else {
         const commonName = task.project.description || task.project.name;
 
@@ -851,7 +846,7 @@ class OutlookCalendarService {
         }
       }
 
-      const event: OutlookEvent = {
+      return {
         subject: subject,
         start: {
           dateTime: dateString,
@@ -868,6 +863,89 @@ class OutlookCalendarService {
         },
         categories: [category]
       };
+    } catch (error) {
+      console.error(`[Outlook] Error building event for task ${task.id}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Helper method to build Outlook event object for a deadline task
+   * Extracted for reuse in batch API and individual sync
+   */
+  private buildDeadlineTaskEvent(task: any): OutlookEvent | null {
+    try {
+      const deadlineDate = new Date(task.date);
+      deadlineDate.setUTCHours(0, 0, 0, 0);
+      const deadlineEndDate = new Date(deadlineDate);
+      deadlineEndDate.setDate(deadlineEndDate.getDate() + 1);
+
+      const commonName = task.project?.description || task.project?.name || 'Unknown';
+
+      let title = '';
+      let category = '';
+
+      switch (task.deadlineType) {
+        case 'DEADLINE':
+          title = `Deadline - ${commonName}`;
+          category = 'Deadline';
+          break;
+        case 'INTERNAL_DEADLINE':
+          title = `Internal - ${commonName}`;
+          category = 'Internal Deadline';
+          break;
+        case 'MILESTONE':
+          title = `Milestone - ${commonName}`;
+          category = 'Project Milestone';
+          break;
+        default:
+          title = commonName;
+          category = 'Deadline';
+      }
+
+      return {
+        subject: title,
+        start: {
+          dateTime: deadlineDate.toISOString(),
+          timeZone: 'UTC'
+        },
+        end: {
+          dateTime: deadlineEndDate.toISOString(),
+          timeZone: 'UTC'
+        },
+        isAllDay: true,
+        body: {
+          contentType: 'text',
+          content: [
+            `Type: ${task.deadlineType}`,
+            task.client ? `Client: ${task.client.name}` : null,
+            task.project ? `Project: ${task.project.description || task.project.name}` : null,
+            task.description ? `Description: ${task.description}` : null,
+            '',
+            'Added by MoodTracker'
+          ].filter(line => line !== null).join('\n')
+        },
+        categories: [category]
+      };
+    } catch (error) {
+      console.error(`[Outlook] Error building event for deadline task ${task.id}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Fast sync for planning task (optimized for serverless)
+   * Takes task data directly to avoid extra DB queries
+   * Uses update-or-create pattern to minimize API calls
+   */
+  private async syncPlanningTaskFast(
+    task: any,
+    client: Client,
+    calendarId: string
+  ): Promise<boolean> {
+    try {
+      const event = this.buildPlanningTaskEvent(task);
+      if (!event) return false;
 
       let eventId = task.outlookEventId;
 
@@ -952,19 +1030,80 @@ class OutlookCalendarService {
         });
       }
 
-      // Sync all tasks in parallel with optimized batch processing
-      // For serverless: reduce API calls by using update-or-create pattern
-      const BATCH_SIZE = 5; // Very small batches for Vercel Hobby 10s timeout
+      // Use Microsoft Graph Batch API to reduce API calls
+      // Batch up to 20 requests per batch (Microsoft Graph limit)
+      const BATCH_SIZE = 20;
 
       for (let i = 0; i < planningTasks.length; i += BATCH_SIZE) {
         const batch = planningTasks.slice(i, i + BATCH_SIZE);
 
-        // Process entire batch in parallel with fast sync
-        const results = await Promise.all(
-          batch.map(task => this.syncPlanningTaskFast(task, client, calendarId))
-        );
+        // Build batch requests
+        const batchRequests = batch.map((task, index) => {
+          const event = this.buildPlanningTaskEvent(task);
+          if (!event) return null;
 
-        result.syncedTasks += results.filter(r => r).length;
+          // If task has outlookEventId, try to update; otherwise create
+          if (task.outlookEventId) {
+            return {
+              id: index.toString(),
+              method: 'PATCH',
+              url: `/me/calendars/${calendarId}/events/${task.outlookEventId}`,
+              body: event,
+              headers: { 'Content-Type': 'application/json' }
+            };
+          } else {
+            return {
+              id: index.toString(),
+              method: 'POST',
+              url: `/me/calendars/${calendarId}/events`,
+              body: event,
+              headers: { 'Content-Type': 'application/json' }
+            };
+          }
+        }).filter(r => r !== null);
+
+        if (batchRequests.length === 0) continue;
+
+        // Execute batch request
+        try {
+          const batchResponse = await client.api('/$batch').post({ requests: batchRequests });
+
+          // Process batch responses
+          for (let j = 0; j < batchResponse.responses.length; j++) {
+            const response = batchResponse.responses[j];
+            const taskIndex = parseInt(response.id);
+            const task = batch[taskIndex];
+
+            if (response.status >= 200 && response.status < 300) {
+              result.syncedTasks++;
+
+              // If it was a POST (create), save the new eventId
+              if (!task.outlookEventId && response.body?.id) {
+                await prisma.planningTask.update({
+                  where: { id: task.id },
+                  data: { outlookEventId: response.body.id }
+                });
+              }
+            } else if (response.status === 404 && task.outlookEventId) {
+              // Event not found, need to create it - handle in next iteration
+              console.log(`[Outlook] Event ${task.outlookEventId} not found, will recreate`);
+              // Clear the invalid eventId
+              await prisma.planningTask.update({
+                where: { id: task.id },
+                data: { outlookEventId: null }
+              });
+            } else {
+              console.error(`[Outlook] Batch request failed for task ${task.id}:`, response.status, response.body);
+            }
+          }
+        } catch (error) {
+          console.error('[Outlook] Batch API error:', error);
+          // Fallback to individual sync for this batch
+          for (const task of batch) {
+            const success = await this.syncPlanningTaskFast(task, client, calendarId);
+            if (success) result.syncedTasks++;
+          }
+        }
 
         // Report progress
         if (jobId) {
@@ -999,58 +1138,8 @@ class OutlookCalendarService {
     userId: string
   ): Promise<boolean> {
     try {
-      const deadlineDate = new Date(task.date);
-      deadlineDate.setUTCHours(0, 0, 0, 0);
-      const deadlineEndDate = new Date(deadlineDate);
-      deadlineEndDate.setDate(deadlineEndDate.getDate() + 1);
-
-      const commonName = task.project?.description || task.project?.name || 'Unknown';
-
-      let title = '';
-      let category = '';
-
-      switch (task.deadlineType) {
-        case 'DEADLINE':
-          title = `Deadline - ${commonName}`;
-          category = 'Deadline';
-          break;
-        case 'INTERNAL_DEADLINE':
-          title = `Internal - ${commonName}`;
-          category = 'Internal Deadline';
-          break;
-        case 'MILESTONE':
-          title = `Milestone - ${commonName}`;
-          category = 'Project Milestone';
-          break;
-        default:
-          title = commonName;
-          category = 'Deadline';
-      }
-
-      const event: OutlookEvent = {
-        subject: title,
-        start: {
-          dateTime: deadlineDate.toISOString(),
-          timeZone: 'UTC'
-        },
-        end: {
-          dateTime: deadlineEndDate.toISOString(),
-          timeZone: 'UTC'
-        },
-        isAllDay: true,
-        body: {
-          contentType: 'text',
-          content: [
-            `Type: ${task.deadlineType}`,
-            task.client ? `Client: ${task.client.name}` : null,
-            task.project ? `Project: ${task.project.description || task.project.name}` : null,
-            task.description ? `Description: ${task.description}` : null,
-            '',
-            'Added by MoodTracker'
-          ].filter(line => line !== null).join('\n')
-        },
-        categories: [category]
-      };
+      const event = this.buildDeadlineTaskEvent(task);
+      if (!event) return false;
 
       let eventId = task.outlookEventId;
 
@@ -1131,18 +1220,80 @@ class OutlookCalendarService {
         });
       }
 
-      // Sync all tasks in parallel with optimized batch processing
-      const BATCH_SIZE = 5; // Very small batches for Vercel Hobby 10s timeout
+      // Use Microsoft Graph Batch API to reduce API calls
+      // Batch up to 20 requests per batch (Microsoft Graph limit)
+      const BATCH_SIZE = 20;
 
       for (let i = 0; i < deadlineTasks.length; i += BATCH_SIZE) {
         const batch = deadlineTasks.slice(i, i + BATCH_SIZE);
 
-        // Process entire batch in parallel with fast sync
-        const results = await Promise.all(
-          batch.map(task => this.syncDeadlineTaskFast(task, client, calendarId, userId))
-        );
+        // Build batch requests
+        const batchRequests = batch.map((task, index) => {
+          const event = this.buildDeadlineTaskEvent(task);
+          if (!event) return null;
 
-        result.syncedTasks += results.filter(r => r).length;
+          // If task has outlookEventId, try to update; otherwise create
+          if (task.outlookEventId) {
+            return {
+              id: index.toString(),
+              method: 'PATCH',
+              url: `/me/calendars/${calendarId}/events/${task.outlookEventId}`,
+              body: event,
+              headers: { 'Content-Type': 'application/json' }
+            };
+          } else {
+            return {
+              id: index.toString(),
+              method: 'POST',
+              url: `/me/calendars/${calendarId}/events`,
+              body: event,
+              headers: { 'Content-Type': 'application/json' }
+            };
+          }
+        }).filter(r => r !== null);
+
+        if (batchRequests.length === 0) continue;
+
+        // Execute batch request
+        try {
+          const batchResponse = await client.api('/$batch').post({ requests: batchRequests });
+
+          // Process batch responses
+          for (let j = 0; j < batchResponse.responses.length; j++) {
+            const response = batchResponse.responses[j];
+            const taskIndex = parseInt(response.id);
+            const task = batch[taskIndex];
+
+            if (response.status >= 200 && response.status < 300) {
+              result.syncedTasks++;
+
+              // If it was a POST (create), save the new eventId
+              if (!task.outlookEventId && response.body?.id) {
+                await prisma.deadlineTask.update({
+                  where: { id: task.id },
+                  data: { outlookEventId: response.body.id }
+                });
+              }
+            } else if (response.status === 404 && task.outlookEventId) {
+              // Event not found, need to create it - handle in next iteration
+              console.log(`[Outlook] Event ${task.outlookEventId} not found, will recreate`);
+              // Clear the invalid eventId
+              await prisma.deadlineTask.update({
+                where: { id: task.id },
+                data: { outlookEventId: null }
+              });
+            } else {
+              console.error(`[Outlook] Batch request failed for task ${task.id}:`, response.status, response.body);
+            }
+          }
+        } catch (error) {
+          console.error('[Outlook] Batch API error:', error);
+          // Fallback to individual sync for this batch
+          for (const task of batch) {
+            const success = await this.syncDeadlineTaskFast(task, client, calendarId, userId);
+            if (success) result.syncedTasks++;
+          }
+        }
 
         // Report progress
         if (jobId) {
