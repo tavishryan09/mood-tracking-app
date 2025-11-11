@@ -220,6 +220,9 @@ export const updatePlanningTask = async (req: AuthRequest, res: Response) => {
     if (blockIndex !== undefined) {
       // Check if blockIndex is actually changing
       if (existingTask.blockIndex !== blockIndex) {
+        // Preserve the Outlook event ID to avoid creating duplicates
+        const preservedOutlookEventId = existingTask.outlookEventId;
+
         // Delete the old task and create a new one with the new blockIndex
         await prisma.planningTask.delete({
           where: { id },
@@ -234,6 +237,7 @@ export const updatePlanningTask = async (req: AuthRequest, res: Response) => {
             task: task !== undefined ? task : existingTask.task,
             span: span !== undefined ? span : existingTask.span,
             completed: completed !== undefined ? completed : existingTask.completed,
+            outlookEventId: preservedOutlookEventId, // Preserve to avoid duplicate events
           },
           include: {
             user: {
@@ -290,17 +294,27 @@ export const updatePlanningTask = async (req: AuthRequest, res: Response) => {
           if (userId && userId !== oldUserId) {
             console.log(`[Outlook] Planning task moved from user ${oldUserId} to ${userId}`);
 
-            // Delete from old user's calendar and sync to new user (with timeout)
-            const deletePromise = outlookCalendarService.deletePlanningTask(id, oldUserId);
+            // Delete from old user's calendar using the preserved event ID
+            if (preservedOutlookEventId) {
+              const deletePromise = outlookCalendarService.deletePlanningTaskByEventId(preservedOutlookEventId, oldUserId);
+              const timeoutPromise1 = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Outlook delete timeout')), 8000)
+              );
+              await Promise.race([deletePromise, timeoutPromise1]).catch(err =>
+                console.error('[Outlook] Failed to delete from old user calendar:', err)
+              );
+            }
+
+            // Sync to new user's calendar (will update existing event or create new one)
             const syncPromise = outlookCalendarService.syncPlanningTask(planningTask.id, planningTask.userId);
-            const timeoutPromise = new Promise((_, reject) =>
+            const timeoutPromise2 = new Promise((_, reject) =>
               setTimeout(() => reject(new Error('Outlook sync timeout')), 8000)
             );
 
-            await Promise.race([Promise.all([deletePromise, syncPromise]), timeoutPromise]);
+            await Promise.race([syncPromise, timeoutPromise2]);
             console.log('[Outlook] Planning task moved and synced successfully');
           } else {
-            // Same user, sync the updated task (blockIndex changed)
+            // Same user, sync the updated task (will update existing event)
             console.log(`[Outlook] Syncing updated planning task ${planningTask.id} (blockIndex changed) to user ${planningTask.userId}`);
             const syncPromise = outlookCalendarService.syncPlanningTask(planningTask.id, planningTask.userId);
             const timeoutPromise = new Promise((_, reject) =>
