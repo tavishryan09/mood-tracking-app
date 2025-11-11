@@ -794,15 +794,15 @@ class OutlookCalendarService {
       console.log(`[Outlook] Finished syncing all deadline tasks`);
 
       // Re-fetch tasks with updated event IDs before cleanup
+      // IMPORTANT: Include ALL planning tasks (both project tasks AND status events with projectId: null)
       console.log(`[Outlook] Re-fetching tasks with updated event IDs...`);
       const updatedPlanningTasks = await prisma.planningTask.findMany({
         where: {
-          userId,
-          projectId: { not: null }
+          userId
         }
       });
       const updatedDeadlineTasks = await prisma.deadlineTask.findMany({});
-      console.log(`[Outlook] Re-fetched ${updatedPlanningTasks.length} planning tasks and ${updatedDeadlineTasks.length} deadline tasks`);
+      console.log(`[Outlook] Re-fetched ${updatedPlanningTasks.length} planning tasks (including status events) and ${updatedDeadlineTasks.length} deadline tasks`);
 
       // Cleanup orphaned events - delete Outlook events that no longer exist in database
       console.log(`[Outlook] Starting cleanup of orphaned events...`);
