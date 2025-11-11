@@ -68,13 +68,13 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
 
           if (!isMounted) return;
 
-          await loadActiveCustomTheme();
+          // Try to load user's active theme - returns true if theme was loaded
+          const hasUserTheme = await loadActiveCustomTheme();
 
           if (!isMounted) return;
 
           // If no user-specific theme is set, check for admin-defined default theme
-          // Note: loadActiveCustomTheme already checked the database for ACTIVE_CUSTOM_THEME_KEY
-          if (!activeCustomTheme && isMounted) {
+          if (!hasUserTheme && isMounted) {
             try {
               // Check if admin has set a default theme
               const defaultThemeResponse = await settingsAPI.app.get('default_custom_theme');
@@ -146,9 +146,9 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
     }
   }, [user]);
 
-  const loadActiveCustomTheme = useCallback(async () => {
+  const loadActiveCustomTheme = useCallback(async (): Promise<boolean> => {
     try {
-      if (!user) return;
+      if (!user) return false;
 
       // Load active theme ID from database
       const activeThemeResponse = await settingsAPI.user.get(ACTIVE_CUSTOM_THEME_KEY);
@@ -175,7 +175,8 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
             setActiveCustomThemeState(theme);
             setActivePalette(palette);
             setIsUsingCustomTheme(true);
-            return;
+            console.log('[CustomColorTheme] User theme loaded:', activeThemeId);
+            return true;
           }
         }
       }
@@ -183,6 +184,7 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
       setActiveCustomThemeState(null);
       setActivePalette(null);
       setIsUsingCustomTheme(false);
+      return false;
     } catch (error: any) {
       if (error?.response?.status !== 404) {
         console.error('[CustomColorTheme] Error loading active custom theme:', error);
@@ -190,6 +192,7 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
       setActiveCustomThemeState(null);
       setActivePalette(null);
       setIsUsingCustomTheme(false);
+      return false;
     }
   }, [user]);
 
