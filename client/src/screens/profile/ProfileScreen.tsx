@@ -756,8 +756,6 @@ const ProfileScreen = ({ navigation }: any) => {
     menuVisible: boolean,
     setMenuVisible: (visible: boolean) => void,
     setDefaultPage: (page: string) => void,
-    showWeekends: boolean,
-    setShowWeekends: (value: boolean) => void,
     defaultProjectsTable: boolean,
     setDefaultProjectsTable: (value: boolean) => void
   ) => {
@@ -1373,8 +1371,6 @@ const ProfileScreen = ({ navigation }: any) => {
                       adminMenuVisible,
                       setAdminMenuVisible,
                       setAdminDefaultPage,
-                      adminShowWeekends,
-                      setAdminShowWeekends,
                       adminDefaultProjectsTable,
                       setAdminDefaultProjectsTable
                     )}
@@ -1391,8 +1387,6 @@ const ProfileScreen = ({ navigation }: any) => {
                       managerMenuVisible,
                       setManagerMenuVisible,
                       setManagerDefaultPage,
-                      managerShowWeekends,
-                      setManagerShowWeekends,
                       managerDefaultProjectsTable,
                       setManagerDefaultProjectsTable
                     )}
@@ -1409,8 +1403,6 @@ const ProfileScreen = ({ navigation }: any) => {
                       userMenuVisible,
                       setUserMenuVisible,
                       setUserDefaultPage,
-                      userShowWeekends,
-                      setUserShowWeekends,
                       userDefaultProjectsTable,
                       setUserDefaultProjectsTable
                     )}
