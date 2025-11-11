@@ -3,11 +3,15 @@ import 'isomorphic-fetch';
 import prisma from '../config/database';
 
 // Microsoft App Configuration
-// Trim environment variables to remove any newlines or whitespace
-const MICROSOFT_CLIENT_ID = (process.env.MICROSOFT_CLIENT_ID || '').trim();
-const MICROSOFT_CLIENT_SECRET = (process.env.MICROSOFT_CLIENT_SECRET || '').trim();
-// Use 'common' for multitenant + personal accounts (not tenant-specific)
-const MICROSOFT_TENANT_ID = 'common';
+// Read environment variables at runtime (not at module load time)
+// This ensures Vercel serverless functions can properly access the env vars
+function getMicrosoftCredentials() {
+  return {
+    clientId: (process.env.MICROSOFT_CLIENT_ID || '').trim(),
+    clientSecret: (process.env.MICROSOFT_CLIENT_SECRET || '').trim(),
+    tenantId: 'common' // Use 'common' for multitenant + personal accounts
+  };
+}
 
 interface OutlookEvent {
   subject: string;
@@ -73,15 +77,18 @@ class OutlookCalendarService {
 
     try {
       console.log('[Outlook] Attempting to exchange refresh token for access token...');
+      // Get credentials at runtime
+      const creds = getMicrosoftCredentials();
+
       // Exchange refresh token for access token
       const tokenResponse = await fetch(
-        `https://login.microsoftonline.com/${MICROSOFT_TENANT_ID}/oauth2/v2.0/token`,
+        `https://login.microsoftonline.com/${creds.tenantId}/oauth2/v2.0/token`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body: new URLSearchParams({
-            client_id: MICROSOFT_CLIENT_ID,
-            client_secret: MICROSOFT_CLIENT_SECRET,
+            client_id: creds.clientId,
+            client_secret: creds.clientSecret,
             refresh_token: user.outlookRefreshToken,
             grant_type: 'refresh_token',
             scope: 'https://graph.microsoft.com/Calendars.ReadWrite offline_access'
@@ -637,16 +644,17 @@ class OutlookCalendarService {
    * Generate OAuth authorization URL
    */
   getAuthorizationUrl(redirectUri: string): string {
+    const creds = getMicrosoftCredentials();
     const scopes = 'https://graph.microsoft.com/Calendars.ReadWrite offline_access';
     const params = new URLSearchParams({
-      client_id: MICROSOFT_CLIENT_ID,
+      client_id: creds.clientId,
       response_type: 'code',
       redirect_uri: redirectUri,
       scope: scopes,
       response_mode: 'query'
     });
 
-    return `https://login.microsoftonline.com/${MICROSOFT_TENANT_ID}/oauth2/v2.0/authorize?${params}`;
+    return `https://login.microsoftonline.com/${creds.tenantId}/oauth2/v2.0/authorize?${params}`;
   }
 
   /**
@@ -654,14 +662,15 @@ class OutlookCalendarService {
    */
   async exchangeCodeForTokens(code: string, redirectUri: string): Promise<string | null> {
     try {
+      const creds = getMicrosoftCredentials();
       const response = await fetch(
-        `https://login.microsoftonline.com/${MICROSOFT_TENANT_ID}/oauth2/v2.0/token`,
+        `https://login.microsoftonline.com/${creds.tenantId}/oauth2/v2.0/token`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
           body: new URLSearchParams({
-            client_id: MICROSOFT_CLIENT_ID,
-            client_secret: MICROSOFT_CLIENT_SECRET,
+            client_id: creds.clientId,
+            client_secret: creds.clientSecret,
             code,
             redirect_uri: redirectUri,
             grant_type: 'authorization_code',
