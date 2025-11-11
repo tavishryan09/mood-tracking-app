@@ -16,13 +16,21 @@ export const initiateOutlookAuth = async (req: AuthRequest, res: Response) => {
     console.log('[Outlook Auth] API_URL from env:', process.env.API_URL);
     console.log('[Outlook Auth] NODE_ENV:', process.env.NODE_ENV);
     console.log('[Outlook Auth] VERCEL_URL:', process.env.VERCEL_URL);
+    console.log('[Outlook Auth] VERCEL_ENV:', process.env.VERCEL_ENV);
 
-    // Determine the base URL - prefer API_URL, fallback to VERCEL_URL for production
+    // Determine the base URL with the following priority:
+    // 1. API_URL (if set)
+    // 2. Stable production URL if in production environment
+    // 3. VERCEL_URL (current deployment URL)
+    // 4. localhost for development
     let baseUrl = process.env.API_URL;
-    if (!baseUrl && process.env.VERCEL_URL) {
+
+    if (!baseUrl && process.env.VERCEL_ENV === 'production') {
+      // Use stable production URL for OAuth callback
+      baseUrl = 'https://moodtracker-tavish-ryans-projects.vercel.app';
+    } else if (!baseUrl && process.env.VERCEL_URL) {
       baseUrl = `https://${process.env.VERCEL_URL}`;
-    }
-    if (!baseUrl) {
+    } else if (!baseUrl) {
       baseUrl = 'http://localhost:3000';
     }
 
@@ -63,12 +71,14 @@ export const handleOutlookCallback = async (req: AuthRequest, res: Response) => 
       return res.status(400).send('Invalid state parameter');
     }
 
-    // Determine the base URL - prefer API_URL, fallback to VERCEL_URL for production
+    // Determine the base URL - must match the one used in initiateOutlookAuth
     let baseUrl = process.env.API_URL;
-    if (!baseUrl && process.env.VERCEL_URL) {
+
+    if (!baseUrl && process.env.VERCEL_ENV === 'production') {
+      baseUrl = 'https://moodtracker-tavish-ryans-projects.vercel.app';
+    } else if (!baseUrl && process.env.VERCEL_URL) {
       baseUrl = `https://${process.env.VERCEL_URL}`;
-    }
-    if (!baseUrl) {
+    } else if (!baseUrl) {
       baseUrl = 'http://localhost:3000';
     }
 
