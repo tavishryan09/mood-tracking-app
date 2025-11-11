@@ -192,9 +192,9 @@ export const updatePlanningTask = async (req: AuthRequest, res: Response) => {
     }
 
     const { id } = req.params;
-    const { projectId, task, span, blockIndex, completed, userId } = req.body;
+    const { projectId, task, span, blockIndex, completed, userId, date } = req.body;
 
-    // Get the existing task first to track userId changes
+    // Get the existing task first to track userId and projectId changes
     const existingTask = await prisma.planningTask.findUnique({
       where: { id },
     });
@@ -204,6 +204,7 @@ export const updatePlanningTask = async (req: AuthRequest, res: Response) => {
     }
 
     const oldUserId = existingTask.userId;
+    const oldProjectId = existingTask.projectId;
 
     // If blockIndex is being changed, we need to delete and recreate due to unique constraint
     if (blockIndex !== undefined) {
@@ -218,7 +219,7 @@ export const updatePlanningTask = async (req: AuthRequest, res: Response) => {
           data: {
             userId: userId || existingTask.userId,
             projectId: projectId || existingTask.projectId,
-            date: existingTask.date,
+            date: date ? new Date(date) : existingTask.date,
             blockIndex,
             task: task !== undefined ? task : existingTask.task,
             span: span !== undefined ? span : existingTask.span,
@@ -243,6 +244,35 @@ export const updatePlanningTask = async (req: AuthRequest, res: Response) => {
             },
           },
         });
+
+        // Auto-add team member if project changed or user changed
+        const newUserId = userId || existingTask.userId;
+        const newProjectId = projectId || existingTask.projectId;
+
+        if (newProjectId) {
+          try {
+            const existingMember = await prisma.projectMember.findUnique({
+              where: {
+                projectId_userId: {
+                  projectId: newProjectId,
+                  userId: newUserId,
+                },
+              },
+            });
+
+            if (!existingMember) {
+              await prisma.projectMember.create({
+                data: {
+                  projectId: newProjectId,
+                  userId: newUserId,
+                },
+              });
+              console.log(`[PlanningTask] Auto-added user ${newUserId} to project ${newProjectId}`);
+            }
+          } catch (error) {
+            console.error('[PlanningTask] Failed to auto-add team member:', error);
+          }
+        }
 
         // If userId changed, delete from old user's calendar and sync to new user's calendar
         if (userId && userId !== oldUserId) {
@@ -296,6 +326,11 @@ export const updatePlanningTask = async (req: AuthRequest, res: Response) => {
       updateData.userId = userId;
     }
 
+    // Only update date if provided
+    if (date !== undefined) {
+      updateData.date = new Date(date);
+    }
+
     const planningTask = await prisma.planningTask.update({
       where: { id },
       data: updateData,
@@ -318,6 +353,35 @@ export const updatePlanningTask = async (req: AuthRequest, res: Response) => {
         },
       },
     });
+
+    // Auto-add team member if project changed or user changed
+    const finalProjectId = planningTask.projectId;
+    const finalUserId = planningTask.userId;
+
+    if (finalProjectId) {
+      try {
+        const existingMember = await prisma.projectMember.findUnique({
+          where: {
+            projectId_userId: {
+              projectId: finalProjectId,
+              userId: finalUserId,
+            },
+          },
+        });
+
+        if (!existingMember) {
+          await prisma.projectMember.create({
+            data: {
+              projectId: finalProjectId,
+              userId: finalUserId,
+            },
+          });
+          console.log(`[PlanningTask] Auto-added user ${finalUserId} to project ${finalProjectId}`);
+        }
+      } catch (error) {
+        console.error('[PlanningTask] Failed to auto-add team member:', error);
+      }
+    }
 
     // If userId changed, delete from old user's calendar and sync to new user's calendar
     if (userId && userId !== oldUserId) {
