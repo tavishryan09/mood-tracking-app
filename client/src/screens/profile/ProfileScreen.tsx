@@ -181,8 +181,27 @@ const ProfileScreen = ({ navigation }: any) => {
       const response = await outlookAPI.sync();
       console.log('[ProfileScreen] Sync response:', response.data);
 
-      // Background sync - no progress details available immediately
-      const message = response.data.message || 'Sync started! Your tasks are being synced to Outlook calendar in the background. This may take a few minutes.';
+      const { progress } = response.data;
+
+      // Create detailed message with sync progress
+      let message = response.data.message || 'Sync completed!';
+      if (progress) {
+        message += `\n\n📊 Sync Summary:`;
+        message += `\n• Total Tasks: ${progress.totalTasks}`;
+        message += `\n• Planning Tasks Synced: ${progress.syncedPlanningTasks}`;
+        message += `\n• Deadline Tasks Synced: ${progress.syncedDeadlineTasks}`;
+        message += `\n• Old Events Deleted: ${progress.deletedEvents}`;
+
+        if (progress.errors && progress.errors.length > 0) {
+          message += `\n\n⚠️ Errors (${progress.errors.length}):`;
+          progress.errors.slice(0, 3).forEach((err: string) => {
+            message += `\n• ${err}`;
+          });
+          if (progress.errors.length > 3) {
+            message += `\n• ... and ${progress.errors.length - 3} more`;
+          }
+        }
+      }
 
       setSuccessMessage(message);
       setShowSuccessDialog(true);
@@ -193,9 +212,9 @@ const ProfileScreen = ({ navigation }: any) => {
       // Handle specific error cases
       let errorMessage = 'Failed to sync tasks to Outlook calendar';
       if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-        errorMessage = 'Request timed out. The sync is still running in the background. Please check your Outlook calendar in a few minutes.';
+        errorMessage = 'Sync timed out. If you have many tasks, some may have synced. Try checking your Outlook calendar and run sync again if needed.';
       } else if (error.response?.status === 504) {
-        errorMessage = 'Sync is taking longer than expected but is still running in the background. Please check your Outlook calendar in a few minutes.';
+        errorMessage = 'Sync timed out. If you have many tasks, some may have synced. Try checking your Outlook calendar and run sync again if needed.';
       } else if (error.response?.data?.error) {
         errorMessage = error.response.data.error;
       }
