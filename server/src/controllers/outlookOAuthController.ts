@@ -36,6 +36,22 @@ export const initiateOutlookAuth = async (req: AuthRequest, res: Response) => {
 
     const redirectUri = `${baseUrl}/api/outlook/callback`;
     console.log('[Outlook Auth] Generated redirectUri:', redirectUri);
+
+    // Validate redirect URI
+    if (!redirectUri || !redirectUri.startsWith('http')) {
+      console.error('[Outlook Auth] Invalid redirect URI:', redirectUri);
+      return res.status(500).json({
+        error: 'Failed to generate redirect URI',
+        debug: {
+          baseUrl,
+          redirectUri,
+          API_URL: process.env.API_URL,
+          VERCEL_ENV: process.env.VERCEL_ENV,
+          VERCEL_URL: process.env.VERCEL_URL
+        }
+      });
+    }
+
     const authUrl = outlookCalendarService.getAuthorizationUrl(redirectUri);
     console.log('[Outlook Auth] Final authUrl:', authUrl);
 
