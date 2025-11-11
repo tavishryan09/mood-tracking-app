@@ -4,7 +4,8 @@ import { validationResult } from 'express-validator';
 import prisma from '../config/database';
 import { AuthRequest } from '../middleware/auth';
 import { sendInviteEmail, sendPasswordResetEmail } from '../services/emailService';
-import { avatarStorageService } from '../services/avatarStorageService';
+// Temporarily disabled for Vercel deployment - avatar upload not compatible with serverless
+// import { avatarStorageService } from '../services/avatarStorageService';
 
 // Admin-only: Get all users
 export const getAllUsers = async (req: AuthRequest, res: Response) => {
@@ -220,53 +221,5 @@ export const resetUserPassword = async (req: AuthRequest, res: Response) => {
   }
 };
 
-// Upload avatar image
-export const uploadAvatar = async (req: AuthRequest, res: Response) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'No image file provided' });
-    }
-
-    // Validate file type
-    const allowedMimeTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
-    if (!allowedMimeTypes.includes(req.file.mimetype)) {
-      return res.status(400).json({ error: 'Invalid image format. Allowed: JPEG, PNG, GIF, WebP' });
-    }
-
-    // Upload avatar using storage service (optimizes and saves as file)
-    const avatarUrl = await avatarStorageService.uploadAvatar(req.file.buffer, req.file.mimetype);
-
-    // Delete old avatar if exists
-    const currentUser = await prisma.user.findUnique({
-      where: { id: req.user!.userId },
-      select: { avatarUrl: true }
-    });
-
-    if (currentUser?.avatarUrl && !currentUser.avatarUrl.startsWith('data:')) {
-      await avatarStorageService.deleteAvatar(currentUser.avatarUrl);
-    }
-
-    // Update user's avatar URL (now just a path, not base64!)
-    const updatedUser = await prisma.user.update({
-      where: { id: req.user!.userId },
-      data: { avatarUrl },
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        role: true,
-        avatarUrl: true,
-      },
-    });
-
-    console.log(`[Avatar] Uploaded avatar for user ${req.user!.userId}: ${avatarUrl}`);
-    res.json({
-      message: 'Avatar uploaded successfully',
-      user: updatedUser,
-    });
-  } catch (error) {
-    console.error('Upload avatar error:', error);
-    res.status(500).json({ error: 'Failed to upload avatar' });
-  }
-};
+// Avatar upload functionality removed - not compatible with Vercel serverless
+// Use cloud storage (S3, Cloudinary, etc.) if avatar uploads are needed in the future
