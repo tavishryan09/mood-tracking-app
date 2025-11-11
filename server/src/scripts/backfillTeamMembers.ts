@@ -77,7 +77,8 @@ async function backfillTeamMembers() {
           await prisma.projectMember.create({
             data: {
               projectId: pair.projectId,
-              userId: pair.userId
+              userId: pair.userId,
+              assignedBy: pair.userId // Self-assigned during backfill
             }
           });
           console.log(`[Backfill] ADDED: ${pair.userName} to ${pair.projectName}`);

@@ -253,7 +253,7 @@ class OutlookCalendarService {
       }
 
       // Use the same optimized sync method as batch sync
-      const success = await this.syncDeadlineTaskFast(task, client, calendarId);
+      const success = await this.syncDeadlineTaskFast(task, client, calendarId, userId);
       console.log(`[Outlook] syncDeadlineTask ${success ? 'succeeded' : 'failed'}`);
       return success;
     } catch (error) {
