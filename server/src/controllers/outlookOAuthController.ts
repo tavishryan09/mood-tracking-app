@@ -13,8 +13,11 @@ export const initiateOutlookAuth = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
+    console.log('[Outlook Auth] API_URL from env:', process.env.API_URL);
     const redirectUri = `${process.env.API_URL || 'http://localhost:3000'}/api/outlook/callback`;
+    console.log('[Outlook Auth] Generated redirectUri:', redirectUri);
     const authUrl = outlookCalendarService.getAuthorizationUrl(redirectUri);
+    console.log('[Outlook Auth] Final authUrl:', authUrl);
 
     // Store userId in session or temp storage for callback
     // For now, we'll pass it as state parameter (in production, use proper session management)
