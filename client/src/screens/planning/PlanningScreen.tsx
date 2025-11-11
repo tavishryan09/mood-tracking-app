@@ -1775,12 +1775,8 @@ const PlanningScreen = () => {
       setRepeatWeeklyDays([false, false, false, false, false, false, false]);
       setSelectedBlock(null);
 
-      // Reload planning tasks to refresh the view (handle errors separately)
-      try {
-        await loadData();
-      } catch (reloadError) {
-        console.warn('Failed to reload planning tasks, but save was successful:', reloadError);
-      }
+      // No need to reload - the UI has already been updated optimistically
+      // The task is visible in blockAssignments state
     } catch (error: any) {
       console.error('Save planning task error:', error);
       console.error('Error response:', error.response?.data);
