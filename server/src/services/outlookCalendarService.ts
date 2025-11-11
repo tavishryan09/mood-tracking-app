@@ -173,338 +173,89 @@ class OutlookCalendarService {
   }
 
   /**
-   * Sync a planning task to Outlook calendar
+   * Sync a single planning task to Outlook calendar
+   * Optimized for serverless - uses efficient helper methods
    */
   async syncPlanningTask(taskId: string, userId: string): Promise<boolean> {
-    console.log('================================================================================');
-    console.log(`[Outlook] syncPlanningTask CALLED - taskId: ${taskId}, userId: ${userId}`);
-    console.log('================================================================================');
+    console.log(`[Outlook] syncPlanningTask - taskId: ${taskId}, userId: ${userId}`);
     try {
-      console.log('[Outlook] Step 1: Getting Graph client...');
+      // Get Graph client
       const client = await this.getGraphClient(userId);
       if (!client) {
-        console.error('[Outlook] ERROR: No Graph client available - cannot sync planning task');
+        console.error('[Outlook] No Graph client available');
         return false;
       }
-      console.log('[Outlook] Step 1: SUCCESS - Graph client obtained');
 
       // Get or create the Mood Tracker calendar
-      console.log('[Outlook] Step 2: Getting/creating Mood Tracker calendar...');
       const calendarId = await this.getMoodTrackerCalendar(client);
       if (!calendarId) {
-        console.error('[Outlook] ERROR: Could not get/create Mood Tracker calendar');
+        console.error('[Outlook] Could not get/create Mood Tracker calendar');
         return false;
       }
-      console.log(`[Outlook] Step 2: SUCCESS - Mood Tracker calendar ID: ${calendarId}`);
 
-      console.log('[Outlook] Graph client obtained, fetching task from database...');
+      // Ensure master categories exist
+      await this.ensureMasterCategories(userId);
+
+      // Fetch task with project data
       const task = await prisma.planningTask.findUnique({
         where: { id: taskId },
         include: { project: true }
       });
 
-      console.log('[Outlook] Task fetched:', task ? `project: ${task.project?.name}, task: ${task.task}` : 'null');
-
       if (!task) {
-        console.log('[Outlook] Task not found, returning false');
+        console.log('[Outlook] Task not found');
         return false;
       }
 
-      // Create as all-day event
-      // IMPORTANT: For all-day events, use local date string (YYYY-MM-DD) format
-      // DO NOT use setUTCHours() as it causes timezone shifts!
-      const taskDate = new Date(task.date);
-      const year = taskDate.getFullYear();
-      const month = String(taskDate.getMonth() + 1).padStart(2, '0');
-      const day = String(taskDate.getDate()).padStart(2, '0');
-      const dateString = `${year}-${month}-${day}`;
-
-      // For all-day events, Outlook requires end date to be the next day
-      const taskEndDate = new Date(taskDate);
-      taskEndDate.setDate(taskEndDate.getDate() + 1);
-      const endYear = taskEndDate.getFullYear();
-      const endMonth = String(taskEndDate.getMonth() + 1).padStart(2, '0');
-      const endDay = String(taskEndDate.getDate()).padStart(2, '0');
-      const endDateString = `${endYear}-${endMonth}-${endDay}`;
-
-      // Determine the event subject and category based on task type
-      let subject: string;
-      let category: string;
-      let bodyContent: string;
-
-      // Check if this is a status event (no project, status stored in task field)
-      const isStatusEvent = !task.projectId;
-
-      if (isStatusEvent) {
-        // Status events: Time Off, Unavailable, Out of Office (without project)
-        console.log('[Outlook] Processing status event, task field:', task.task);
-        const statusName = task.task || '';
-
-        if (statusName === 'Time Off') {
-          subject = 'PTO';
-          category = 'Time off';
-          bodyContent = 'Time Off\n\nAdded by MoodTracker';
-        } else if (statusName === 'Unavailable') {
-          subject = 'Unavailable';
-          category = 'Unavailable';
-          bodyContent = 'Unavailable\n\nAdded by MoodTracker';
-        } else if (statusName === 'Out of Office') {
-          subject = 'OOS';
-          category = 'Out of office';
-          bodyContent = 'Out of Office\n\nAdded by MoodTracker';
-        } else {
-          // Unknown status type, log warning but continue
-          console.log('[Outlook] Warning: Unknown status type in task field:', statusName);
-          subject = statusName || 'Status Event';
-          category = 'Project Task';
-          bodyContent = `${statusName}\n\nAdded by MoodTracker`;
-        }
-      } else if (!task.project) {
-        // Task has projectId but project not found - data inconsistency
-        console.log('[Outlook] Error: Task has projectId but project not loaded, returning false');
-        return false;
-      } else {
-        // Regular project task or project with Out of Office marker
-        const commonName = task.project.description || task.project.name;
-
-        // Check for special status events
-        if (task.project.name === 'Time Off') {
-          subject = 'PTO';
-          category = 'Time off';
-          bodyContent = `Time Off\n\nAdded by MoodTracker`;
-        } else if (task.project.name === 'Out of Office' || task.task?.startsWith('[OUT_OF_OFFICE]')) {
-          subject = `OOS - ${commonName}`;
-          category = 'Out of office';
-          const taskDescription = task.task?.replace('[OUT_OF_OFFICE]', '').trim() || '';
-          bodyContent = taskDescription
-            ? `Project: ${commonName}\nTask: ${taskDescription}\n\nAdded by MoodTracker`
-            : `Project: ${commonName}\n\nAdded by MoodTracker`;
-        } else if (task.project.name === 'Unavailable') {
-          subject = 'Unavailable';
-          category = 'Unavailable';
-          bodyContent = `Unavailable\n\nAdded by MoodTracker`;
-        } else {
-          // Regular project task
-          subject = commonName;
-          category = 'Project Task';
-          bodyContent = task.task
-            ? `Project: ${commonName}\nTask: ${task.task}\n\nAdded by MoodTracker`
-            : `Project: ${commonName}\n\nAdded by MoodTracker`;
-        }
-      }
-
-      const event: OutlookEvent = {
-        subject: subject,
-        start: {
-          dateTime: dateString,
-          timeZone: 'UTC'
-        },
-        end: {
-          dateTime: endDateString,
-          timeZone: 'UTC'
-        },
-        isAllDay: true,
-        body: {
-          contentType: 'text',
-          content: bodyContent
-        },
-        categories: [category]
-      };
-
-      let eventId = task.outlookEventId;
-      console.log('[Outlook] Task outlookEventId:', eventId || 'null (will create new event)');
-
-      if (eventId) {
-        // Try to update the event in the Mood Tracker calendar first
-        // If it doesn't exist there, delete from default calendar and create new one
-        console.log('[Outlook] Checking if event exists in Mood Tracker calendar:', eventId);
-        try {
-          // Try to get the event from Mood Tracker calendar
-          await client.api(`/me/calendars/${calendarId}/events/${eventId}`).get();
-          // If we get here, event exists in Mood Tracker calendar, so update it
-          console.log('[Outlook] Event found in Mood Tracker calendar, updating...');
-          console.log('[Outlook] Update data - Subject:', event.subject, '| Body:', event.body.content.substring(0, 50) + '...', '| Category:', event.categories[0]);
-          await client.api(`/me/calendars/${calendarId}/events/${eventId}`).update(event);
-          console.log(`[Outlook] Successfully updated planning task event: ${eventId}`);
-        } catch (error: any) {
-          // Event doesn't exist in Mood Tracker calendar
-          console.log('[Outlook] Event not in Mood Tracker calendar, migrating from default calendar...');
-
-          // Try to delete from default calendar
-          try {
-            await client.api(`/me/events/${eventId}`).delete();
-            console.log('[Outlook] Successfully deleted old event from default calendar');
-          } catch (deleteError: any) {
-            // If event doesn't exist anywhere (404), that's fine
-            if (deleteError.statusCode !== 404) {
-              console.log('[Outlook] Error deleting old event:', deleteError.statusCode, deleteError.message);
-            }
-          }
-
-          // Create new event in Mood Tracker calendar
-          console.log('[Outlook] Creating new event in Mood Tracker calendar...');
-          const createdEvent = await client.api(`/me/calendars/${calendarId}/events`).post(event);
-          eventId = createdEvent.id;
-          await prisma.planningTask.update({
-            where: { id: taskId },
-            data: { outlookEventId: eventId }
-          });
-          console.log(`[Outlook] Created new planning task event in Mood Tracker calendar: ${eventId}`);
-        }
-      } else {
-        // Create new event
-        console.log('[Outlook] Creating new Outlook event...');
-        console.log('[Outlook] Event data:', JSON.stringify(event, null, 2));
-        const createdEvent = await client.api(`/me/calendars/${calendarId}/events`).post(event);
-        console.log('[Outlook] Event created successfully. Event ID:', createdEvent.id);
-        eventId = createdEvent.id;
-
-        console.log('[Outlook] Updating task in database with Outlook event ID...');
-        await prisma.planningTask.update({
-          where: { id: taskId },
-          data: { outlookEventId: eventId }
-        });
-        console.log(`[Outlook] Database updated. Created planning task event: ${eventId}`);
-      }
-
-      console.log('[Outlook] syncPlanningTask completed successfully, returning true');
-      return true;
+      // Use the same optimized sync method as batch sync
+      const success = await this.syncPlanningTaskFast(task, client, calendarId);
+      console.log(`[Outlook] syncPlanningTask ${success ? 'succeeded' : 'failed'}`);
+      return success;
     } catch (error) {
       console.error('[Outlook] Error syncing planning task:', error);
-      console.error('[Outlook] Error details:', JSON.stringify(error, null, 2));
       return false;
     }
   }
 
   /**
-   * Sync a deadline task to Outlook calendar
+   * Sync a single deadline task to Outlook calendar
+   * Optimized for serverless - uses efficient helper methods
    */
   async syncDeadlineTask(taskId: string, userId: string): Promise<boolean> {
+    console.log(`[Outlook] syncDeadlineTask - taskId: ${taskId}, userId: ${userId}`);
     try {
+      // Get Graph client
       const client = await this.getGraphClient(userId);
-      if (!client) return false;
+      if (!client) {
+        console.error('[Outlook] No Graph client available');
+        return false;
+      }
 
       // Get or create the Mood Tracker calendar
       const calendarId = await this.getMoodTrackerCalendar(client);
       if (!calendarId) {
-        console.log('[Outlook] Could not get/create Mood Tracker calendar');
+        console.error('[Outlook] Could not get/create Mood Tracker calendar');
         return false;
       }
 
+      // Ensure master categories exist
+      await this.ensureMasterCategories(userId);
+
+      // Fetch task with client and project data
       const task = await prisma.deadlineTask.findUnique({
         where: { id: taskId },
         include: { client: true, project: true }
       });
 
-      if (!task) return false;
-
-      const deadlineDate = new Date(task.date);
-      // For all-day events, Outlook requires the time to be set to midnight
-      deadlineDate.setUTCHours(0, 0, 0, 0);
-      // For all-day events, Outlook requires end date to be at least 24 hours after start
-      const deadlineEndDate = new Date(deadlineDate);
-      deadlineEndDate.setDate(deadlineEndDate.getDate() + 1);
-
-      // Use project common name
-      const commonName = task.project?.description || task.project?.name || 'Unknown';
-
-      // Format title and category based on deadline type
-      let title = '';
-      let category = '';
-
-      switch (task.deadlineType) {
-        case 'DEADLINE':
-          title = `Deadline - ${commonName}`;
-          category = 'Deadline';
-          break;
-        case 'INTERNAL_DEADLINE':
-          title = `Internal - ${commonName}`;
-          category = 'Internal Deadline';
-          break;
-        case 'MILESTONE':
-          title = `Milestone - ${commonName}`;
-          category = 'Project Milestone';
-          break;
-        default:
-          title = commonName;
-          category = 'Deadline';
+      if (!task) {
+        console.log('[Outlook] Task not found');
+        return false;
       }
 
-      const event: OutlookEvent = {
-        subject: title,
-        start: {
-          dateTime: deadlineDate.toISOString(),
-          timeZone: 'UTC'
-        },
-        end: {
-          dateTime: deadlineEndDate.toISOString(),
-          timeZone: 'UTC'
-        },
-        isAllDay: true,
-        body: {
-          contentType: 'text',
-          content: [
-            `Type: ${task.deadlineType}`,
-            task.client ? `Client: ${task.client.name}` : null,
-            task.project ? `Project: ${task.project.description || task.project.name}` : null,
-            task.description ? `Description: ${task.description}` : null,
-            '',
-            'Added by MoodTracker'
-          ].filter(line => line !== null).join('\n')
-        },
-        categories: [category]
-      };
-
-      let eventId = task.outlookEventId;
-
-      if (eventId) {
-        // Try to update the event in the Mood Tracker calendar first
-        // If it doesn't exist there, delete from default calendar and create new one
-        console.log('[Outlook] Checking if deadline event exists in Mood Tracker calendar:', eventId);
-        try {
-          // Try to get the event from Mood Tracker calendar
-          await client.api(`/me/calendars/${calendarId}/events/${eventId}`).get();
-          // If we get here, event exists in Mood Tracker calendar, so update it
-          console.log('[Outlook] Deadline event found in Mood Tracker calendar, updating...');
-          await client.api(`/me/calendars/${calendarId}/events/${eventId}`).update(event);
-          console.log(`[Outlook] Successfully updated deadline task event: ${eventId}`);
-        } catch (error: any) {
-          // Event doesn't exist in Mood Tracker calendar
-          console.log('[Outlook] Deadline event not in Mood Tracker calendar, migrating from default calendar...');
-
-          // Try to delete from default calendar
-          try {
-            await client.api(`/me/events/${eventId}`).delete();
-            console.log('[Outlook] Successfully deleted old deadline event from default calendar');
-          } catch (deleteError: any) {
-            // If event doesn't exist anywhere (404), that's fine
-            if (deleteError.statusCode !== 404) {
-              console.log('[Outlook] Error deleting old deadline event:', deleteError.statusCode, deleteError.message);
-            }
-          }
-
-          // Create new event in Mood Tracker calendar
-          console.log('[Outlook] Creating new deadline event in Mood Tracker calendar...');
-          const createdEvent = await client.api(`/me/calendars/${calendarId}/events`).post(event);
-          eventId = createdEvent.id;
-          await prisma.deadlineTask.update({
-            where: { id: taskId },
-            data: { outlookEventId: eventId }
-          });
-          console.log(`[Outlook] Created new deadline task event in Mood Tracker calendar: ${eventId}`);
-        }
-      } else{
-        // Create new event
-        const createdEvent = await client.api(`/me/calendars/${calendarId}/events`).post(event);
-        eventId = createdEvent.id;
-        await prisma.deadlineTask.update({
-          where: { id: taskId },
-          data: { outlookEventId: eventId }
-        });
-        console.log(`[Outlook] Created deadline task event: ${eventId}`);
-      }
-
-      return true;
+      // Use the same optimized sync method as batch sync
+      const success = await this.syncDeadlineTaskFast(task, client, calendarId);
+      console.log(`[Outlook] syncDeadlineTask ${success ? 'succeeded' : 'failed'}`);
+      return success;
     } catch (error) {
       console.error('[Outlook] Error syncing deadline task:', error);
       return false;
