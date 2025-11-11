@@ -14,7 +14,7 @@ interface CustomColorThemeContextType {
   customColorPalettes: Record<string, CustomColorPalette>;
   activeCustomTheme: CustomColorTheme | null;
   isUsingCustomTheme: boolean;
-  setActiveCustomTheme: (paletteId: string) => Promise<void>;
+  setActiveCustomTheme: (paletteId: string, saveToUserSettings?: boolean) => Promise<void>;
   disableCustomTheme: () => Promise<void>;
   getColorForElement: (section: string, element: string) => string;
   loadCustomColorPalettes: () => Promise<void>;
@@ -84,12 +84,13 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
               if (defaultThemeResponse.data?.value) {
                 const defaultThemeId = defaultThemeResponse.data.value;
                 console.log('[CustomColorTheme] Admin default theme found:', defaultThemeId);
-                await setActiveCustomTheme(defaultThemeId);
-                console.log('[CustomColorTheme] Admin default theme activated');
+                // Don't save to user settings - this is a temporary app-wide default
+                await setActiveCustomTheme(defaultThemeId, false);
+                console.log('[CustomColorTheme] Admin default theme activated (temporary)');
               } else {
                 // Fall back to built-in default theme
-                await setActiveCustomTheme('default_theme');
-                console.log('[CustomColorTheme] Built-in default theme auto-activated');
+                await setActiveCustomTheme('default_theme', false);
+                console.log('[CustomColorTheme] Built-in default theme auto-activated (temporary)');
               }
             } catch (error: any) {
               if (!isMounted) return;
@@ -97,8 +98,8 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
               // If 404, no default theme set, use built-in default
               if (error.response?.status === 404) {
                 try {
-                  await setActiveCustomTheme('default_theme');
-                  console.log('[CustomColorTheme] Built-in default theme auto-activated (no admin default)');
+                  await setActiveCustomTheme('default_theme', false);
+                  console.log('[CustomColorTheme] Built-in default theme auto-activated (temporary, no admin default)');
                 } catch (err) {
                   console.error('[CustomColorTheme] Error auto-activating built-in default theme:', err);
                 }
@@ -196,7 +197,7 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
     }
   }, [user]);
 
-  const setActiveCustomTheme = useCallback(async (paletteId: string) => {
+  const setActiveCustomTheme = useCallback(async (paletteId: string, saveToUserSettings: boolean = true) => {
     try {
       if (!user) throw new Error('User not logged in');
 
@@ -254,7 +255,15 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
         elementMapping: mapping,
       };
 
-      await settingsAPI.user.set(ACTIVE_CUSTOM_THEME_KEY, paletteId);
+      // Only save to user settings if explicitly requested (default behavior)
+      // When applying app-wide default theme, we don't want to save it to user settings
+      if (saveToUserSettings) {
+        await settingsAPI.user.set(ACTIVE_CUSTOM_THEME_KEY, paletteId);
+        console.log('[CustomColorTheme] Theme saved to user settings:', paletteId);
+      } else {
+        console.log('[CustomColorTheme] Theme activated temporarily (not saved to user settings):', paletteId);
+      }
+
       setActiveCustomThemeState(theme);
       setActivePalette(palette);
       setIsUsingCustomTheme(true);
