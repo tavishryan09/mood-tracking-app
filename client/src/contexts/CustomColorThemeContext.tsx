@@ -278,15 +278,34 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
     try {
       if (!user) return;
 
+      // Delete user's personal theme preference
       await settingsAPI.user.delete(ACTIVE_CUSTOM_THEME_KEY);
+
+      // Clear current theme
       setActiveCustomThemeState(null);
       setActivePalette(null);
       setIsUsingCustomTheme(false);
+
+      // Load app-level default theme (if one is set by admin)
+      try {
+        const defaultThemeResponse = await settingsAPI.app.get('default_custom_theme');
+        if (defaultThemeResponse?.data?.value) {
+          const defaultThemeId = defaultThemeResponse.data.value;
+          console.log('[CustomColorTheme] Loading app default theme after deactivation:', defaultThemeId);
+          await setActiveCustomTheme(defaultThemeId, false); // Don't save to user settings
+        } else {
+          console.log('[CustomColorTheme] No app default theme set, using hardcoded default');
+        }
+      } catch (error: any) {
+        if (error?.response?.status !== 404) {
+          console.error('[CustomColorTheme] Error loading app default theme:', error);
+        }
+      }
     } catch (error) {
       console.error('[CustomColorTheme] Error disabling custom theme:', error);
       throw error;
     }
-  }, [user]);
+  }, [user, setActiveCustomTheme]);
 
   const getColorForElement = useCallback((section: string, element: string): string => {
     if (!activeCustomTheme || !isUsingCustomTheme || !activePalette) {
