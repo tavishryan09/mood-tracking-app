@@ -197,6 +197,7 @@ export const getOutlookStatus = async (req: AuthRequest, res: Response) => {
 
 /**
  * Manually trigger sync of all tasks
+ * NOTE: This runs in the background to avoid serverless timeout issues
  */
 export const syncAllTasks = async (req: AuthRequest, res: Response) => {
   console.log('==============================================');
@@ -211,17 +212,21 @@ export const syncAllTasks = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    console.log('[Outlook] About to call syncAllUserTasks for user:', userId);
+    console.log('[Outlook] About to trigger background sync for user:', userId);
 
-    // Trigger sync and wait for it to complete to return progress
-    const progress = await outlookCalendarService.syncAllUserTasks(userId);
+    // Trigger sync in background (non-blocking) to prevent serverless timeout
+    // Vercel serverless functions have a 10 second timeout on Hobby plan
+    outlookCalendarService.syncAllUserTasks(userId).then((progress) => {
+      console.log('[Outlook] Background sync completed with progress:', progress);
+    }).catch((error) => {
+      console.error('[Outlook] Background sync failed:', error);
+    });
 
-    console.log('[Outlook] Sync completed with progress:', progress);
+    // Return immediately
+    console.log('[Outlook] Sync started in background');
     res.json({
-      message: progress.success
-        ? 'Sync completed successfully!'
-        : 'Sync completed with some errors',
-      progress
+      message: 'Sync started in background. Your tasks will be synced to Outlook calendar shortly. This may take a few minutes.',
+      status: 'in_progress'
     });
   } catch (error) {
     console.error('[Outlook] Error triggering sync:', error);
