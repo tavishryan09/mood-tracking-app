@@ -19,7 +19,9 @@ const router = Router();
 // GET /app - Get all app settings
 router.get('/app', authenticate, getAppSettings);
 
-// GET /:key - All authenticated users can read settings
+// GET /app/:key - All authenticated users can read settings
+// Exception: 'default_custom_theme' is public so it can be loaded before login
+router.get('/app/default_custom_theme', getSetting);
 router.get('/app/:key', authenticate, getSetting);
 
 // PUT /:key - All users can write their own settings, admins can write any setting
