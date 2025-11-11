@@ -5,7 +5,8 @@ import prisma from '../config/database';
 // Microsoft App Configuration
 const MICROSOFT_CLIENT_ID = process.env.MICROSOFT_CLIENT_ID || '';
 const MICROSOFT_CLIENT_SECRET = process.env.MICROSOFT_CLIENT_SECRET || '';
-const MICROSOFT_TENANT_ID = process.env.MICROSOFT_TENANT_ID || 'common';
+// Use 'common' for multitenant + personal accounts (not tenant-specific)
+const MICROSOFT_TENANT_ID = 'common';
 
 interface OutlookEvent {
   subject: string;
