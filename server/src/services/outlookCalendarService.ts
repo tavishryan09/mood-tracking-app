@@ -1,6 +1,7 @@
 import { Client } from '@microsoft/microsoft-graph-client';
 import 'isomorphic-fetch';
 import prisma from '../config/database';
+import { syncJobTracker } from './syncJobTracker';
 
 // Microsoft App Configuration
 // Read environment variables at runtime (not at module load time)
@@ -766,9 +767,10 @@ class OutlookCalendarService {
    *
    * This is efficient for large datasets and preserves existing events
    *
+   * @param jobId Optional job ID for progress tracking
    * @returns Sync progress information
    */
-  async syncAllUserTasks(userId: string): Promise<{
+  async syncAllUserTasks(userId: string, jobId?: string): Promise<{
     success: boolean;
     totalTasks: number;
     syncedPlanningTasks: number;
@@ -815,6 +817,11 @@ class OutlookCalendarService {
       console.log(`[Outlook] Found ${planningTasks.length} planning tasks, ${deadlineTasks.length} deadline tasks`);
       progress.totalTasks = planningTasks.length + deadlineTasks.length;
 
+      // Report initial progress
+      if (jobId) {
+        syncJobTracker.updateProgress(jobId, progress);
+      }
+
       // Step 2: Sync all tasks in parallel batches (optimized for speed)
       console.log(`[Outlook] Syncing tasks in parallel batches...`);
       const BATCH_SIZE = 10;
@@ -830,6 +837,11 @@ class OutlookCalendarService {
         if (failed > 0) {
           progress.errors.push(`Failed to sync ${failed} planning tasks in batch`);
         }
+
+        // Report progress after each batch
+        if (jobId) {
+          syncJobTracker.updateProgress(jobId, progress);
+        }
       }
 
       // Sync deadline tasks in batches
@@ -842,6 +854,11 @@ class OutlookCalendarService {
         const failed = results.filter(r => !r).length;
         if (failed > 0) {
           progress.errors.push(`Failed to sync ${failed} deadline tasks in batch`);
+        }
+
+        // Report progress after each batch
+        if (jobId) {
+          syncJobTracker.updateProgress(jobId, progress);
         }
       }
 
@@ -901,10 +918,22 @@ class OutlookCalendarService {
 
       progress.success = progress.syncedPlanningTasks + progress.syncedDeadlineTasks === progress.totalTasks;
       console.log(`[Outlook] Incremental sync completed:`, progress);
+
+      // Mark job as completed
+      if (jobId) {
+        syncJobTracker.completeJob(jobId, progress);
+      }
+
       return progress;
     } catch (error) {
       console.error('[Outlook] Error in incremental sync:', error);
       progress.errors.push(error instanceof Error ? error.message : 'Unknown error');
+
+      // Mark job as failed
+      if (jobId) {
+        syncJobTracker.failJob(jobId, error instanceof Error ? error.message : 'Unknown error');
+      }
+
       return progress;
     }
   }

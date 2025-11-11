@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import prisma from '../config/database';
 import { outlookCalendarService } from '../services/outlookCalendarService';
+import { syncJobTracker } from '../services/syncJobTracker';
 
 /**
  * Initiate Outlook OAuth flow
@@ -197,7 +198,7 @@ export const getOutlookStatus = async (req: AuthRequest, res: Response) => {
 
 /**
  * Manually trigger sync of all tasks
- * Uses optimized batching to complete within serverless timeout
+ * Returns immediately with job ID for polling
  */
 export const syncAllTasks = async (req: AuthRequest, res: Response) => {
   console.log('==============================================');
@@ -212,20 +213,56 @@ export const syncAllTasks = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    console.log('[Outlook] Starting optimized sync for user:', userId);
+    console.log('[Outlook] Creating sync job for user:', userId);
 
-    // Run sync with optimized batching (should complete within timeout)
-    const progress = await outlookCalendarService.syncAllUserTasks(userId);
+    // Create a new sync job
+    const jobId = syncJobTracker.createJob(userId);
 
-    console.log('[Outlook] Sync completed with progress:', progress);
+    // Start sync in background (non-blocking)
+    outlookCalendarService.syncAllUserTasks(userId, jobId).catch((error) => {
+      console.error('[Outlook] Background sync failed:', error);
+      syncJobTracker.failJob(jobId, error instanceof Error ? error.message : 'Unknown error');
+    });
+
+    // Return immediately with job ID
+    console.log('[Outlook] Sync job created:', jobId);
     res.json({
-      message: progress.success
-        ? 'Sync completed successfully!'
-        : 'Sync completed with some errors',
-      progress
+      message: 'Sync started in background',
+      jobId,
+      status: 'in_progress'
     });
   } catch (error) {
-    console.error('[Outlook] Error during sync:', error);
-    res.status(500).json({ error: 'Failed to sync', details: error instanceof Error ? error.message : 'Unknown error' });
+    console.error('[Outlook] Error starting sync:', error);
+    res.status(500).json({ error: 'Failed to start sync', details: error instanceof Error ? error.message : 'Unknown error' });
+  }
+};
+
+/**
+ * Get sync job status
+ */
+export const getSyncStatus = async (req: AuthRequest, res: Response) => {
+  try {
+    const { jobId } = req.params;
+    const userId = req.user?.id;
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const job = syncJobTracker.getJob(jobId);
+
+    if (!job) {
+      return res.status(404).json({ error: 'Job not found or expired' });
+    }
+
+    // Verify job belongs to user
+    if (job.userId !== userId) {
+      return res.status(403).json({ error: 'Access denied' });
+    }
+
+    res.json(job);
+  } catch (error) {
+    console.error('[Outlook] Error getting sync status:', error);
+    res.status(500).json({ error: 'Failed to get sync status' });
   }
 };

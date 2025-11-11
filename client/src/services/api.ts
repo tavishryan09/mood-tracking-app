@@ -258,4 +258,5 @@ export const outlookAPI = {
   connect: () => api.post('/outlook/connect'),
   disconnect: () => api.post('/outlook/disconnect'),
   sync: () => api.post('/outlook/sync'),
+  getSyncStatus: (jobId: string) => api.get(`/outlook/sync/${jobId}`),
 };
