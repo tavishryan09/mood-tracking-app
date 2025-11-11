@@ -100,18 +100,33 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
     try {
       // Load both user preference and app-level default in parallel
-      const [userPaletteResult, appDefaultResult] = await Promise.allSettled([
+      const [userPaletteResult, appDefaultResult, appCustomPalettesResult] = await Promise.allSettled([
         settingsAPI.user.get(SELECTED_PALETTE_KEY),
         settingsAPI.app.get('default_custom_theme'),
+        settingsAPI.app.get('custom_color_palettes'),
       ]);
+
+      let selectedTheme: string | null = null;
 
       // Priority: user preference > app default > hardcoded 'default'
       if (userPaletteResult.status === 'fulfilled' && userPaletteResult.value?.data?.value) {
         // User has their own preference
-        setSelectedPaletteState(userPaletteResult.value.data.value);
+        selectedTheme = userPaletteResult.value.data.value;
       } else if (appDefaultResult.status === 'fulfilled' && appDefaultResult.value?.data?.value) {
         // No user preference, use app-level default set by admin
-        setSelectedPaletteState(appDefaultResult.value.data.value);
+        selectedTheme = appDefaultResult.value.data.value;
+
+        // If this is a custom palette, load it from app settings
+        if (selectedTheme && !colorPalettes[selectedTheme as ColorPaletteName]) {
+          if (appCustomPalettesResult.status === 'fulfilled' && appCustomPalettesResult.value?.data?.value?.[selectedTheme]) {
+            console.log('[ThemeContext] Loading custom palette from app settings:', selectedTheme);
+            setCustomPalettes(prev => ({ ...prev, [selectedTheme]: appCustomPalettesResult.value.data.value[selectedTheme] }));
+          }
+        }
+      }
+
+      if (selectedTheme) {
+        setSelectedPaletteState(selectedTheme);
       }
       // Otherwise keep the hardcoded default ('default')
     } catch (error: any) {
