@@ -173,10 +173,19 @@ export const createPlanningTask = async (req: AuthRequest, res: Response) => {
       }
     }
 
-    // Sync to the assigned user's Outlook calendar (non-blocking)
-    outlookCalendarService.syncPlanningTask(planningTask.id, userId).catch((error) => {
-      console.error('[Outlook] Failed to sync planning task:', error);
-    });
+    // Sync to the assigned user's Outlook calendar (with timeout)
+    try {
+      const syncPromise = outlookCalendarService.syncPlanningTask(planningTask.id, userId);
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Outlook sync timeout')), 8000) // 8 second timeout
+      );
+
+      await Promise.race([syncPromise, timeoutPromise]);
+      console.log('[Outlook] Planning task synced successfully');
+    } catch (error) {
+      console.error('[Outlook] Failed to sync planning task (non-fatal):', error);
+      // Don't fail the request - task was saved successfully
+    }
 
     res.status(201).json(planningTask);
   } catch (error) {
@@ -276,26 +285,34 @@ export const updatePlanningTask = async (req: AuthRequest, res: Response) => {
           }
         }
 
-        // If userId changed, delete from old user's calendar and sync to new user's calendar
-        if (userId && userId !== oldUserId) {
-          console.log(`[Outlook] Planning task moved from user ${oldUserId} to ${userId}`);
+        // Sync to Outlook with timeout (for blockIndex changes)
+        try {
+          if (userId && userId !== oldUserId) {
+            console.log(`[Outlook] Planning task moved from user ${oldUserId} to ${userId}`);
 
-          // Delete from old user's calendar (non-blocking)
-          outlookCalendarService.deletePlanningTask(id, oldUserId).catch((error) => {
-            console.error('[Outlook] Failed to delete planning task from old user:', error);
-          });
+            // Delete from old user's calendar and sync to new user (with timeout)
+            const deletePromise = outlookCalendarService.deletePlanningTask(id, oldUserId);
+            const syncPromise = outlookCalendarService.syncPlanningTask(planningTask.id, planningTask.userId);
+            const timeoutPromise = new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('Outlook sync timeout')), 8000)
+            );
 
-          // Sync to new user's calendar (non-blocking)
-          console.log(`[Outlook] Syncing planning task ${planningTask.id} to new user ${planningTask.userId}`);
-          outlookCalendarService.syncPlanningTask(planningTask.id, planningTask.userId).catch((error) => {
-            console.error('[Outlook] Failed to sync planning task to new user:', error);
-          });
-        } else {
-          // Same user, sync the updated task (blockIndex changed)
-          console.log(`[Outlook] Syncing updated planning task ${planningTask.id} (blockIndex changed) to user ${planningTask.userId}`);
-          outlookCalendarService.syncPlanningTask(planningTask.id, planningTask.userId).catch((error) => {
-            console.error('[Outlook] Failed to sync planning task:', error);
-          });
+            await Promise.race([Promise.all([deletePromise, syncPromise]), timeoutPromise]);
+            console.log('[Outlook] Planning task moved and synced successfully');
+          } else {
+            // Same user, sync the updated task (blockIndex changed)
+            console.log(`[Outlook] Syncing updated planning task ${planningTask.id} (blockIndex changed) to user ${planningTask.userId}`);
+            const syncPromise = outlookCalendarService.syncPlanningTask(planningTask.id, planningTask.userId);
+            const timeoutPromise = new Promise((_, reject) =>
+              setTimeout(() => reject(new Error('Outlook sync timeout')), 8000)
+            );
+
+            await Promise.race([syncPromise, timeoutPromise]);
+            console.log('[Outlook] Planning task synced successfully');
+          }
+        } catch (error) {
+          console.error('[Outlook] Failed to sync planning task (non-fatal):', error);
+          // Don't fail the request - task was saved successfully
         }
 
         return res.json(planningTask);
@@ -398,26 +415,34 @@ export const updatePlanningTask = async (req: AuthRequest, res: Response) => {
 
     console.log(`[PlanningTask] Update detected - changes: ${changes.join(', ')}`);
 
-    // If userId changed, delete from old user's calendar and sync to new user's calendar
-    if (userId && userId !== oldUserId) {
-      console.log(`[Outlook] Planning task moved from user ${oldUserId} to ${userId}`);
+    // Sync to Outlook with timeout
+    try {
+      if (userId && userId !== oldUserId) {
+        console.log(`[Outlook] Planning task moved from user ${oldUserId} to ${userId}`);
 
-      // Delete from old user's calendar (non-blocking)
-      outlookCalendarService.deletePlanningTask(id, oldUserId).catch((error) => {
-        console.error('[Outlook] Failed to delete planning task from old user:', error);
-      });
+        // Delete from old user's calendar and sync to new user (with timeout)
+        const deletePromise = outlookCalendarService.deletePlanningTask(id, oldUserId);
+        const syncPromise = outlookCalendarService.syncPlanningTask(planningTask.id, planningTask.userId);
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Outlook sync timeout')), 8000)
+        );
 
-      // Sync to new user's calendar (non-blocking)
-      console.log(`[Outlook] Syncing planning task ${planningTask.id} to new user ${planningTask.userId}`);
-      outlookCalendarService.syncPlanningTask(planningTask.id, planningTask.userId).catch((error) => {
-        console.error('[Outlook] Failed to sync planning task to new user:', error);
-      });
-    } else {
-      // Same user, sync the updated task to Outlook
-      console.log(`[Outlook] Syncing updated planning task ${planningTask.id} to user ${planningTask.userId}`);
-      outlookCalendarService.syncPlanningTask(planningTask.id, planningTask.userId).catch((error) => {
-        console.error('[Outlook] Failed to sync planning task:', error);
-      });
+        await Promise.race([Promise.all([deletePromise, syncPromise]), timeoutPromise]);
+        console.log('[Outlook] Planning task moved and synced successfully');
+      } else {
+        // Same user, sync the updated task to Outlook (with timeout)
+        console.log(`[Outlook] Syncing updated planning task ${planningTask.id} to user ${planningTask.userId}`);
+        const syncPromise = outlookCalendarService.syncPlanningTask(planningTask.id, planningTask.userId);
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Outlook sync timeout')), 8000)
+        );
+
+        await Promise.race([syncPromise, timeoutPromise]);
+        console.log('[Outlook] Planning task synced successfully');
+      }
+    } catch (error) {
+      console.error('[Outlook] Failed to sync planning task (non-fatal):', error);
+      // Don't fail the request - task was saved successfully
     }
 
     res.json(planningTask);
