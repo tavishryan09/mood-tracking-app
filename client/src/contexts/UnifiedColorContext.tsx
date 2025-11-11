@@ -50,17 +50,22 @@ export const UnifiedColorProvider = ({ children }: { children: ReactNode }) => {
         // Load custom color mappings if user is logged in
         if (user) {
           // Load all settings in parallel to ensure they're all ready before rendering
-          const [paletteResult, mappingsResult, planningColorsResult] = await Promise.allSettled([
+          const [paletteResult, mappingsResult, planningColorsResult, defaultThemeResult] = await Promise.allSettled([
             settingsAPI.user.get('selected_color_palette'),
             settingsAPI.user.get('custom_color_mappings'),
             settingsAPI.user.get('planning_colors'),
+            settingsAPI.app.get('default_custom_theme'),
           ]);
 
           if (!isMounted) return;
 
-          // Process palette
+          // Process palette - use user preference if available, otherwise use app default
           if (paletteResult.status === 'fulfilled' && paletteResult.value?.data?.value) {
+            // User has their own preference
             setSelectedPaletteState(paletteResult.value.data.value);
+          } else if (defaultThemeResult.status === 'fulfilled' && defaultThemeResult.value?.data?.value) {
+            // No user preference, use app-level default
+            setSelectedPaletteState(defaultThemeResult.value.data.value);
           } else if (paletteResult.status === 'rejected' && paletteResult.reason?.response?.status !== 404) {
             console.error('[UnifiedColor] Error loading palette:', paletteResult.reason);
           }
