@@ -26,12 +26,10 @@ const ThemedApp = () => {
       <PaperProvider theme={theme}>
         <View style={{ flex: 1, height: '100%', width: '100%', position: 'relative' }}>
           <OfflineIndicator />
-          <CustomColorThemeProvider>
-            <PlanningColorsProvider>
-              <AppNavigator />
-              <StatusBar style="dark" />
-            </PlanningColorsProvider>
-          </CustomColorThemeProvider>
+          <PlanningColorsProvider>
+            <AppNavigator />
+            <StatusBar style="dark" />
+          </PlanningColorsProvider>
           <InstallPrompt />
         </View>
       </PaperProvider>
@@ -131,9 +129,11 @@ export default function App() {
   return (
     <SafeAreaProvider style={{ flex: 1, height: '100%', width: '100%' }}>
       <AuthProvider>
-        <ThemeProvider>
-          <ThemedApp />
-        </ThemeProvider>
+        <CustomColorThemeProvider>
+          <ThemeProvider>
+            <ThemedApp />
+          </ThemeProvider>
+        </CustomColorThemeProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );
