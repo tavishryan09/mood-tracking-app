@@ -772,6 +772,138 @@ class OutlookCalendarService {
    * @returns Sync progress information
    */
   /**
+   * Fast sync for planning task (optimized for serverless)
+   * Takes task data directly to avoid extra DB queries
+   * Uses update-or-create pattern to minimize API calls
+   */
+  private async syncPlanningTaskFast(
+    task: any,
+    client: Client,
+    calendarId: string
+  ): Promise<boolean> {
+    try {
+      // Build date strings
+      const taskDate = new Date(task.date);
+      const year = taskDate.getFullYear();
+      const month = String(taskDate.getMonth() + 1).padStart(2, '0');
+      const day = String(taskDate.getDate()).padStart(2, '0');
+      const dateString = `${year}-${month}-${day}`;
+
+      const taskEndDate = new Date(taskDate);
+      taskEndDate.setDate(taskEndDate.getDate() + 1);
+      const endYear = taskEndDate.getFullYear();
+      const endMonth = String(taskEndDate.getMonth() + 1).padStart(2, '0');
+      const endDay = String(taskEndDate.getDate()).padStart(2, '0');
+      const endDateString = `${endYear}-${endMonth}-${endDay}`;
+
+      // Determine subject, category, body
+      let subject: string;
+      let category: string;
+      let bodyContent: string;
+
+      const isStatusEvent = !task.projectId;
+
+      if (isStatusEvent) {
+        const statusName = task.task || '';
+        if (statusName === 'Time Off') {
+          subject = 'PTO';
+          category = 'Time off';
+          bodyContent = 'Time Off\n\nAdded by MoodTracker';
+        } else if (statusName === 'Unavailable') {
+          subject = 'Unavailable';
+          category = 'Unavailable';
+          bodyContent = 'Unavailable\n\nAdded by MoodTracker';
+        } else if (statusName === 'Out of Office') {
+          subject = 'OOS';
+          category = 'Out of office';
+          bodyContent = 'Out of Office\n\nAdded by MoodTracker';
+        } else {
+          subject = statusName || 'Status Event';
+          category = 'Project Task';
+          bodyContent = `${statusName}\n\nAdded by MoodTracker`;
+        }
+      } else if (!task.project) {
+        return false;
+      } else {
+        const commonName = task.project.description || task.project.name;
+
+        if (task.project.name === 'Time Off') {
+          subject = 'PTO';
+          category = 'Time off';
+          bodyContent = `Time Off\n\nAdded by MoodTracker`;
+        } else if (task.project.name === 'Out of Office' || task.task?.startsWith('[OUT_OF_OFFICE]')) {
+          subject = `OOS - ${commonName}`;
+          category = 'Out of office';
+          const taskDescription = task.task?.replace('[OUT_OF_OFFICE]', '').trim() || '';
+          bodyContent = taskDescription
+            ? `Project: ${commonName}\nTask: ${taskDescription}\n\nAdded by MoodTracker`
+            : `Project: ${commonName}\n\nAdded by MoodTracker`;
+        } else if (task.project.name === 'Unavailable') {
+          subject = 'Unavailable';
+          category = 'Unavailable';
+          bodyContent = `Unavailable\n\nAdded by MoodTracker`;
+        } else {
+          subject = commonName;
+          category = 'Project Task';
+          bodyContent = task.task
+            ? `Project: ${commonName}\nTask: ${task.task}\n\nAdded by MoodTracker`
+            : `Project: ${commonName}\n\nAdded by MoodTracker`;
+        }
+      }
+
+      const event: OutlookEvent = {
+        subject: subject,
+        start: {
+          dateTime: dateString,
+          timeZone: 'UTC'
+        },
+        end: {
+          dateTime: endDateString,
+          timeZone: 'UTC'
+        },
+        isAllDay: true,
+        body: {
+          contentType: 'text',
+          content: bodyContent
+        },
+        categories: [category]
+      };
+
+      let eventId = task.outlookEventId;
+
+      if (eventId) {
+        // Try to update existing event
+        try {
+          await client.api(`/me/calendars/${calendarId}/events/${eventId}`).update(event);
+          return true;
+        } catch (error: any) {
+          // Event not found or update failed - create new one
+          if (error.statusCode === 404) {
+            const createdEvent = await client.api(`/me/calendars/${calendarId}/events`).post(event);
+            await prisma.planningTask.update({
+              where: { id: task.id },
+              data: { outlookEventId: createdEvent.id }
+            });
+            return true;
+          }
+          throw error;
+        }
+      } else {
+        // Create new event
+        const createdEvent = await client.api(`/me/calendars/${calendarId}/events`).post(event);
+        await prisma.planningTask.update({
+          where: { id: task.id },
+          data: { outlookEventId: createdEvent.id }
+        });
+        return true;
+      }
+    } catch (error) {
+      console.error(`[Outlook] Error syncing planning task ${task.id}:`, error);
+      return false;
+    }
+  }
+
+  /**
    * Sync only planning tasks to Outlook
    */
   async syncPlanningTasks(userId: string, jobId?: string): Promise<{
@@ -804,8 +936,11 @@ class OutlookCalendarService {
 
       await this.ensureMasterCategories(userId);
 
-      // Get planning tasks from database
-      const planningTasks = await prisma.planningTask.findMany({ where: { userId } });
+      // Get planning tasks from database WITH project data (single query)
+      const planningTasks = await prisma.planningTask.findMany({
+        where: { userId },
+        include: { project: true }
+      });
       console.log(`[Outlook] Found ${planningTasks.length} planning tasks`);
       result.totalTasks = planningTasks.length;
 
@@ -817,16 +952,16 @@ class OutlookCalendarService {
         });
       }
 
-      // Sync all tasks in parallel (much faster for small datasets)
-      // Process up to 50 tasks concurrently to stay well under timeout
-      const BATCH_SIZE = 50;
+      // Sync all tasks in parallel with optimized batch processing
+      // For serverless: reduce API calls by using update-or-create pattern
+      const BATCH_SIZE = 10; // Smaller batches to stay under 10s timeout
 
       for (let i = 0; i < planningTasks.length; i += BATCH_SIZE) {
         const batch = planningTasks.slice(i, i + BATCH_SIZE);
 
-        // Process entire batch in parallel
+        // Process entire batch in parallel with fast sync
         const results = await Promise.all(
-          batch.map(task => this.syncPlanningTask(task.id, userId))
+          batch.map(task => this.syncPlanningTaskFast(task, client, calendarId))
         );
 
         result.syncedTasks += results.filter(r => r).length;
@@ -849,6 +984,105 @@ class OutlookCalendarService {
       console.error('[Outlook] Error syncing planning tasks:', error);
       result.errors.push(error instanceof Error ? error.message : 'Unknown error');
       return result;
+    }
+  }
+
+  /**
+   * Fast sync for deadline task (optimized for serverless)
+   * Takes task data directly to avoid extra DB queries
+   * Uses update-or-create pattern to minimize API calls
+   */
+  private async syncDeadlineTaskFast(
+    task: any,
+    client: Client,
+    calendarId: string,
+    userId: string
+  ): Promise<boolean> {
+    try {
+      const deadlineDate = new Date(task.date);
+      deadlineDate.setUTCHours(0, 0, 0, 0);
+      const deadlineEndDate = new Date(deadlineDate);
+      deadlineEndDate.setDate(deadlineEndDate.getDate() + 1);
+
+      const commonName = task.project?.description || task.project?.name || 'Unknown';
+
+      let title = '';
+      let category = '';
+
+      switch (task.deadlineType) {
+        case 'DEADLINE':
+          title = `Deadline - ${commonName}`;
+          category = 'Deadline';
+          break;
+        case 'INTERNAL_DEADLINE':
+          title = `Internal - ${commonName}`;
+          category = 'Internal Deadline';
+          break;
+        case 'MILESTONE':
+          title = `Milestone - ${commonName}`;
+          category = 'Project Milestone';
+          break;
+        default:
+          title = commonName;
+          category = 'Deadline';
+      }
+
+      const event: OutlookEvent = {
+        subject: title,
+        start: {
+          dateTime: deadlineDate.toISOString(),
+          timeZone: 'UTC'
+        },
+        end: {
+          dateTime: deadlineEndDate.toISOString(),
+          timeZone: 'UTC'
+        },
+        isAllDay: true,
+        body: {
+          contentType: 'text',
+          content: [
+            `Type: ${task.deadlineType}`,
+            task.client ? `Client: ${task.client.name}` : null,
+            task.project ? `Project: ${task.project.description || task.project.name}` : null,
+            task.description ? `Description: ${task.description}` : null,
+            '',
+            'Added by MoodTracker'
+          ].filter(line => line !== null).join('\n')
+        },
+        categories: [category]
+      };
+
+      let eventId = task.outlookEventId;
+
+      if (eventId) {
+        // Try to update existing event
+        try {
+          await client.api(`/me/calendars/${calendarId}/events/${eventId}`).update(event);
+          return true;
+        } catch (error: any) {
+          // Event not found - create new one
+          if (error.statusCode === 404) {
+            const createdEvent = await client.api(`/me/calendars/${calendarId}/events`).post(event);
+            await prisma.deadlineTask.update({
+              where: { id: task.id },
+              data: { outlookEventId: createdEvent.id }
+            });
+            return true;
+          }
+          throw error;
+        }
+      } else {
+        // Create new event
+        const createdEvent = await client.api(`/me/calendars/${calendarId}/events`).post(event);
+        await prisma.deadlineTask.update({
+          where: { id: task.id },
+          data: { outlookEventId: createdEvent.id }
+        });
+        return true;
+      }
+    } catch (error) {
+      console.error(`[Outlook] Error syncing deadline task ${task.id}:`, error);
+      return false;
     }
   }
 
@@ -883,8 +1117,10 @@ class OutlookCalendarService {
         return result;
       }
 
-      // Get all deadline tasks (team-wide)
-      const deadlineTasks = await prisma.deadlineTask.findMany({});
+      // Get all deadline tasks (team-wide) WITH project and client data
+      const deadlineTasks = await prisma.deadlineTask.findMany({
+        include: { project: true, client: true }
+      });
       console.log(`[Outlook] Found ${deadlineTasks.length} deadline tasks`);
       result.totalTasks = deadlineTasks.length;
 
@@ -895,16 +1131,15 @@ class OutlookCalendarService {
         });
       }
 
-      // Sync all tasks in parallel (much faster for small datasets)
-      // Process up to 50 tasks concurrently to stay well under timeout
-      const BATCH_SIZE = 50;
+      // Sync all tasks in parallel with optimized batch processing
+      const BATCH_SIZE = 10; // Smaller batches to stay under 10s timeout
 
       for (let i = 0; i < deadlineTasks.length; i += BATCH_SIZE) {
         const batch = deadlineTasks.slice(i, i + BATCH_SIZE);
 
-        // Process entire batch in parallel
+        // Process entire batch in parallel with fast sync
         const results = await Promise.all(
-          batch.map(task => this.syncDeadlineTask(task.id, userId))
+          batch.map(task => this.syncDeadlineTaskFast(task, client, calendarId, userId))
         );
 
         result.syncedTasks += results.filter(r => r).length;
