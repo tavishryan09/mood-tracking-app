@@ -23,13 +23,13 @@ export const initiateOutlookAuth = async (req: AuthRequest, res: Response) => {
     // 2. Stable production URL if in production environment
     // 3. VERCEL_URL (current deployment URL)
     // 4. localhost for development
-    let baseUrl = process.env.API_URL;
+    let baseUrl = process.env.API_URL?.trim();
 
     if (!baseUrl && process.env.VERCEL_ENV === 'production') {
       // Use stable production URL for OAuth callback
       baseUrl = 'https://moodtracker-tavish-ryans-projects.vercel.app';
     } else if (!baseUrl && process.env.VERCEL_URL) {
-      baseUrl = `https://${process.env.VERCEL_URL}`;
+      baseUrl = `https://${process.env.VERCEL_URL.trim()}`;
     } else if (!baseUrl) {
       baseUrl = 'http://localhost:3000';
     }
@@ -88,12 +88,12 @@ export const handleOutlookCallback = async (req: AuthRequest, res: Response) => 
     }
 
     // Determine the base URL - must match the one used in initiateOutlookAuth
-    let baseUrl = process.env.API_URL;
+    let baseUrl = process.env.API_URL?.trim();
 
     if (!baseUrl && process.env.VERCEL_ENV === 'production') {
       baseUrl = 'https://moodtracker-tavish-ryans-projects.vercel.app';
     } else if (!baseUrl && process.env.VERCEL_URL) {
-      baseUrl = `https://${process.env.VERCEL_URL}`;
+      baseUrl = `https://${process.env.VERCEL_URL.trim()}`;
     } else if (!baseUrl) {
       baseUrl = 'http://localhost:3000';
     }

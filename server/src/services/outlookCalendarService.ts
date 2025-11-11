@@ -3,8 +3,9 @@ import 'isomorphic-fetch';
 import prisma from '../config/database';
 
 // Microsoft App Configuration
-const MICROSOFT_CLIENT_ID = process.env.MICROSOFT_CLIENT_ID || '';
-const MICROSOFT_CLIENT_SECRET = process.env.MICROSOFT_CLIENT_SECRET || '';
+// Trim environment variables to remove any newlines or whitespace
+const MICROSOFT_CLIENT_ID = (process.env.MICROSOFT_CLIENT_ID || '').trim();
+const MICROSOFT_CLIENT_SECRET = (process.env.MICROSOFT_CLIENT_SECRET || '').trim();
 // Use 'common' for multitenant + personal accounts (not tenant-specific)
 const MICROSOFT_TENANT_ID = 'common';
 
