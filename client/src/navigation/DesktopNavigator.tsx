@@ -79,7 +79,7 @@ const SmartProjectsScreen = (props: any) => {
           }
         }
 
-        // Fall back to role-based setting
+        // Fall back to role-based setting (stored in app settings, not user settings)
         let defaultTableViewKey = 'team_view_user_default_projects_table';
         if (user.role === 'ADMIN') {
           defaultTableViewKey = 'team_view_admin_default_projects_table';
@@ -88,7 +88,7 @@ const SmartProjectsScreen = (props: any) => {
         }
 
         try {
-          const roleDefaultResponse = await settingsAPI.user.get(defaultTableViewKey);
+          const roleDefaultResponse = await settingsAPI.app.get(defaultTableViewKey);
           if (roleDefaultResponse.data?.value !== undefined) {
             setUseTableView(roleDefaultResponse.data.value === true);
           }
