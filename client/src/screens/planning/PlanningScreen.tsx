@@ -1777,7 +1777,7 @@ const PlanningScreen = () => {
 
       // Reload planning tasks to refresh the view (handle errors separately)
       try {
-        await loadPlanningTasks();
+        await loadData();
       } catch (reloadError) {
         console.warn('Failed to reload planning tasks, but save was successful:', reloadError);
       }
