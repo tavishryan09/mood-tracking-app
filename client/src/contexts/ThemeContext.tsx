@@ -28,18 +28,39 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [isUsingCustomTheme, setIsUsingCustomTheme] = useState<boolean>(false);
   const [userLoaded, setUserLoaded] = useState(false);
 
+  // Load app-level default theme immediately on mount (no auth required)
+  const loadAppDefaultTheme = useCallback(async () => {
+    try {
+      const response = await settingsAPI.app.get('default_custom_theme');
+      if (response?.data?.value) {
+        console.log('[ThemeContext] Loaded app default theme:', response.data.value);
+        setSelectedPaletteState(response.data.value);
+      }
+    } catch (error: any) {
+      if (error?.response?.status !== 404) {
+        console.error('[ThemeContext] Error loading app default theme:', error);
+      }
+    }
+  }, []);
+
+  // Load app default on mount
+  useEffect(() => {
+    loadAppDefaultTheme();
+  }, [loadAppDefaultTheme]);
+
+  // Load user-specific settings when user logs in
   useEffect(() => {
     if (user && !userLoaded) {
       setUserLoaded(true);
       loadSavedPalette();
       loadCustomPalettesData();
     } else if (!user && userLoaded) {
-      // User logged out, reset to defaults
+      // User logged out, reload app default
       setUserLoaded(false);
-      setSelectedPaletteState('default');
       setCustomPalettes({});
+      loadAppDefaultTheme();
     }
-  }, [user, userLoaded]);
+  }, [user, userLoaded, loadAppDefaultTheme]);
 
   const loadCustomPalettesData = useCallback(async () => {
     if (!user) return;
