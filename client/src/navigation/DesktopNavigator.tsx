@@ -151,24 +151,31 @@ function CustomDrawerContent(props: any) {
         settingsKey = 'team_view_manager_page_access';
       }
 
-      // Load settings from database
-      const response = await settingsAPI.user.getAll();
-      const settings = response.data;
+      // Load settings from app-wide settings (not user-specific)
+      try {
+        const response = await settingsAPI.app.get(settingsKey);
+        const pageAccess = response.data.value;
 
-      const pageAccessSetting = settings.find((s: any) => s.key === settingsKey);
+        if (pageAccess) {
+          console.log('[DesktopNavigator] Loaded page access for', user.role, ':', pageAccess);
 
-      if (pageAccessSetting) {
-        const pageAccess = pageAccessSetting.value;
-        console.log('[DesktopNavigator] Loaded page access for', user.role, ':', pageAccess);
-
-        // Filter menu items based on page access
-        const filtered = allMenuItems.filter((item) => pageAccess[item.name] === true);
-        console.log('[DesktopNavigator] Filtered menu items:', filtered.map(i => i.name));
-        setVisibleMenuItems(filtered);
-      } else {
-        // If no settings saved, show all pages
-        console.log('[DesktopNavigator] No saved settings, showing all pages');
-        setVisibleMenuItems(allMenuItems);
+          // Filter menu items based on page access
+          const filtered = allMenuItems.filter((item) => pageAccess[item.name] === true);
+          console.log('[DesktopNavigator] Filtered menu items:', filtered.map(i => i.name));
+          setVisibleMenuItems(filtered);
+        } else {
+          // If no settings saved, show all pages
+          console.log('[DesktopNavigator] No saved settings, showing all pages');
+          setVisibleMenuItems(allMenuItems);
+        }
+      } catch (error: any) {
+        // If setting doesn't exist (404), show all pages
+        if (error.response?.status === 404) {
+          console.log('[DesktopNavigator] No saved settings, showing all pages');
+          setVisibleMenuItems(allMenuItems);
+        } else {
+          throw error;
+        }
       }
     } catch (error) {
       console.error('[DesktopNavigator] Error loading menu settings:', error);
@@ -300,29 +307,44 @@ function MainDrawer() {
         defaultPageKey = 'team_view_manager_default_page';
       }
 
-      // Load settings from database
-      const response = await settingsAPI.user.getAll();
-      const settings = response.data;
+      // Load settings from app-wide settings (not user-specific)
+      try {
+        const pageAccessResponse = await settingsAPI.app.get(pageAccessKey);
+        const pageAccess = pageAccessResponse.data.value;
 
-      const pageAccessSetting = settings.find((s: any) => s.key === pageAccessKey);
-      const defaultPageSetting = settings.find((s: any) => s.key === defaultPageKey);
+        if (pageAccess) {
+          console.log('[MainDrawer] Loaded page access for', user.role, ':', pageAccess);
 
-      if (pageAccessSetting) {
-        const pageAccess = pageAccessSetting.value;
-        console.log('[MainDrawer] Loaded page access for', user.role, ':', pageAccess);
-
-        const filtered = allMenuItems.filter((item) => pageAccess[item.name] === true);
-        console.log('[MainDrawer] Filtered menu items:', filtered.map(i => i.name));
-        setVisibleMenuItems(filtered);
-      } else {
-        setVisibleMenuItems(allMenuItems);
+          const filtered = allMenuItems.filter((item) => pageAccess[item.name] === true);
+          console.log('[MainDrawer] Filtered menu items:', filtered.map(i => i.name));
+          setVisibleMenuItems(filtered);
+        } else {
+          setVisibleMenuItems(allMenuItems);
+        }
+      } catch (error: any) {
+        // If setting doesn't exist (404), show all pages
+        if (error.response?.status === 404) {
+          console.log('[MainDrawer] No page access settings, showing all pages');
+          setVisibleMenuItems(allMenuItems);
+        } else {
+          throw error;
+        }
       }
 
       // Set initial route from default page setting
-      if (defaultPageSetting) {
-        const defaultPage = defaultPageSetting.value;
-        console.log('[MainDrawer] Setting initial route to:', defaultPage);
-        setInitialRoute(defaultPage);
+      try {
+        const defaultPageResponse = await settingsAPI.app.get(defaultPageKey);
+        const defaultPage = defaultPageResponse.data.value;
+
+        if (defaultPage) {
+          console.log('[MainDrawer] Setting initial route to:', defaultPage);
+          setInitialRoute(defaultPage);
+        }
+      } catch (error: any) {
+        // If setting doesn't exist (404), use default
+        if (error.response?.status !== 404) {
+          throw error;
+        }
       }
     } catch (error) {
       console.error('[MainDrawer] Error loading menu settings:', error);

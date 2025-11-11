@@ -1,3 +1,7 @@
+// Load environment variables FIRST before any other imports
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express, { Application, Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import compression from 'compression';
@@ -6,7 +10,6 @@ import rateLimit from 'express-rate-limit';
 import session from 'express-session';
 // import mongoSanitize from 'express-mongo-sanitize'; // Temporarily disabled due to compatibility issue
 import hpp from 'hpp';
-import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes';
 import clientRoutes from './routes/clientRoutes';
 import projectRoutes from './routes/projectRoutes';
@@ -18,9 +21,6 @@ import planningTaskRoutes from './routes/planningTaskRoutes';
 import settingsRoutes from './routes/settingsRoutes';
 import deadlineTaskRoutes from './routes/deadlineTaskRoutes';
 import outlookOAuthRoutes from './routes/outlookOAuth';
-
-// Load environment variables
-dotenv.config();
 
 const app: Application = express();
 const PORT = process.env.PORT || 5000;
