@@ -162,6 +162,7 @@ export const createPlanningTask = async (req: AuthRequest, res: Response) => {
             data: {
               projectId,
               userId,
+              assignedBy: userId, // Self-assigned for auto-add
             },
           });
           console.log(`[PlanningTask] Automatically added user ${userId} to project ${projectId}`);
@@ -265,6 +266,7 @@ export const updatePlanningTask = async (req: AuthRequest, res: Response) => {
                 data: {
                   projectId: newProjectId,
                   userId: newUserId,
+                  assignedBy: newUserId, // Self-assigned for auto-add
                 },
               });
               console.log(`[PlanningTask] Auto-added user ${newUserId} to project ${newProjectId}`);
@@ -374,6 +376,7 @@ export const updatePlanningTask = async (req: AuthRequest, res: Response) => {
             data: {
               projectId: finalProjectId,
               userId: finalUserId,
+              assignedBy: finalUserId, // Self-assigned for auto-add
             },
           });
           console.log(`[PlanningTask] Auto-added user ${finalUserId} to project ${finalProjectId}`);
