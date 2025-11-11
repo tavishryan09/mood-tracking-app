@@ -60,14 +60,23 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     if (!user) return;
 
     try {
-      const response = await settingsAPI.user.get(SELECTED_PALETTE_KEY);
-      if (response?.data?.value) {
-        setSelectedPaletteState(response.data.value);
+      // Load both user preference and app-level default in parallel
+      const [userPaletteResult, appDefaultResult] = await Promise.allSettled([
+        settingsAPI.user.get(SELECTED_PALETTE_KEY),
+        settingsAPI.app.get('default_custom_theme'),
+      ]);
+
+      // Priority: user preference > app default > hardcoded 'default'
+      if (userPaletteResult.status === 'fulfilled' && userPaletteResult.value?.data?.value) {
+        // User has their own preference
+        setSelectedPaletteState(userPaletteResult.value.data.value);
+      } else if (appDefaultResult.status === 'fulfilled' && appDefaultResult.value?.data?.value) {
+        // No user preference, use app-level default set by admin
+        setSelectedPaletteState(appDefaultResult.value.data.value);
       }
+      // Otherwise keep the hardcoded default ('default')
     } catch (error: any) {
-      if (error?.response?.status !== 404) {
-        console.error('[ThemeContext] Error loading saved palette:', error);
-      }
+      console.error('[ThemeContext] Error loading saved palette:', error);
     }
   };
 
