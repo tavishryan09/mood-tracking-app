@@ -954,7 +954,7 @@ class OutlookCalendarService {
 
       // Sync all tasks in parallel with optimized batch processing
       // For serverless: reduce API calls by using update-or-create pattern
-      const BATCH_SIZE = 10; // Smaller batches to stay under 10s timeout
+      const BATCH_SIZE = 5; // Very small batches for Vercel Hobby 10s timeout
 
       for (let i = 0; i < planningTasks.length; i += BATCH_SIZE) {
         const batch = planningTasks.slice(i, i + BATCH_SIZE);
@@ -1132,7 +1132,7 @@ class OutlookCalendarService {
       }
 
       // Sync all tasks in parallel with optimized batch processing
-      const BATCH_SIZE = 10; // Smaller batches to stay under 10s timeout
+      const BATCH_SIZE = 5; // Very small batches for Vercel Hobby 10s timeout
 
       for (let i = 0; i < deadlineTasks.length; i += BATCH_SIZE) {
         const batch = deadlineTasks.slice(i, i + BATCH_SIZE);
