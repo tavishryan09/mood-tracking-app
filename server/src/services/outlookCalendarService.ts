@@ -760,12 +760,11 @@ class OutlookCalendarService {
 
   /**
    * Sync all existing tasks for a user to Outlook calendar
-   * This function does a CLEAN sync:
-   * 1. Deletes ALL existing events from Mood Tracker calendar
-   * 2. Clears all outlookEventId fields in database
-   * 3. Creates fresh events for all current tasks
+   * Incremental sync approach:
+   * 1. Sync/update all tasks from database (create new or update existing)
+   * 2. Delete orphaned events (events in Outlook but not in database)
    *
-   * This ensures no duplicates and perfect sync between app and Outlook
+   * This is efficient for large datasets and preserves existing events
    *
    * @returns Sync progress information
    */
@@ -786,7 +785,7 @@ class OutlookCalendarService {
       errors: [] as string[]
     };
     try {
-      console.log(`[Outlook] Starting CLEAN sync for user ${userId}`);
+      console.log(`[Outlook] Starting incremental sync for user ${userId}`);
 
       const client = await this.getGraphClient(userId);
       if (!client) {
@@ -806,48 +805,7 @@ class OutlookCalendarService {
       // First, ensure all master categories exist
       await this.ensureMasterCategories(userId);
 
-      // Step 1: Get ALL existing events from Mood Tracker calendar and delete them
-      console.log(`[Outlook] Fetching and deleting all existing events for clean sync...`);
-      const events = await client
-        .api(`/me/calendars/${calendarId}/events`)
-        .select('id,subject')
-        .top(999)
-        .get();
-
-      const existingEvents = events.value || [];
-      console.log(`[Outlook] Found ${existingEvents.length} existing events to delete`);
-
-      // Delete all in parallel for speed
-      const deletePromises = existingEvents.map((event: any) =>
-        client.api(`/me/calendars/${calendarId}/events/${event.id}`).delete()
-          .then(() => {
-            progress.deletedEvents++;
-            return true;
-          })
-          .catch((error: any) => {
-            if (error.statusCode !== 404) {
-              console.error(`[Outlook] Error deleting event ${event.id}:`, error);
-            }
-            return false;
-          })
-      );
-
-      await Promise.all(deletePromises);
-      console.log(`[Outlook] Deleted ${progress.deletedEvents} events`);
-
-      // Step 2: Clear all outlookEventId fields
-      console.log(`[Outlook] Clearing outlookEventId fields...`);
-      await Promise.all([
-        prisma.planningTask.updateMany({
-          where: { userId },
-          data: { outlookEventId: null }
-        }),
-        prisma.deadlineTask.updateMany({
-          data: { outlookEventId: null }
-        })
-      ]);
-
-      // Step 3: Get all tasks from database
+      // Step 1: Get all tasks from database
       console.log(`[Outlook] Fetching tasks from database...`);
       const [planningTasks, deadlineTasks] = await Promise.all([
         prisma.planningTask.findMany({ where: { userId } }),
@@ -857,9 +815,9 @@ class OutlookCalendarService {
       console.log(`[Outlook] Found ${planningTasks.length} planning tasks, ${deadlineTasks.length} deadline tasks`);
       progress.totalTasks = planningTasks.length + deadlineTasks.length;
 
-      // Step 4: Sync all tasks in parallel (batches of 5 to avoid rate limits)
+      // Step 2: Sync all tasks in parallel batches (optimized for speed)
       console.log(`[Outlook] Syncing tasks in parallel batches...`);
-      const BATCH_SIZE = 5;
+      const BATCH_SIZE = 10;
 
       // Sync planning tasks in batches
       for (let i = 0; i < planningTasks.length; i += BATCH_SIZE) {
@@ -868,6 +826,10 @@ class OutlookCalendarService {
           batch.map(task => this.syncPlanningTask(task.id, userId))
         );
         progress.syncedPlanningTasks += results.filter(r => r).length;
+        const failed = results.filter(r => !r).length;
+        if (failed > 0) {
+          progress.errors.push(`Failed to sync ${failed} planning tasks in batch`);
+        }
       }
 
       // Sync deadline tasks in batches
@@ -877,13 +839,71 @@ class OutlookCalendarService {
           batch.map(task => this.syncDeadlineTask(task.id, userId))
         );
         progress.syncedDeadlineTasks += results.filter(r => r).length;
+        const failed = results.filter(r => !r).length;
+        if (failed > 0) {
+          progress.errors.push(`Failed to sync ${failed} deadline tasks in batch`);
+        }
+      }
+
+      // Step 3: Get all existing events from Outlook and find orphans
+      console.log(`[Outlook] Fetching Outlook events to find orphans...`);
+      const events = await client
+        .api(`/me/calendars/${calendarId}/events`)
+        .select('id,subject')
+        .top(999)
+        .get();
+
+      const existingEvents = events.value || [];
+      console.log(`[Outlook] Found ${existingEvents.length} existing Outlook events`);
+
+      // Step 4: Build set of valid event IDs from database
+      const [updatedPlanningTasks, updatedDeadlineTasks] = await Promise.all([
+        prisma.planningTask.findMany({
+          where: { userId },
+          select: { outlookEventId: true }
+        }),
+        prisma.deadlineTask.findMany({
+          select: { outlookEventId: true }
+        })
+      ]);
+
+      const validEventIds = new Set<string>();
+      [...updatedPlanningTasks, ...updatedDeadlineTasks].forEach(task => {
+        if (task.outlookEventId) {
+          validEventIds.add(task.outlookEventId);
+        }
+      });
+
+      console.log(`[Outlook] Valid event IDs: ${validEventIds.size}`);
+
+      // Step 5: Delete orphaned events in parallel
+      const orphanedEvents = existingEvents.filter((e: any) => !validEventIds.has(e.id));
+      console.log(`[Outlook] Found ${orphanedEvents.length} orphaned events to delete`);
+
+      if (orphanedEvents.length > 0) {
+        const deleteResults = await Promise.all(
+          orphanedEvents.map((event: any) =>
+            client.api(`/me/calendars/${calendarId}/events/${event.id}`).delete()
+              .then(() => {
+                progress.deletedEvents++;
+                return true;
+              })
+              .catch((error: any) => {
+                if (error.statusCode !== 404) {
+                  console.error(`[Outlook] Error deleting orphan ${event.id}:`, error);
+                }
+                return false;
+              })
+          )
+        );
+        console.log(`[Outlook] Deleted ${progress.deletedEvents} orphaned events`);
       }
 
       progress.success = progress.syncedPlanningTasks + progress.syncedDeadlineTasks === progress.totalTasks;
-      console.log(`[Outlook] CLEAN sync completed:`, progress);
+      console.log(`[Outlook] Incremental sync completed:`, progress);
       return progress;
     } catch (error) {
-      console.error('[Outlook] Error in clean sync:', error);
+      console.error('[Outlook] Error in incremental sync:', error);
       progress.errors.push(error instanceof Error ? error.message : 'Unknown error');
       return progress;
     }
