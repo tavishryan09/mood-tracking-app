@@ -323,6 +323,7 @@ class OutlookCalendarService {
           await client.api(`/me/calendars/${calendarId}/events/${eventId}`).get();
           // If we get here, event exists in Mood Tracker calendar, so update it
           console.log('[Outlook] Event found in Mood Tracker calendar, updating...');
+          console.log('[Outlook] Update data - Subject:', event.subject, '| Body:', event.body.content.substring(0, 50) + '...', '| Category:', event.categories[0]);
           await client.api(`/me/calendars/${calendarId}/events/${eventId}`).update(event);
           console.log(`[Outlook] Successfully updated planning task event: ${eventId}`);
         } catch (error: any) {
