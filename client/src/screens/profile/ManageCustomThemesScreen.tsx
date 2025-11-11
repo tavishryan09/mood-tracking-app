@@ -123,16 +123,48 @@ const ManageCustomThemesScreen = ({ navigation }: any) => {
       // Save the theme ID as default
       await settingsAPI.app.set('default_custom_theme', paletteId);
 
-      // Also save the custom palette data to app settings so it's accessible before login
+      // Load existing app palettes and merge with new one
       if (palettes[paletteId]) {
-        await settingsAPI.app.set('custom_color_palettes', { [paletteId]: palettes[paletteId] });
+        try {
+          const existingPalettesResponse = await settingsAPI.app.get('custom_color_palettes');
+          const existingPalettes = existingPalettesResponse?.data?.value || {};
+
+          // Merge with existing app palettes to avoid overwriting other themes
+          await settingsAPI.app.set('custom_color_palettes', {
+            ...existingPalettes,
+            [paletteId]: palettes[paletteId]
+          });
+        } catch (error: any) {
+          // If 404, no existing palettes, just set this one
+          if (error.response?.status === 404) {
+            await settingsAPI.app.set('custom_color_palettes', { [paletteId]: palettes[paletteId] });
+          } else {
+            throw error;
+          }
+        }
       }
 
-      // Also save the element mapping to app settings
+      // Load existing app mappings and merge with new one
       try {
         const mappingsResponse = await settingsAPI.user.get('element_color_mapping');
         if (mappingsResponse?.data?.value?.[paletteId]) {
-          await settingsAPI.app.set('element_color_mapping', { [paletteId]: mappingsResponse.data.value[paletteId] });
+          try {
+            const existingMappingsResponse = await settingsAPI.app.get('element_color_mapping');
+            const existingMappings = existingMappingsResponse?.data?.value || {};
+
+            // Merge with existing app mappings
+            await settingsAPI.app.set('element_color_mapping', {
+              ...existingMappings,
+              [paletteId]: mappingsResponse.data.value[paletteId]
+            });
+          } catch (error: any) {
+            // If 404, no existing mappings, just set this one
+            if (error.response?.status === 404) {
+              await settingsAPI.app.set('element_color_mapping', { [paletteId]: mappingsResponse.data.value[paletteId] });
+            } else {
+              throw error;
+            }
+          }
         }
       } catch (error) {
         console.error('Error saving element mapping to app settings:', error);
