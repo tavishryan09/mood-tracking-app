@@ -12,6 +12,7 @@ import userRoutes from '../server/src/routes/userRoutes';
 import planningTaskRoutes from '../server/src/routes/planningTaskRoutes';
 import settingsRoutes from '../server/src/routes/settingsRoutes';
 import deadlineTaskRoutes from '../server/src/routes/deadlineTaskRoutes';
+import outlookOAuthRoutes from '../server/src/routes/outlookOAuth';
 
 // Note: In Vercel serverless functions, environment variables are already available
 // No need to call dotenv.config() here - it can cause crashes
@@ -76,6 +77,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/planning-tasks', planningTaskRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/deadline-tasks', deadlineTaskRoutes);
+app.use('/api/outlook', outlookOAuthRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {
