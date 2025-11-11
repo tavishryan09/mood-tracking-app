@@ -817,29 +817,18 @@ class OutlookCalendarService {
         });
       }
 
-      // Sync in smaller batches to avoid timeout (3 tasks at a time with 5 parallel batches = 15 concurrent)
-      const BATCH_SIZE = 3;
-      const PARALLEL_BATCHES = 5;
-      const CHUNK_SIZE = BATCH_SIZE * PARALLEL_BATCHES; // 15 tasks processed in parallel
+      // Sync all tasks in parallel (much faster for small datasets)
+      // Process up to 50 tasks concurrently to stay well under timeout
+      const BATCH_SIZE = 50;
 
-      for (let i = 0; i < planningTasks.length; i += CHUNK_SIZE) {
-        const chunk = planningTasks.slice(i, i + CHUNK_SIZE);
+      for (let i = 0; i < planningTasks.length; i += BATCH_SIZE) {
+        const batch = planningTasks.slice(i, i + BATCH_SIZE);
 
-        // Split chunk into batches
-        const batches = [];
-        for (let j = 0; j < chunk.length; j += BATCH_SIZE) {
-          batches.push(chunk.slice(j, j + BATCH_SIZE));
-        }
-
-        // Process all batches in parallel
-        const batchResults = await Promise.all(
-          batches.map(batch =>
-            Promise.all(batch.map(task => this.syncPlanningTask(task.id, userId)))
-          )
+        // Process entire batch in parallel
+        const results = await Promise.all(
+          batch.map(task => this.syncPlanningTask(task.id, userId))
         );
 
-        // Flatten and count successes
-        const results = batchResults.flat();
         result.syncedTasks += results.filter(r => r).length;
 
         // Report progress
@@ -906,29 +895,18 @@ class OutlookCalendarService {
         });
       }
 
-      // Sync in smaller batches to avoid timeout (3 tasks at a time with 5 parallel batches = 15 concurrent)
-      const BATCH_SIZE = 3;
-      const PARALLEL_BATCHES = 5;
-      const CHUNK_SIZE = BATCH_SIZE * PARALLEL_BATCHES; // 15 tasks processed in parallel
+      // Sync all tasks in parallel (much faster for small datasets)
+      // Process up to 50 tasks concurrently to stay well under timeout
+      const BATCH_SIZE = 50;
 
-      for (let i = 0; i < deadlineTasks.length; i += CHUNK_SIZE) {
-        const chunk = deadlineTasks.slice(i, i + CHUNK_SIZE);
+      for (let i = 0; i < deadlineTasks.length; i += BATCH_SIZE) {
+        const batch = deadlineTasks.slice(i, i + BATCH_SIZE);
 
-        // Split chunk into batches
-        const batches = [];
-        for (let j = 0; j < chunk.length; j += BATCH_SIZE) {
-          batches.push(chunk.slice(j, j + BATCH_SIZE));
-        }
-
-        // Process all batches in parallel
-        const batchResults = await Promise.all(
-          batches.map(batch =>
-            Promise.all(batch.map(task => this.syncDeadlineTask(task.id, userId)))
-          )
+        // Process entire batch in parallel
+        const results = await Promise.all(
+          batch.map(task => this.syncDeadlineTask(task.id, userId))
         );
 
-        // Flatten and count successes
-        const results = batchResults.flat();
         result.syncedTasks += results.filter(r => r).length;
 
         // Report progress
