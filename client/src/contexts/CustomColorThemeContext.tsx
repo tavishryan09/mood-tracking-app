@@ -41,19 +41,23 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
   const [initializedForUser, setInitializedForUser] = useState<string | null>(null);
 
   useEffect(() => {
+    console.log('[CustomColorTheme] useEffect triggered, user:', user?.id, 'initializedForUser:', initializedForUser);
     let isMounted = true; // Track if component is mounted
 
     const initializeTheme = async () => {
+      console.log('[CustomColorTheme] initializeTheme called, isMounted:', isMounted);
       if (!isMounted) return;
 
       // Don't re-initialize if we've already done it for this user
       const userId = user?.id?.toString() || 'no-user';
+      console.log('[CustomColorTheme] Checking initialization status for user:', userId, 'initializedForUser:', initializedForUser);
       if (initializedForUser === userId) {
         console.log('[CustomColorTheme] Already initialized for user:', userId);
         setIsInitializing(false);
         return;
       }
 
+      console.log('[CustomColorTheme] Starting initialization for user:', userId);
       setIsInitializing(true);
 
       try {
