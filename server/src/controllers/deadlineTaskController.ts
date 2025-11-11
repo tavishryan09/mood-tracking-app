@@ -105,10 +105,10 @@ export const createDeadlineTask = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    // Sync to ALL users' Outlook calendars (non-blocking) - Temporarily disabled
-    // outlookCalendarService.syncDeadlineTaskToAllUsers(deadlineTask.id).catch((error) => {
-    //   console.error('[Outlook] Failed to sync deadline task to all users:', error);
-    // });
+    // Sync to ALL users' Outlook calendars (non-blocking)
+    outlookCalendarService.syncDeadlineTaskToAllUsers(deadlineTask.id).catch((error) => {
+      console.error('[Outlook] Failed to sync deadline task to all users:', error);
+    });
 
     res.status(201).json(deadlineTask);
   } catch (error) {
@@ -150,10 +150,10 @@ export const updateDeadlineTask = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    // Sync to ALL users' Outlook calendars (non-blocking) - Temporarily disabled
-    // outlookCalendarService.syncDeadlineTaskToAllUsers(deadlineTask.id).catch((error) => {
-    //   console.error('[Outlook] Failed to sync deadline task to all users:', error);
-    // });
+    // Sync to ALL users' Outlook calendars (non-blocking)
+    outlookCalendarService.syncDeadlineTaskToAllUsers(deadlineTask.id).catch((error) => {
+      console.error('[Outlook] Failed to sync deadline task to all users:', error);
+    });
 
     res.json(deadlineTask);
   } catch (error) {
@@ -180,10 +180,10 @@ export const deleteDeadlineTask = async (req: AuthRequest, res: Response) => {
 
     // Delete from ALL users' Outlook calendars (non-blocking)
     if (task) {
-      // Temporarily disabled - Outlook calendar sync
-      // outlookCalendarService.deleteDeadlineTaskFromAllUsers(id).catch((error) => {
-      //   console.error('[Outlook] Failed to delete deadline task from all users:', error);
-      // });
+      // Outlook calendar sync
+      outlookCalendarService.deleteDeadlineTaskFromAllUsers(id).catch((error) => {
+        console.error('[Outlook] Failed to delete deadline task from all users:', error);
+      });
     }
 
     res.json({ message: 'Deadline task deleted successfully' });
@@ -265,10 +265,10 @@ export const syncProjectDueDates = async (req: AuthRequest, res: Response) => {
               },
             });
 
-            // Sync updated deadline to ALL users' Outlook calendars (non-blocking) - Temporarily disabled
-            // outlookCalendarService.syncDeadlineTaskToAllUsers(existing.id).catch((error) => {
-            //   console.error('[Outlook] Failed to sync updated auto-generated deadline to all users:', error);
-            // });
+            // Sync updated deadline to ALL users' Outlook calendars (non-blocking)
+            outlookCalendarService.syncDeadlineTaskToAllUsers(existing.id).catch((error) => {
+              console.error('[Outlook] Failed to sync updated auto-generated deadline to all users:', error);
+            });
           } else {
             errors.push(`No available slot for project: ${project.name}`);
           }
@@ -325,9 +325,9 @@ export const syncProjectDueDates = async (req: AuthRequest, res: Response) => {
       });
 
       // Sync to ALL users' Outlook calendars (non-blocking)
-      // outlookCalendarService.syncDeadlineTaskToAllUsers(deadlineTask.id).catch((error) => {
-      //   console.error('[Outlook] Failed to sync auto-generated deadline task to all users:', error);
-      // });
+      outlookCalendarService.syncDeadlineTaskToAllUsers(deadlineTask.id).catch((error) => {
+        console.error('[Outlook] Failed to sync auto-generated deadline task to all users:', error);
+      });
 
       createdTasks.push(deadlineTask);
     }
