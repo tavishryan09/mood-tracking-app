@@ -180,7 +180,30 @@ const ProfileScreen = ({ navigation }: any) => {
       setOutlookSyncing(true);
       const response = await outlookAPI.sync();
       console.log('[ProfileScreen] Sync response:', response.data);
-      setSuccessMessage(response.data.message || 'Your tasks are being synced to Outlook calendar.');
+
+      const { progress } = response.data;
+
+      // Create detailed message with sync progress
+      let message = response.data.message || 'Sync completed!';
+      if (progress) {
+        message += `\n\n📊 Sync Summary:`;
+        message += `\n• Total Tasks: ${progress.totalTasks}`;
+        message += `\n• Planning Tasks Synced: ${progress.syncedPlanningTasks}`;
+        message += `\n• Deadline Tasks Synced: ${progress.syncedDeadlineTasks}`;
+        message += `\n• Old Events Deleted: ${progress.deletedEvents}`;
+
+        if (progress.errors && progress.errors.length > 0) {
+          message += `\n\n⚠️ Errors (${progress.errors.length}):`;
+          progress.errors.slice(0, 3).forEach((err: string) => {
+            message += `\n• ${err}`;
+          });
+          if (progress.errors.length > 3) {
+            message += `\n• ... and ${progress.errors.length - 3} more`;
+          }
+        }
+      }
+
+      setSuccessMessage(message);
       setShowSuccessDialog(true);
     } catch (error: any) {
       console.error('[ProfileScreen] Error syncing Outlook:', error);

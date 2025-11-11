@@ -762,22 +762,41 @@ class OutlookCalendarService {
    * Sync all existing tasks for a user to Outlook calendar
    * This function is smart about what to sync - it clears all existing events first,
    * then syncs only the current tasks from the database
+   *
+   * @returns Sync progress information
    */
-  async syncAllUserTasks(userId: string): Promise<void> {
+  async syncAllUserTasks(userId: string): Promise<{
+    success: boolean;
+    totalTasks: number;
+    syncedPlanningTasks: number;
+    syncedDeadlineTasks: number;
+    deletedEvents: number;
+    errors: string[];
+  }> {
+    const progress = {
+      success: false,
+      totalTasks: 0,
+      syncedPlanningTasks: 0,
+      syncedDeadlineTasks: 0,
+      deletedEvents: 0,
+      errors: [] as string[]
+    };
     try {
       console.log(`[Outlook] Starting bulk sync for user ${userId}`);
 
       const client = await this.getGraphClient(userId);
       if (!client) {
         console.log('[Outlook] No Graph client available - cannot sync');
-        return;
+        progress.errors.push('No Graph client available');
+        return progress;
       }
 
       // Get or create the Mood Tracker calendar
       const calendarId = await this.getMoodTrackerCalendar(client);
       if (!calendarId) {
         console.log('[Outlook] Could not get/create Mood Tracker calendar');
-        return;
+        progress.errors.push('Could not get/create Mood Tracker calendar');
+        return progress;
       }
 
       // First, ensure all master categories exist
@@ -796,18 +815,18 @@ class OutlookCalendarService {
 
       // Step 2: Delete ALL existing events from Outlook to ensure clean slate
       console.log(`[Outlook] Deleting all existing events to ensure clean slate...`);
-      let deletedCount = 0;
       for (const event of existingOutlookEvents) {
         try {
           await client.api(`/me/calendars/${calendarId}/events/${event.id}`).delete();
-          deletedCount++;
+          progress.deletedEvents++;
         } catch (error: any) {
           if (error.statusCode !== 404) {
             console.error(`[Outlook] Error deleting event ${event.id}:`, error);
+            progress.errors.push(`Failed to delete event ${event.id}`);
           }
         }
       }
-      console.log(`[Outlook] Deleted ${deletedCount} existing events`);
+      console.log(`[Outlook] Deleted ${progress.deletedEvents} existing events`);
 
       // Step 3: Clear all outlookEventId fields in database to force fresh sync
       console.log(`[Outlook] Clearing outlookEventId fields in database...`);
@@ -834,12 +853,17 @@ class OutlookCalendarService {
 
       console.log(`[Outlook] Found ${deadlineTasks.length} deadline tasks to sync`);
 
+      progress.totalTasks = planningTasks.length + deadlineTasks.length;
+
       // Step 6: Sync planning tasks (this will create new events and update outlookEventId)
       console.log(`[Outlook] Syncing ${planningTasks.length} planning tasks...`);
       for (const task of planningTasks) {
         const result = await this.syncPlanningTask(task.id, userId);
-        if (!result) {
+        if (result) {
+          progress.syncedPlanningTasks++;
+        } else {
           console.log(`[Outlook] Warning: Failed to sync planning task ${task.id}`);
+          progress.errors.push(`Failed to sync planning task ${task.id}`);
         }
       }
       console.log(`[Outlook] Finished syncing all planning tasks`);
@@ -848,15 +872,22 @@ class OutlookCalendarService {
       console.log(`[Outlook] Syncing ${deadlineTasks.length} deadline tasks...`);
       for (const task of deadlineTasks) {
         const result = await this.syncDeadlineTask(task.id, userId);
-        if (!result) {
+        if (result) {
+          progress.syncedDeadlineTasks++;
+        } else {
           console.log(`[Outlook] Warning: Failed to sync deadline task ${task.id}`);
+          progress.errors.push(`Failed to sync deadline task ${task.id}`);
         }
       }
       console.log(`[Outlook] Finished syncing all deadline tasks`);
 
-      console.log(`[Outlook] Bulk sync completed for user ${userId}`);
+      progress.success = progress.syncedPlanningTasks + progress.syncedDeadlineTasks === progress.totalTasks;
+      console.log(`[Outlook] Bulk sync completed for user ${userId}`, progress);
+      return progress;
     } catch (error) {
       console.error('[Outlook] Error in bulk sync:', error);
+      progress.errors.push(error instanceof Error ? error.message : 'Unknown error');
+      return progress;
     }
   }
 
