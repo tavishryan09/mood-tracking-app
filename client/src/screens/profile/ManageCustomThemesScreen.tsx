@@ -24,10 +24,12 @@ const ManageCustomThemesScreen = ({ navigation }: any) => {
   } = useCustomColorTheme();
 
   const [palettes, setPalettes] = useState<Record<string, CustomColorPalette>>({});
+  const [sharedPalettes, setSharedPalettes] = useState<Record<string, CustomColorPalette>>({});
   const [activating, setActivating] = useState<boolean>(false);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [defaultThemeId, setDefaultThemeId] = useState<string | null>(null);
   const [settingDefault, setSettingDefault] = useState<boolean>(false);
+  const [sharingTheme, setSharingTheme] = useState<string | null>(null);
 
   // Dialog states
   const [showSuccessDialog, setShowSuccessDialog] = useState<boolean>(false);
@@ -55,15 +57,39 @@ const ManageCustomThemesScreen = ({ navigation }: any) => {
     try {
       if (!user) return;
 
-      const response = await settingsAPI.user.get(CUSTOM_COLOR_PALETTES_KEY);
-      if (response?.data?.value) {
-        const loadedPalettes: Record<string, CustomColorPalette> = response.data.value;
-        setPalettes(loadedPalettes);
+      // Load user's personal palettes
+      try {
+        const response = await settingsAPI.user.get(CUSTOM_COLOR_PALETTES_KEY);
+        if (response?.data?.value) {
+          const loadedPalettes: Record<string, CustomColorPalette> = response.data.value;
+          setPalettes(loadedPalettes);
+        } else {
+          setPalettes({});
+        }
+      } catch (error: any) {
+        if (error?.response?.status !== 404) {
+          console.error('Error loading user palettes:', error);
+        }
+        setPalettes({});
+      }
+
+      // Load shared palettes from app settings (available to all users)
+      try {
+        const sharedResponse = await settingsAPI.app.get('shared_custom_themes');
+        if (sharedResponse?.data?.value) {
+          const loadedSharedPalettes: Record<string, CustomColorPalette> = sharedResponse.data.value;
+          setSharedPalettes(loadedSharedPalettes);
+        } else {
+          setSharedPalettes({});
+        }
+      } catch (error: any) {
+        if (error?.response?.status !== 404) {
+          console.error('Error loading shared palettes:', error);
+        }
+        setSharedPalettes({});
       }
     } catch (error: any) {
-      if (error?.response?.status !== 404) {
-        console.error('Error loading palettes:', error);
-      }
+      console.error('Error in loadPalettes:', error);
     }
   };
 
@@ -146,6 +172,70 @@ const ManageCustomThemesScreen = ({ navigation }: any) => {
     }
   };
 
+  const handleShareWithAllUsers = async (paletteId: string) => {
+    if (user?.role !== 'ADMIN') {
+      setErrorMessage('Only administrators can share themes with all users');
+      setShowErrorDialog(true);
+      return;
+    }
+
+    setSharingTheme(paletteId);
+    try {
+      // Get the palette and mapping from user settings
+      const palette = palettes[paletteId];
+      if (!palette) {
+        throw new Error('Palette not found');
+      }
+
+      // Get element mapping
+      const mappingsResponse = await settingsAPI.user.get('element_color_mapping');
+      if (!mappingsResponse?.data?.value?.[paletteId]) {
+        throw new Error('Element mapping not found for this palette. Please map elements first.');
+      }
+
+      // Load existing shared themes
+      let sharedThemes: Record<string, CustomColorPalette> = {};
+      let sharedMappings: any = {};
+      try {
+        const sharedResponse = await settingsAPI.app.get('shared_custom_themes');
+        if (sharedResponse?.data?.value) {
+          sharedThemes = sharedResponse.data.value;
+        }
+      } catch (error: any) {
+        if (error?.response?.status !== 404) throw error;
+      }
+
+      try {
+        const mappingResponse = await settingsAPI.app.get('shared_element_mappings');
+        if (mappingResponse?.data?.value) {
+          sharedMappings = mappingResponse.data.value;
+        }
+      } catch (error: any) {
+        if (error?.response?.status !== 404) throw error;
+      }
+
+      // Add this theme to shared themes
+      sharedThemes[paletteId] = palette;
+      sharedMappings[paletteId] = mappingsResponse.data.value[paletteId];
+
+      // Save to app settings
+      await settingsAPI.app.set('shared_custom_themes', sharedThemes);
+      await settingsAPI.app.set('shared_element_mappings', sharedMappings);
+
+      // Reload palettes to show the updated shared status
+      await loadPalettes();
+
+      setSuccessMessage(`"${palette.name}" is now shared with all users and will appear in their theme selection.`);
+      setShowSuccessDialog(true);
+    } catch (error: any) {
+      console.error('Error sharing theme:', error);
+      setErrorMessage(error.message || 'Failed to share theme with all users');
+      setShowErrorDialog(true);
+    } finally {
+      setSharingTheme(null);
+    }
+  };
+
   const handleActivateTheme = async (paletteId: string) => {
     setActivating(true);
     try {
@@ -213,7 +303,7 @@ const ManageCustomThemesScreen = ({ navigation }: any) => {
     }
   };
 
-  const renderPaletteCard = (paletteId: string, palette: CustomColorPalette) => {
+  const renderPaletteCard = (paletteId: string, palette: CustomColorPalette, isShared: boolean = false) => {
     const isActive = activeCustomTheme?.paletteId === paletteId && isUsingCustomTheme;
     const isDefault = defaultThemeId === paletteId;
     const primaryColor = palette.colors.find(c => c.isPrimary);
@@ -242,19 +332,26 @@ const ManageCustomThemesScreen = ({ navigation }: any) => {
                   </Chip>
                 )}
                 {isDefault && (
-                  <Chip mode="flat" compact style={{ backgroundColor: currentColors.secondary }}>
+                  <Chip mode="flat" compact style={{ backgroundColor: currentColors.secondary, marginRight: 4 }}>
                     <Text style={{ color: currentColors.white }}>Default</Text>
+                  </Chip>
+                )}
+                {isShared && (
+                  <Chip mode="flat" compact style={{ backgroundColor: '#4CAF50' }}>
+                    <Text style={{ color: currentColors.white }}>Shared</Text>
                   </Chip>
                 )}
               </View>
             </View>
-            <IconButton
-              icon="delete"
-              size={20}
-              onPress={() => confirmDelete(paletteId)}
-              iconColor={currentColors.error}
-              disabled={deleting === paletteId || isDefault}
-            />
+            {!isShared && (
+              <IconButton
+                icon="delete"
+                size={20}
+                onPress={() => confirmDelete(paletteId)}
+                iconColor={currentColors.error}
+                disabled={deleting === paletteId || isDefault}
+              />
+            )}
           </View>
 
           <View style={styles.colorsPreview}>
@@ -303,21 +400,27 @@ const ManageCustomThemesScreen = ({ navigation }: any) => {
                 Deactivate
               </Button>
             )}
-            <Button
-              mode="outlined"
-              onPress={() => navigation.navigate('CustomColorManager', { paletteId })}
-              style={styles.actionButton}
-            >
-              Edit Colors
-            </Button>
-            <Button
-              mode="outlined"
-              onPress={() => navigation.navigate('ElementColorMapper', { paletteId })}
-              style={styles.actionButton}
-            >
-              Map Elements
-            </Button>
-            {user?.role === 'ADMIN' && !isDefault && (
+            {/* Only show edit buttons for user's own themes, not shared ones */}
+            {!isShared && (
+              <>
+                <Button
+                  mode="outlined"
+                  onPress={() => navigation.navigate('CustomColorManager', { paletteId })}
+                  style={styles.actionButton}
+                >
+                  Edit Colors
+                </Button>
+                <Button
+                  mode="outlined"
+                  onPress={() => navigation.navigate('ElementColorMapper', { paletteId })}
+                  style={styles.actionButton}
+                >
+                  Map Elements
+                </Button>
+              </>
+            )}
+            {/* Admin buttons */}
+            {user?.role === 'ADMIN' && !isShared && !isDefault && (
               <Button
                 mode="outlined"
                 onPress={() => handleSetAsDefault(paletteId)}
@@ -339,6 +442,19 @@ const ManageCustomThemesScreen = ({ navigation }: any) => {
                 textColor={currentColors.error}
               >
                 Clear Default
+              </Button>
+            )}
+            {user?.role === 'ADMIN' && !isShared && (
+              <Button
+                mode="outlined"
+                onPress={() => handleShareWithAllUsers(paletteId)}
+                style={[styles.actionButton, { borderColor: '#4CAF50' }]}
+                loading={sharingTheme === paletteId}
+                disabled={sharingTheme === paletteId}
+                textColor="#4CAF50"
+                icon="share-variant"
+              >
+                Share with All Users
               </Button>
             )}
           </View>
@@ -366,7 +482,7 @@ const ManageCustomThemesScreen = ({ navigation }: any) => {
           Activate a custom color theme to apply your personalized colors throughout the app.
         </Text>
 
-        {Object.keys(palettes).length === 0 ? (
+        {Object.keys(palettes).length === 0 && Object.keys(sharedPalettes).length === 0 ? (
           <View style={styles.emptyState}>
             <Text style={[styles.emptyText, { color: currentColors.textSecondary }]}>
               You haven't created any custom color palettes yet.
@@ -382,7 +498,21 @@ const ManageCustomThemesScreen = ({ navigation }: any) => {
           </View>
         ) : (
           <>
-            {Object.entries(palettes).map(([paletteId, palette]) => renderPaletteCard(paletteId, palette))}
+            {/* User's own themes */}
+            {Object.keys(palettes).length > 0 && (
+              <Text style={[styles.sectionTitle, { color: currentColors.text, marginTop: 16 }]}>
+                Your Themes
+              </Text>
+            )}
+            {Object.entries(palettes).map(([paletteId, palette]) => renderPaletteCard(paletteId, palette, false))}
+
+            {/* Shared themes */}
+            {Object.keys(sharedPalettes).length > 0 && (
+              <Text style={[styles.sectionTitle, { color: currentColors.text, marginTop: 24 }]}>
+                Shared Themes
+              </Text>
+            )}
+            {Object.entries(sharedPalettes).map(([paletteId, palette]) => renderPaletteCard(paletteId, palette, true))}
 
             <Button
               mode="outlined"
@@ -479,6 +609,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 30,
     lineHeight: 20,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 12,
   },
   emptyState: {
     alignItems: 'center',

@@ -200,17 +200,20 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
     try {
       if (!user) throw new Error('User not logged in');
 
-      // Try to load from user settings first
-      const [palettesResult, mappingsResult, appPalettesResult, appMappingsResult] = await Promise.allSettled([
+      // Try to load from user settings, app settings (default), and shared themes
+      const [palettesResult, mappingsResult, appPalettesResult, appMappingsResult, sharedPalettesResult, sharedMappingsResult] = await Promise.allSettled([
         settingsAPI.user.get(CUSTOM_COLOR_PALETTES_KEY),
         settingsAPI.user.get(ELEMENT_COLOR_MAPPING_KEY),
         settingsAPI.app.get('custom_color_palettes'),
         settingsAPI.app.get('element_color_mapping'),
+        settingsAPI.app.get('shared_custom_themes'),
+        settingsAPI.app.get('shared_element_mappings'),
       ]);
 
       let palette: CustomColorPalette | null = null;
       let mapping: ElementColorMapping | null = null;
 
+      // Priority: user settings > app settings (default) > shared themes
       // Try user settings first
       if (palettesResult.status === 'fulfilled' && palettesResult.value?.data?.value?.[paletteId]) {
         palette = palettesResult.value.data.value[paletteId];
@@ -219,6 +222,11 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
       else if (appPalettesResult.status === 'fulfilled' && appPalettesResult.value?.data?.value?.[paletteId]) {
         palette = appPalettesResult.value.data.value[paletteId];
         console.log('[CustomColorTheme] Loaded palette from app settings:', paletteId);
+      }
+      // Fall back to shared themes if not found in app settings
+      else if (sharedPalettesResult.status === 'fulfilled' && sharedPalettesResult.value?.data?.value?.[paletteId]) {
+        palette = sharedPalettesResult.value.data.value[paletteId];
+        console.log('[CustomColorTheme] Loaded palette from shared themes:', paletteId);
       }
 
       // Try user settings first for mapping
@@ -229,6 +237,11 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
       else if (appMappingsResult.status === 'fulfilled' && appMappingsResult.value?.data?.value?.[paletteId]) {
         mapping = appMappingsResult.value.data.value[paletteId];
         console.log('[CustomColorTheme] Loaded mapping from app settings:', paletteId);
+      }
+      // Fall back to shared element mappings if not found in app settings
+      else if (sharedMappingsResult.status === 'fulfilled' && sharedMappingsResult.value?.data?.value?.[paletteId]) {
+        mapping = sharedMappingsResult.value.data.value[paletteId];
+        console.log('[CustomColorTheme] Loaded mapping from shared themes:', paletteId);
       }
 
       if (!palette || !mapping) {
