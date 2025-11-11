@@ -94,7 +94,14 @@ const ManageCustomThemesScreen = ({ navigation }: any) => {
 
     setSettingDefault(true);
     try {
+      // Save the theme ID as default
       await settingsAPI.app.set('default_custom_theme', paletteId);
+
+      // Also save the custom palette data to app settings so it's accessible before login
+      if (palettes[paletteId]) {
+        await settingsAPI.app.set('custom_color_palettes', { [paletteId]: palettes[paletteId] });
+      }
+
       setDefaultThemeId(paletteId);
       setSuccessMessage('This theme is now set as the default for all users who haven\'t selected their own theme');
       setShowSuccessDialog(true);

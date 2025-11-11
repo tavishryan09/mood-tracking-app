@@ -31,10 +31,28 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   // Load app-level default theme immediately on mount (no auth required)
   const loadAppDefaultTheme = useCallback(async () => {
     try {
-      const response = await settingsAPI.app.get('default_custom_theme');
-      if (response?.data?.value) {
-        console.log('[ThemeContext] Loaded app default theme:', response.data.value);
-        setSelectedPaletteState(response.data.value);
+      // First, get the default theme ID
+      const defaultThemeResponse = await settingsAPI.app.get('default_custom_theme');
+      if (defaultThemeResponse?.data?.value) {
+        const themeId = defaultThemeResponse.data.value;
+        console.log('[ThemeContext] Loaded app default theme ID:', themeId);
+
+        // Check if this is a custom palette (not in predefined palettes)
+        if (!colorPalettes[themeId as ColorPaletteName]) {
+          // It's a custom palette - we need to load it from the database
+          // Custom palettes are stored in user settings, so we need a user-agnostic way to load them
+          // For now, try to load from app settings first
+          try {
+            const customPalettesResponse = await settingsAPI.app.get('custom_color_palettes');
+            if (customPalettesResponse?.data?.value?.[themeId]) {
+              setCustomPalettes({ [themeId]: customPalettesResponse.data.value[themeId] });
+            }
+          } catch (err) {
+            console.log('[ThemeContext] Custom palette not in app settings, will load when user logs in');
+          }
+        }
+
+        setSelectedPaletteState(themeId);
       }
     } catch (error: any) {
       if (error?.response?.status !== 404) {
