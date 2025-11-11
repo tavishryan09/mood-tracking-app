@@ -182,84 +182,82 @@ const ProfileScreen = ({ navigation }: any) => {
 
   const handleSyncOutlook = async () => {
     try {
-      console.log('[ProfileScreen] Starting Outlook sync...');
+      console.log('[ProfileScreen] Starting chunked Outlook sync...');
       setOutlookSyncing(true);
-      setSyncProgress(null);
+      setSyncProgress({
+        totalTasks: 0,
+        syncedPlanningTasks: 0,
+        syncedDeadlineTasks: 0,
+        deletedEvents: 0
+      });
 
-      // Start the sync (returns immediately with jobId)
-      const response = await outlookAPI.sync();
-      console.log('[ProfileScreen] Sync started, jobId:', response.data.jobId);
+      // Create a job to track progress
+      const jobResponse = await outlookAPI.sync();
+      const { jobId } = jobResponse.data;
+      console.log('[ProfileScreen] Job created:', jobId);
 
-      const { jobId } = response.data;
+      // Phase 1: Sync planning tasks
+      console.log('[ProfileScreen] Phase 1: Syncing planning tasks...');
+      const planningResult = await outlookAPI.syncPlanning(jobId);
+      console.log('[ProfileScreen] Planning result:', planningResult.data);
 
-      // Poll for status every 2 seconds
-      const pollInterval = setInterval(async () => {
-        try {
-          const statusResponse = await outlookAPI.getSyncStatus(jobId);
-          const job = statusResponse.data;
+      // Update progress
+      const statusAfterPlanning = await outlookAPI.getSyncStatus(jobId);
+      if (statusAfterPlanning.data.progress) {
+        setSyncProgress(statusAfterPlanning.data.progress);
+      }
 
-          console.log('[ProfileScreen] Sync status:', job.status, job.progress);
+      // Phase 2: Sync deadline tasks
+      console.log('[ProfileScreen] Phase 2: Syncing deadline tasks...');
+      const deadlineResult = await outlookAPI.syncDeadline(jobId);
+      console.log('[ProfileScreen] Deadline result:', deadlineResult.data);
 
-          // Update progress in real-time
-          if (job.progress) {
-            setSyncProgress(job.progress);
-          }
+      // Update progress
+      const statusAfterDeadline = await outlookAPI.getSyncStatus(jobId);
+      if (statusAfterDeadline.data.progress) {
+        setSyncProgress(statusAfterDeadline.data.progress);
+      }
 
-          if (job.status === 'completed' || job.status === 'failed') {
-            clearInterval(pollInterval);
-            setOutlookSyncing(false);
-            setSyncProgress(null);
+      // Phase 3: Cleanup orphaned events
+      console.log('[ProfileScreen] Phase 3: Cleaning up orphaned events...');
+      const cleanupResult = await outlookAPI.syncCleanup(jobId);
+      console.log('[ProfileScreen] Cleanup result:', cleanupResult.data);
 
-            const { progress } = job;
-            let message = job.status === 'completed'
-              ? 'Sync completed successfully!'
-              : 'Sync completed with errors';
+      // Get final status
+      const finalStatus = await outlookAPI.getSyncStatus(jobId);
+      const { progress } = finalStatus.data;
 
-            if (progress) {
-              message += `\n\n📊 Sync Summary:`;
-              message += `\n• Total Tasks: ${progress.totalTasks}`;
-              message += `\n• Planning Tasks Synced: ${progress.syncedPlanningTasks}`;
-              message += `\n• Deadline Tasks Synced: ${progress.syncedDeadlineTasks}`;
-              message += `\n• Old Events Deleted: ${progress.deletedEvents}`;
-
-              if (progress.errors && progress.errors.length > 0) {
-                message += `\n\n⚠️ Errors (${progress.errors.length}):`;
-                progress.errors.slice(0, 3).forEach((err: string) => {
-                  message += `\n• ${err}`;
-                });
-                if (progress.errors.length > 3) {
-                  message += `\n• ... and ${progress.errors.length - 3} more`;
-                }
-              }
-            }
-
-            setSuccessMessage(message);
-            setShowSuccessDialog(true);
-          }
-        } catch (pollError: any) {
-          console.error('[ProfileScreen] Error polling sync status:', pollError);
-          clearInterval(pollInterval);
-          setOutlookSyncing(false);
-          setSyncProgress(null);
-          setErrorMessage('Lost connection to sync job. Please check your Outlook calendar.');
-          setShowErrorDialog(true);
-        }
-      }, 2000); // Poll every 2 seconds
-
-      // Timeout after 5 minutes
-      setTimeout(() => {
-        clearInterval(pollInterval);
-        setOutlookSyncing(false);
-        setSyncProgress(null);
-        setErrorMessage('Sync is taking longer than expected. Please check your Outlook calendar.');
-        setShowErrorDialog(true);
-      }, 5 * 60 * 1000);
-
-    } catch (error: any) {
-      console.error('[ProfileScreen] Error starting sync:', error);
       setOutlookSyncing(false);
       setSyncProgress(null);
-      setErrorMessage(error.response?.data?.error || 'Failed to start sync');
+
+      // Build success message
+      let message = 'Sync completed successfully!';
+      if (progress) {
+        message += `\n\n📊 Sync Summary:`;
+        message += `\n• Total Tasks: ${progress.totalTasks}`;
+        message += `\n• Planning Tasks Synced: ${progress.syncedPlanningTasks}`;
+        message += `\n• Deadline Tasks Synced: ${progress.syncedDeadlineTasks}`;
+        message += `\n• Old Events Deleted: ${progress.deletedEvents}`;
+
+        if (progress.errors && progress.errors.length > 0) {
+          message += `\n\n⚠️ Errors (${progress.errors.length}):`;
+          progress.errors.slice(0, 3).forEach((err: string) => {
+            message += `\n• ${err}`;
+          });
+          if (progress.errors.length > 3) {
+            message += `\n• ... and ${progress.errors.length - 3} more`;
+          }
+        }
+      }
+
+      setSuccessMessage(message);
+      setShowSuccessDialog(true);
+
+    } catch (error: any) {
+      console.error('[ProfileScreen] Error during sync:', error);
+      setOutlookSyncing(false);
+      setSyncProgress(null);
+      setErrorMessage(error.response?.data?.error || 'Failed to complete sync');
       setShowErrorDialog(true);
     }
   };

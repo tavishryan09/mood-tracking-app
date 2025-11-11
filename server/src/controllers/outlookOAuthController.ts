@@ -266,3 +266,93 @@ export const getSyncStatus = async (req: AuthRequest, res: Response) => {
     res.status(500).json({ error: 'Failed to get sync status' });
   }
 };
+
+/**
+ * Sync only planning tasks
+ */
+export const syncPlanningTasks = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { jobId } = req.body;
+    if (!jobId) {
+      return res.status(400).json({ error: 'Job ID is required' });
+    }
+
+    // Verify job belongs to user
+    const job = await syncJobTracker.getJob(jobId);
+    if (!job || job.userId !== userId) {
+      return res.status(403).json({ error: 'Invalid job ID' });
+    }
+
+    // Run sync
+    const result = await outlookCalendarService.syncPlanningTasks(userId, jobId);
+    res.json(result);
+  } catch (error) {
+    console.error('[Outlook] Error syncing planning tasks:', error);
+    res.status(500).json({ error: 'Failed to sync planning tasks' });
+  }
+};
+
+/**
+ * Sync only deadline tasks
+ */
+export const syncDeadlineTasks = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { jobId } = req.body;
+    if (!jobId) {
+      return res.status(400).json({ error: 'Job ID is required' });
+    }
+
+    // Verify job belongs to user
+    const job = await syncJobTracker.getJob(jobId);
+    if (!job || job.userId !== userId) {
+      return res.status(403).json({ error: 'Invalid job ID' });
+    }
+
+    // Run sync
+    const result = await outlookCalendarService.syncDeadlineTasks(userId, jobId);
+    res.json(result);
+  } catch (error) {
+    console.error('[Outlook] Error syncing deadline tasks:', error);
+    res.status(500).json({ error: 'Failed to sync deadline tasks' });
+  }
+};
+
+/**
+ * Clean up orphaned Outlook events
+ */
+export const cleanupOrphanedEvents = async (req: AuthRequest, res: Response) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { jobId } = req.body;
+    if (!jobId) {
+      return res.status(400).json({ error: 'Job ID is required' });
+    }
+
+    // Verify job belongs to user
+    const job = await syncJobTracker.getJob(jobId);
+    if (!job || job.userId !== userId) {
+      return res.status(403).json({ error: 'Invalid job ID' });
+    }
+
+    // Run cleanup
+    const result = await outlookCalendarService.cleanupOrphanedEvents(userId, jobId);
+    res.json(result);
+  } catch (error) {
+    console.error('[Outlook] Error cleaning up orphaned events:', error);
+    res.status(500).json({ error: 'Failed to cleanup orphaned events' });
+  }
+};

@@ -6,7 +6,10 @@ import {
   disconnectOutlook,
   getOutlookStatus,
   syncAllTasks,
-  getSyncStatus
+  getSyncStatus,
+  syncPlanningTasks,
+  syncDeadlineTasks,
+  cleanupOrphanedEvents
 } from '../controllers/outlookOAuthController';
 
 const router = express.Router();
@@ -28,5 +31,10 @@ router.post('/sync', authenticate, syncAllTasks);
 
 // Get sync job status (for polling)
 router.get('/sync/:jobId', authenticate, getSyncStatus);
+
+// Sync individual phases (for chunked sync to avoid serverless timeouts)
+router.post('/sync/planning', authenticate, syncPlanningTasks);
+router.post('/sync/deadline', authenticate, syncDeadlineTasks);
+router.post('/sync/cleanup', authenticate, cleanupOrphanedEvents);
 
 export default router;

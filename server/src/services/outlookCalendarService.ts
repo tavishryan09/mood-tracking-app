@@ -770,6 +770,254 @@ class OutlookCalendarService {
    * @param jobId Optional job ID for progress tracking
    * @returns Sync progress information
    */
+  /**
+   * Sync only planning tasks to Outlook
+   */
+  async syncPlanningTasks(userId: string, jobId?: string): Promise<{
+    success: boolean;
+    totalTasks: number;
+    syncedTasks: number;
+    errors: string[];
+  }> {
+    const result = {
+      success: false,
+      totalTasks: 0,
+      syncedTasks: 0,
+      errors: [] as string[]
+    };
+
+    try {
+      console.log(`[Outlook] Starting planning tasks sync for user ${userId}`);
+
+      const client = await this.getGraphClient(userId);
+      if (!client) {
+        result.errors.push('No Graph client available');
+        return result;
+      }
+
+      const calendarId = await this.getMoodTrackerCalendar(client);
+      if (!calendarId) {
+        result.errors.push('Could not get/create Mood Tracker calendar');
+        return result;
+      }
+
+      await this.ensureMasterCategories(userId);
+
+      // Get planning tasks from database
+      const planningTasks = await prisma.planningTask.findMany({ where: { userId } });
+      console.log(`[Outlook] Found ${planningTasks.length} planning tasks`);
+      result.totalTasks = planningTasks.length;
+
+      // Update job progress
+      if (jobId) {
+        await syncJobTracker.updateProgress(jobId, {
+          totalTasks: result.totalTasks,
+          syncedPlanningTasks: 0
+        });
+      }
+
+      // Sync in batches
+      const BATCH_SIZE = 10;
+      for (let i = 0; i < planningTasks.length; i += BATCH_SIZE) {
+        const batch = planningTasks.slice(i, i + BATCH_SIZE);
+        const results = await Promise.all(
+          batch.map(task => this.syncPlanningTask(task.id, userId))
+        );
+        result.syncedTasks += results.filter(r => r).length;
+
+        // Report progress
+        if (jobId) {
+          await syncJobTracker.updateProgress(jobId, {
+            syncedPlanningTasks: result.syncedTasks
+          });
+        }
+      }
+
+      result.success = result.syncedTasks === result.totalTasks;
+      console.log(`[Outlook] Planning tasks sync completed: ${result.syncedTasks}/${result.totalTasks}`);
+
+      return result;
+    } catch (error) {
+      console.error('[Outlook] Error syncing planning tasks:', error);
+      result.errors.push(error instanceof Error ? error.message : 'Unknown error');
+      return result;
+    }
+  }
+
+  /**
+   * Sync only deadline tasks to Outlook
+   */
+  async syncDeadlineTasks(userId: string, jobId?: string): Promise<{
+    success: boolean;
+    totalTasks: number;
+    syncedTasks: number;
+    errors: string[];
+  }> {
+    const result = {
+      success: false,
+      totalTasks: 0,
+      syncedTasks: 0,
+      errors: [] as string[]
+    };
+
+    try {
+      console.log(`[Outlook] Starting deadline tasks sync for user ${userId}`);
+
+      const client = await this.getGraphClient(userId);
+      if (!client) {
+        result.errors.push('No Graph client available');
+        return result;
+      }
+
+      const calendarId = await this.getMoodTrackerCalendar(client);
+      if (!calendarId) {
+        result.errors.push('Could not get/create Mood Tracker calendar');
+        return result;
+      }
+
+      // Get all deadline tasks (team-wide)
+      const deadlineTasks = await prisma.deadlineTask.findMany({});
+      console.log(`[Outlook] Found ${deadlineTasks.length} deadline tasks`);
+      result.totalTasks = deadlineTasks.length;
+
+      // Update job progress
+      if (jobId) {
+        await syncJobTracker.updateProgress(jobId, {
+          syncedDeadlineTasks: 0
+        });
+      }
+
+      // Sync in batches
+      const BATCH_SIZE = 10;
+      for (let i = 0; i < deadlineTasks.length; i += BATCH_SIZE) {
+        const batch = deadlineTasks.slice(i, i + BATCH_SIZE);
+        const results = await Promise.all(
+          batch.map(task => this.syncDeadlineTask(task.id, userId))
+        );
+        result.syncedTasks += results.filter(r => r).length;
+
+        // Report progress
+        if (jobId) {
+          await syncJobTracker.updateProgress(jobId, {
+            syncedDeadlineTasks: result.syncedTasks
+          });
+        }
+      }
+
+      result.success = result.syncedTasks === result.totalTasks;
+      console.log(`[Outlook] Deadline tasks sync completed: ${result.syncedTasks}/${result.totalTasks}`);
+
+      return result;
+    } catch (error) {
+      console.error('[Outlook] Error syncing deadline tasks:', error);
+      result.errors.push(error instanceof Error ? error.message : 'Unknown error');
+      return result;
+    }
+  }
+
+  /**
+   * Clean up orphaned Outlook events (events that no longer exist in database)
+   */
+  async cleanupOrphanedEvents(userId: string, jobId?: string): Promise<{
+    success: boolean;
+    deletedEvents: number;
+    errors: string[];
+  }> {
+    const result = {
+      success: false,
+      deletedEvents: 0,
+      errors: [] as string[]
+    };
+
+    try {
+      console.log(`[Outlook] Starting orphaned events cleanup for user ${userId}`);
+
+      const client = await this.getGraphClient(userId);
+      if (!client) {
+        result.errors.push('No Graph client available');
+        return result;
+      }
+
+      const calendarId = await this.getMoodTrackerCalendar(client);
+      if (!calendarId) {
+        result.errors.push('Could not get/create Mood Tracker calendar');
+        return result;
+      }
+
+      // Get all Outlook events
+      const events = await client
+        .api(`/me/calendars/${calendarId}/events`)
+        .select('id,subject')
+        .top(999)
+        .get();
+
+      const existingEvents = events.value || [];
+      console.log(`[Outlook] Found ${existingEvents.length} existing Outlook events`);
+
+      // Get valid event IDs from database
+      const [planningTasks, deadlineTasks] = await Promise.all([
+        prisma.planningTask.findMany({
+          where: { userId },
+          select: { outlookEventId: true }
+        }),
+        prisma.deadlineTask.findMany({
+          select: { outlookEventId: true }
+        })
+      ]);
+
+      const validEventIds = new Set<string>();
+      [...planningTasks, ...deadlineTasks].forEach(task => {
+        if (task.outlookEventId) {
+          validEventIds.add(task.outlookEventId);
+        }
+      });
+
+      console.log(`[Outlook] Valid event IDs: ${validEventIds.size}`);
+
+      // Find and delete orphans
+      const orphanedEvents = existingEvents.filter((e: any) => !validEventIds.has(e.id));
+      console.log(`[Outlook] Found ${orphanedEvents.length} orphaned events to delete`);
+
+      if (orphanedEvents.length > 0) {
+        await Promise.all(
+          orphanedEvents.map((event: any) =>
+            client.api(`/me/calendars/${calendarId}/events/${event.id}`).delete()
+              .then(() => {
+                result.deletedEvents++;
+                return true;
+              })
+              .catch((error: any) => {
+                if (error.statusCode !== 404) {
+                  console.error(`[Outlook] Error deleting orphan ${event.id}:`, error);
+                }
+                return false;
+              })
+          )
+        );
+
+        // Report progress
+        if (jobId) {
+          await syncJobTracker.updateProgress(jobId, {
+            deletedEvents: result.deletedEvents
+          });
+        }
+      }
+
+      result.success = true;
+      console.log(`[Outlook] Cleanup completed: deleted ${result.deletedEvents} orphaned events`);
+
+      return result;
+    } catch (error) {
+      console.error('[Outlook] Error cleaning up orphaned events:', error);
+      result.errors.push(error instanceof Error ? error.message : 'Unknown error');
+      return result;
+    }
+  }
+
+  /**
+   * Legacy method - kept for backwards compatibility
+   * Now orchestrates the three separate sync operations
+   */
   async syncAllUserTasks(userId: string, jobId?: string): Promise<{
     success: boolean;
     totalTasks: number;
@@ -786,138 +1034,26 @@ class OutlookCalendarService {
       deletedEvents: 0,
       errors: [] as string[]
     };
+
     try {
-      console.log(`[Outlook] Starting incremental sync for user ${userId}`);
+      // Phase 1: Sync planning tasks
+      const planningResult = await this.syncPlanningTasks(userId, jobId);
+      progress.totalTasks += planningResult.totalTasks;
+      progress.syncedPlanningTasks = planningResult.syncedTasks;
+      progress.errors.push(...planningResult.errors);
 
-      const client = await this.getGraphClient(userId);
-      if (!client) {
-        console.log('[Outlook] No Graph client available - cannot sync');
-        progress.errors.push('No Graph client available');
-        return progress;
-      }
+      // Phase 2: Sync deadline tasks
+      const deadlineResult = await this.syncDeadlineTasks(userId, jobId);
+      progress.totalTasks += deadlineResult.totalTasks;
+      progress.syncedDeadlineTasks = deadlineResult.syncedTasks;
+      progress.errors.push(...deadlineResult.errors);
 
-      // Get or create the Mood Tracker calendar
-      const calendarId = await this.getMoodTrackerCalendar(client);
-      if (!calendarId) {
-        console.log('[Outlook] Could not get/create Mood Tracker calendar');
-        progress.errors.push('Could not get/create Mood Tracker calendar');
-        return progress;
-      }
+      // Phase 3: Cleanup orphaned events
+      const cleanupResult = await this.cleanupOrphanedEvents(userId, jobId);
+      progress.deletedEvents = cleanupResult.deletedEvents;
+      progress.errors.push(...cleanupResult.errors);
 
-      // First, ensure all master categories exist
-      await this.ensureMasterCategories(userId);
-
-      // Step 1: Get all tasks from database
-      console.log(`[Outlook] Fetching tasks from database...`);
-      const [planningTasks, deadlineTasks] = await Promise.all([
-        prisma.planningTask.findMany({ where: { userId } }),
-        prisma.deadlineTask.findMany({})
-      ]);
-
-      console.log(`[Outlook] Found ${planningTasks.length} planning tasks, ${deadlineTasks.length} deadline tasks`);
-      progress.totalTasks = planningTasks.length + deadlineTasks.length;
-
-      // Report initial progress
-      if (jobId) {
-        await syncJobTracker.updateProgress(jobId, progress);
-      }
-
-      // Step 2: Sync all tasks in parallel batches (optimized for speed)
-      console.log(`[Outlook] Syncing tasks in parallel batches...`);
-      const BATCH_SIZE = 10;
-
-      // Sync planning tasks in batches
-      for (let i = 0; i < planningTasks.length; i += BATCH_SIZE) {
-        const batch = planningTasks.slice(i, i + BATCH_SIZE);
-        const results = await Promise.all(
-          batch.map(task => this.syncPlanningTask(task.id, userId))
-        );
-        progress.syncedPlanningTasks += results.filter(r => r).length;
-        const failed = results.filter(r => !r).length;
-        if (failed > 0) {
-          progress.errors.push(`Failed to sync ${failed} planning tasks in batch`);
-        }
-
-        // Report progress after each batch
-        if (jobId) {
-          await syncJobTracker.updateProgress(jobId, progress);
-        }
-      }
-
-      // Sync deadline tasks in batches
-      for (let i = 0; i < deadlineTasks.length; i += BATCH_SIZE) {
-        const batch = deadlineTasks.slice(i, i + BATCH_SIZE);
-        const results = await Promise.all(
-          batch.map(task => this.syncDeadlineTask(task.id, userId))
-        );
-        progress.syncedDeadlineTasks += results.filter(r => r).length;
-        const failed = results.filter(r => !r).length;
-        if (failed > 0) {
-          progress.errors.push(`Failed to sync ${failed} deadline tasks in batch`);
-        }
-
-        // Report progress after each batch
-        if (jobId) {
-          await syncJobTracker.updateProgress(jobId, progress);
-        }
-      }
-
-      // Step 3: Get all existing events from Outlook and find orphans
-      console.log(`[Outlook] Fetching Outlook events to find orphans...`);
-      const events = await client
-        .api(`/me/calendars/${calendarId}/events`)
-        .select('id,subject')
-        .top(999)
-        .get();
-
-      const existingEvents = events.value || [];
-      console.log(`[Outlook] Found ${existingEvents.length} existing Outlook events`);
-
-      // Step 4: Build set of valid event IDs from database
-      const [updatedPlanningTasks, updatedDeadlineTasks] = await Promise.all([
-        prisma.planningTask.findMany({
-          where: { userId },
-          select: { outlookEventId: true }
-        }),
-        prisma.deadlineTask.findMany({
-          select: { outlookEventId: true }
-        })
-      ]);
-
-      const validEventIds = new Set<string>();
-      [...updatedPlanningTasks, ...updatedDeadlineTasks].forEach(task => {
-        if (task.outlookEventId) {
-          validEventIds.add(task.outlookEventId);
-        }
-      });
-
-      console.log(`[Outlook] Valid event IDs: ${validEventIds.size}`);
-
-      // Step 5: Delete orphaned events in parallel
-      const orphanedEvents = existingEvents.filter((e: any) => !validEventIds.has(e.id));
-      console.log(`[Outlook] Found ${orphanedEvents.length} orphaned events to delete`);
-
-      if (orphanedEvents.length > 0) {
-        const deleteResults = await Promise.all(
-          orphanedEvents.map((event: any) =>
-            client.api(`/me/calendars/${calendarId}/events/${event.id}`).delete()
-              .then(() => {
-                progress.deletedEvents++;
-                return true;
-              })
-              .catch((error: any) => {
-                if (error.statusCode !== 404) {
-                  console.error(`[Outlook] Error deleting orphan ${event.id}:`, error);
-                }
-                return false;
-              })
-          )
-        );
-        console.log(`[Outlook] Deleted ${progress.deletedEvents} orphaned events`);
-      }
-
-      progress.success = progress.syncedPlanningTasks + progress.syncedDeadlineTasks === progress.totalTasks;
-      console.log(`[Outlook] Incremental sync completed:`, progress);
+      progress.success = planningResult.success && deadlineResult.success && cleanupResult.success;
 
       // Mark job as completed
       if (jobId) {
@@ -926,10 +1062,9 @@ class OutlookCalendarService {
 
       return progress;
     } catch (error) {
-      console.error('[Outlook] Error in incremental sync:', error);
+      console.error('[Outlook] Error in sync orchestration:', error);
       progress.errors.push(error instanceof Error ? error.message : 'Unknown error');
 
-      // Mark job as failed
       if (jobId) {
         await syncJobTracker.failJob(jobId, error instanceof Error ? error.message : 'Unknown error');
       }
