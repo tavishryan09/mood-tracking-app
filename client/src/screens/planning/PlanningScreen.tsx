@@ -833,17 +833,12 @@ const PlanningScreen = () => {
     console.log('[DRAG TASK] Dropping task:', { sourceBlockKey, targetBlockKey, span });
 
     try {
-      // Delete the old task
-      await planningTasksAPI.delete(draggedTask.id);
-
-      // Create new task at target location
-      const response = await planningTasksAPI.create({
+      // Update the task to move it to the new location
+      // This preserves all properties including status events and ensures proper Outlook sync
+      const response = await planningTasksAPI.update(draggedTask.id, {
         userId: targetUserId,
-        projectId: draggedTask.projectId,
         date: targetDate,
         blockIndex: targetBlockIndex,
-        task: draggedTask.task,
-        span: draggedTask.span,
       });
 
       // Update state
@@ -851,13 +846,13 @@ const PlanningScreen = () => {
         const newAssignments = { ...prev };
         // Remove from old location
         delete newAssignments[sourceBlockKey];
-        // Add to new location
+        // Add to new location with updated data from response
         newAssignments[targetBlockKey] = {
           id: response.data.id,
-          projectId: draggedTask.projectId,
-          projectName: draggedTask.projectName,
-          task: draggedTask.task,
-          span: draggedTask.span,
+          projectId: response.data.project?.id || draggedTask.projectId,
+          projectName: response.data.project?.name || draggedTask.projectName,
+          task: response.data.task || draggedTask.task,
+          span: response.data.span || draggedTask.span,
         };
         return newAssignments;
       });
