@@ -120,7 +120,14 @@ export const handleOutlookCallback = async (req: AuthRequest, res: Response) => 
     });
 
     // Redirect back to the app
-    const appUrl = process.env.CLIENT_URL || 'http://localhost:8081';
+    let appUrl = process.env.CLIENT_URL?.trim();
+
+    if (!appUrl && process.env.VERCEL_ENV === 'production') {
+      appUrl = 'https://moodtracker-tavish-ryans-projects.vercel.app';
+    } else if (!appUrl) {
+      appUrl = 'http://localhost:8081';
+    }
+
     res.redirect(`${appUrl}/?outlook=connected`);
   } catch (error) {
     console.error('Error handling Outlook callback:', error);
