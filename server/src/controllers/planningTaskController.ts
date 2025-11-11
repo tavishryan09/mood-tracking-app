@@ -2,7 +2,7 @@ import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import prisma from '../config/database';
 import { validationResult } from 'express-validator';
-// import { outlookCalendarService } from '../services/outlookCalendarService'; // Temporarily disabled
+import { outlookCalendarService } from '../services/outlookCalendarService';
 
 export const getAllPlanningTasks = async (req: AuthRequest, res: Response) => {
   try {

@@ -1,7 +1,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import prisma from '../config/database';
-// import { outlookCalendarService } from '../services/outlookCalendarService'; // Temporarily disabled
+import { outlookCalendarService } from '../services/outlookCalendarService';
 
 // Get deadline tasks for a date range
 export const getDeadlineTasks = async (req: AuthRequest, res: Response) => {

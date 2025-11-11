@@ -17,7 +17,7 @@ import userRoutes from './routes/userRoutes';
 import planningTaskRoutes from './routes/planningTaskRoutes';
 import settingsRoutes from './routes/settingsRoutes';
 import deadlineTaskRoutes from './routes/deadlineTaskRoutes';
-// import outlookOAuthRoutes from './routes/outlookOAuth'; // Temporarily disabled due to Prisma type issues
+import outlookOAuthRoutes from './routes/outlookOAuth';
 
 // Load environment variables
 dotenv.config();
@@ -157,7 +157,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/planning-tasks', planningTaskRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/deadline-tasks', deadlineTaskRoutes);
-// app.use('/api/outlook', outlookOAuthRoutes); // Temporarily disabled due to Prisma type issues
+app.use('/api/outlook', outlookOAuthRoutes);
 
 // 404 handler
 app.use((req: Request, res: Response) => {
