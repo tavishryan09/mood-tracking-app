@@ -99,6 +99,10 @@ const PlanningScreen = () => {
   const [clickTimer, setClickTimer] = useState<NodeJS.Timeout | null>(null);
   const [clickedBlock, setClickedBlock] = useState<string | null>(null);
 
+  // Double-click detection for deadline tasks
+  const [deadlineClickTimer, setDeadlineClickTimer] = useState<NodeJS.Timeout | null>(null);
+  const [clickedDeadlineSlot, setClickedDeadlineSlot] = useState<string | null>(null);
+
   // Hover state
   const [hoveredBlock, setHoveredBlock] = useState<string | null>(null);
   const [draggingEdge, setDraggingEdge] = useState<{
@@ -212,6 +216,10 @@ const PlanningScreen = () => {
     span: number;
   } | null>(null);
   const [dragOverCell, setDragOverCell] = useState<string | null>(null);
+
+  // Drag and drop state for deadline tasks
+  const [draggedDeadlineTask, setDraggedDeadlineTask] = useState<DeadlineTask | null>(null);
+  const [dragOverDeadlineCell, setDragOverDeadlineCell] = useState<string | null>(null);
 
   // Deadline tasks state
   const [deadlineTasks, setDeadlineTasks] = useState<DeadlineTask[]>([]);
@@ -898,6 +906,82 @@ const PlanningScreen = () => {
   const handleTaskDragEnd = () => {
     setDraggedTask(null);
     setDragOverCell(null);
+  };
+
+  // Handle deadline task drag start
+  const handleDeadlineTaskDragStart = (task: DeadlineTask) => {
+    setDraggedDeadlineTask(task);
+  };
+
+  // Handle deadline cell drag over
+  const handleDeadlineCellDragOver = (e: React.DragEvent, date: Date, slotIndex: number) => {
+    e.preventDefault();
+    const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const cellKey = `${dateString}-${slotIndex}`;
+    setDragOverDeadlineCell(cellKey);
+  };
+
+  // Handle deadline task drop
+  const handleDeadlineTaskDrop = async (e: React.DragEvent, targetDate: Date, targetSlotIndex: number) => {
+    e.preventDefault();
+
+    if (!draggedDeadlineTask) {
+      return;
+    }
+
+    const targetDateString = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}-${String(targetDate.getDate()).padStart(2, '0')}`;
+    const sourceDateObj = new Date(draggedDeadlineTask.date);
+    const sourceDateString = `${sourceDateObj.getUTCFullYear()}-${String(sourceDateObj.getUTCMonth() + 1).padStart(2, '0')}-${String(sourceDateObj.getUTCDate()).padStart(2, '0')}`;
+
+    // Can't drop on the same slot
+    if (targetDateString === sourceDateString && targetSlotIndex === draggedDeadlineTask.slotIndex) {
+      setDraggedDeadlineTask(null);
+      setDragOverDeadlineCell(null);
+      return;
+    }
+
+    // Check if target slot is already occupied
+    const existingTask = deadlineTasks.find((task) => {
+      const taskDate = new Date(task.date);
+      const taskDateString = `${taskDate.getUTCFullYear()}-${String(taskDate.getUTCMonth() + 1).padStart(2, '0')}-${String(taskDate.getUTCDate()).padStart(2, '0')}`;
+      return taskDateString === targetDateString && task.slotIndex === targetSlotIndex;
+    });
+
+    if (existingTask) {
+      setErrorMessage('Target slot is already occupied');
+      setShowErrorDialog(true);
+      setDraggedDeadlineTask(null);
+      setDragOverDeadlineCell(null);
+      return;
+    }
+
+    try {
+      // Update the deadline task
+      const response = await deadlineTasksAPI.update(draggedDeadlineTask.id, {
+        date: targetDate.toISOString(),
+        slotIndex: targetSlotIndex,
+      });
+
+      // Update state
+      setDeadlineTasks(deadlineTasks.map((task) =>
+        task.id === draggedDeadlineTask.id ? response.data : task
+      ));
+
+      console.log('[DRAG DEADLINE] Deadline task moved successfully');
+    } catch (error) {
+      console.error('[DRAG DEADLINE] Error moving deadline task:', error);
+      setErrorMessage('Failed to move deadline task');
+      setShowErrorDialog(true);
+    }
+
+    setDraggedDeadlineTask(null);
+    setDragOverDeadlineCell(null);
+  };
+
+  // Handle deadline task drag end
+  const handleDeadlineTaskDragEnd = () => {
+    setDraggedDeadlineTask(null);
+    setDragOverDeadlineCell(null);
   };
 
   // Handle block click (single or double)
@@ -1821,24 +1905,47 @@ const PlanningScreen = () => {
 
   // Deadline task handlers
   const handleDeadlineSlotClick = (date: Date, slotIndex: number) => {
+    const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const slotKey = `${dateString}-${slotIndex}`;
+
     // Check if there's an existing task in this slot
     const existingTask = deadlineTasks.find(
       (task) => {
         const taskDate = new Date(task.date);
-        const taskDateString = `${taskDate.getFullYear()}-${String(taskDate.getMonth() + 1).padStart(2, '0')}-${String(taskDate.getDate()).padStart(2, '0')}`;
-        const clickedDateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-        return taskDateString === clickedDateString && task.slotIndex === slotIndex;
+        const taskDateString = `${taskDate.getUTCFullYear()}-${String(taskDate.getUTCMonth() + 1).padStart(2, '0')}-${String(taskDate.getUTCDate()).padStart(2, '0')}`;
+        return taskDateString === dateString && task.slotIndex === slotIndex;
       }
     );
 
-    if (existingTask) {
-      setEditingDeadlineTask(existingTask);
-    } else {
-      setEditingDeadlineTask(null);
-    }
+    // Use double-click detection
+    if (deadlineClickTimer && clickedDeadlineSlot === slotKey) {
+      // This is a double-click - open the modal
+      clearTimeout(deadlineClickTimer);
+      setDeadlineClickTimer(null);
+      setClickedDeadlineSlot(null);
 
-    setSelectedDeadlineSlot({ date, slotIndex });
-    setShowDeadlineModal(true);
+      if (existingTask) {
+        setEditingDeadlineTask(existingTask);
+      } else {
+        setEditingDeadlineTask(null);
+      }
+
+      setSelectedDeadlineSlot({ date, slotIndex });
+      setShowDeadlineModal(true);
+    } else {
+      // This is a single click - start timer for double-click detection
+      if (deadlineClickTimer) {
+        clearTimeout(deadlineClickTimer);
+      }
+
+      setClickedDeadlineSlot(slotKey);
+      const timer = setTimeout(() => {
+        // Single click action - just select the slot (no modal)
+        setClickedDeadlineSlot(null);
+        setDeadlineClickTimer(null);
+      }, 300); // 300ms window for double-click
+      setDeadlineClickTimer(timer);
+    }
   };
 
   const handleSaveDeadlineTask = async (data: DeadlineTaskData) => {
@@ -2469,9 +2576,17 @@ const PlanningScreen = () => {
                       // Get colors if task exists
                       const colors = deadlineTask ? getDeadlineTaskColors(deadlineTask.deadlineType) : null;
 
+                      const cellKey = `${dateString}-${slotIndex}`;
+                      const isDragOver = dragOverDeadlineCell === cellKey;
+
                       return (
                         <td
                           key={`${dateString}-deadline-${slotIndex}`}
+                          draggable={!!deadlineTask}
+                          onDragStart={() => deadlineTask && handleDeadlineTaskDragStart(deadlineTask)}
+                          onDragOver={(e) => handleDeadlineCellDragOver(e, day, slotIndex)}
+                          onDrop={(e) => handleDeadlineTaskDrop(e, day, slotIndex)}
+                          onDragEnd={handleDeadlineTaskDragEnd}
                           onClick={() => handleDeadlineSlotClick(day, slotIndex)}
                           onContextMenu={(e) => {
                             if (deadlineTask) {
@@ -2487,18 +2602,21 @@ const PlanningScreen = () => {
                             height: slotIndex === 1 ? `${TIME_BLOCK_HEIGHT / 2 + 6.5}px` : `${TIME_BLOCK_HEIGHT / 2}px`,
                             borderRight: `1px solid ${cellBorderColor}`,
                             borderBottom: slotIndex === 1 ? `3px solid ${headerBorderColor}` : `1px solid ${cellBorderColor}`,
-                            backgroundColor: deadlineTask
+                            backgroundColor: isDragOver
+                              ? currentColors.primary + '40' // Highlight when dragging over
+                              : deadlineTask
                               ? colors?.bg
                               : isWeekend
                               ? weekendCellBg
                               : weekdayCellBg,
-                            cursor: 'pointer',
+                            cursor: deadlineTask ? 'move' : 'pointer',
                             padding: '4px',
                             fontSize: '10px',
                             verticalAlign: 'middle',
                             textAlign: 'center',
                             color: deadlineTask ? colors?.font : currentColors.textSecondary,
                             fontWeight: deadlineTask ? '600' : 'normal',
+                            opacity: draggedDeadlineTask?.id === deadlineTask?.id ? 0.5 : 1, // Dim the dragged task
                           }}
                         >
                           {deadlineTask && (
