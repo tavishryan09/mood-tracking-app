@@ -40,16 +40,6 @@ import ManageCustomThemesScreen from '../screens/profile/ManageCustomThemesScree
 const Drawer = createDrawerNavigator();
 const Stack = createStackNavigator();
 
-// Storage keys for Team View Settings
-const STORAGE_KEYS = {
-  ADMIN_PAGE_ACCESS: '@team_view_admin_page_access',
-  ADMIN_DEFAULT_PAGE: '@team_view_admin_default_page',
-  MANAGER_PAGE_ACCESS: '@team_view_manager_page_access',
-  MANAGER_DEFAULT_PAGE: '@team_view_manager_default_page',
-  USER_PAGE_ACCESS: '@team_view_user_page_access',
-  USER_DEFAULT_PAGE: '@team_view_user_default_page',
-};
-
 // Smart Projects wrapper for desktop that checks settings
 const SmartProjectsScreen = (props: any) => {
   const { user } = useAuth();
