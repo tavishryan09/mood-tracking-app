@@ -210,12 +210,21 @@ class OutlookCalendarService {
       }
 
       // Create as all-day event
+      // IMPORTANT: For all-day events, use local date string (YYYY-MM-DD) format
+      // DO NOT use setUTCHours() as it causes timezone shifts!
       const taskDate = new Date(task.date);
-      // For all-day events, Outlook requires the time to be set to midnight
-      taskDate.setUTCHours(0, 0, 0, 0);
-      // For all-day events, Outlook requires end date to be at least 24 hours after start
+      const year = taskDate.getFullYear();
+      const month = String(taskDate.getMonth() + 1).padStart(2, '0');
+      const day = String(taskDate.getDate()).padStart(2, '0');
+      const dateString = `${year}-${month}-${day}`;
+
+      // For all-day events, Outlook requires end date to be the next day
       const taskEndDate = new Date(taskDate);
       taskEndDate.setDate(taskEndDate.getDate() + 1);
+      const endYear = taskEndDate.getFullYear();
+      const endMonth = String(taskEndDate.getMonth() + 1).padStart(2, '0');
+      const endDay = String(taskEndDate.getDate()).padStart(2, '0');
+      const endDateString = `${endYear}-${endMonth}-${endDay}`;
 
       // Determine the event subject and category based on task type
       let subject: string;
@@ -287,11 +296,11 @@ class OutlookCalendarService {
       const event: OutlookEvent = {
         subject: subject,
         start: {
-          dateTime: taskDate.toISOString(),
+          dateTime: dateString,
           timeZone: 'UTC'
         },
         end: {
-          dateTime: taskEndDate.toISOString(),
+          dateTime: endDateString,
           timeZone: 'UTC'
         },
         isAllDay: true,
