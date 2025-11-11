@@ -216,12 +216,12 @@ export const syncAllTasks = async (req: AuthRequest, res: Response) => {
     console.log('[Outlook] Creating sync job for user:', userId);
 
     // Create a new sync job
-    const jobId = syncJobTracker.createJob(userId);
+    const jobId = await syncJobTracker.createJob(userId);
 
     // Start sync in background (non-blocking)
-    outlookCalendarService.syncAllUserTasks(userId, jobId).catch((error) => {
+    outlookCalendarService.syncAllUserTasks(userId, jobId).catch(async (error) => {
       console.error('[Outlook] Background sync failed:', error);
-      syncJobTracker.failJob(jobId, error instanceof Error ? error.message : 'Unknown error');
+      await syncJobTracker.failJob(jobId, error instanceof Error ? error.message : 'Unknown error');
     });
 
     // Return immediately with job ID
@@ -249,7 +249,7 @@ export const getSyncStatus = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const job = syncJobTracker.getJob(jobId);
+    const job = await syncJobTracker.getJob(jobId);
 
     if (!job) {
       return res.status(404).json({ error: 'Job not found or expired' });

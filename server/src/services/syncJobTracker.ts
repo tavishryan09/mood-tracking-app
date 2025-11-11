@@ -1,7 +1,10 @@
 /**
- * In-memory job tracker for Outlook sync operations
+ * Database-backed job tracker for Outlook sync operations
  * This tracks sync progress so the UI can poll for updates
+ * Uses UserSetting table for persistence across serverless invocations
  */
+
+import prisma from '../config/database';
 
 interface SyncJob {
   userId: string;
@@ -18,15 +21,14 @@ interface SyncJob {
 }
 
 class SyncJobTracker {
-  private jobs: Map<string, SyncJob> = new Map();
   private readonly JOB_EXPIRY_MS = 5 * 60 * 1000; // 5 minutes
 
   /**
    * Create a new sync job
    */
-  createJob(userId: string): string {
-    const jobId = `${userId}-${Date.now()}`;
-    this.jobs.set(jobId, {
+  async createJob(userId: string): Promise<string> {
+    const jobId = `sync-${userId}-${Date.now()}`;
+    const job: SyncJob = {
       userId,
       status: 'in_progress',
       progress: {
@@ -37,76 +39,184 @@ class SyncJobTracker {
         errors: []
       },
       startedAt: Date.now()
+    };
+
+    await prisma.userSetting.upsert({
+      where: {
+        userId_key: {
+          userId,
+          key: jobId
+        }
+      },
+      create: {
+        userId,
+        key: jobId,
+        value: job
+      },
+      update: {
+        value: job
+      }
     });
+
     return jobId;
   }
 
   /**
    * Update job progress
    */
-  updateProgress(jobId: string, progress: Partial<SyncJob['progress']>): void {
-    const job = this.jobs.get(jobId);
-    if (job) {
-      job.progress = { ...job.progress, ...progress };
+  async updateProgress(jobId: string, progress: Partial<SyncJob['progress']>): Promise<void> {
+    try {
+      const setting = await prisma.userSetting.findFirst({
+        where: { key: jobId }
+      });
+
+      if (setting) {
+        const job = setting.value as SyncJob;
+        job.progress = { ...job.progress, ...progress };
+
+        await prisma.userSetting.update({
+          where: {
+            userId_key: {
+              userId: setting.userId,
+              key: jobId
+            }
+          },
+          data: { value: job }
+        });
+      }
+    } catch (error) {
+      console.error('[SyncJobTracker] Error updating progress:', error);
     }
   }
 
   /**
    * Mark job as completed
    */
-  completeJob(jobId: string, finalProgress: SyncJob['progress']): void {
-    const job = this.jobs.get(jobId);
-    if (job) {
-      job.status = 'completed';
-      job.progress = finalProgress;
-      job.completedAt = Date.now();
+  async completeJob(jobId: string, finalProgress: SyncJob['progress']): Promise<void> {
+    try {
+      const setting = await prisma.userSetting.findFirst({
+        where: { key: jobId }
+      });
+
+      if (setting) {
+        const job = setting.value as SyncJob;
+        job.status = 'completed';
+        job.progress = finalProgress;
+        job.completedAt = Date.now();
+
+        await prisma.userSetting.update({
+          where: {
+            userId_key: {
+              userId: setting.userId,
+              key: jobId
+            }
+          },
+          data: { value: job }
+        });
+      }
+    } catch (error) {
+      console.error('[SyncJobTracker] Error completing job:', error);
     }
   }
 
   /**
    * Mark job as failed
    */
-  failJob(jobId: string, error: string): void {
-    const job = this.jobs.get(jobId);
-    if (job) {
-      job.status = 'failed';
-      job.progress.errors.push(error);
-      job.completedAt = Date.now();
+  async failJob(jobId: string, error: string): Promise<void> {
+    try {
+      const setting = await prisma.userSetting.findFirst({
+        where: { key: jobId }
+      });
+
+      if (setting) {
+        const job = setting.value as SyncJob;
+        job.status = 'failed';
+        job.progress.errors.push(error);
+        job.completedAt = Date.now();
+
+        await prisma.userSetting.update({
+          where: {
+            userId_key: {
+              userId: setting.userId,
+              key: jobId
+            }
+          },
+          data: { value: job }
+        });
+      }
+    } catch (error) {
+      console.error('[SyncJobTracker] Error failing job:', error);
     }
   }
 
   /**
    * Get job status
    */
-  getJob(jobId: string): SyncJob | undefined {
-    const job = this.jobs.get(jobId);
-    if (!job) return undefined;
+  async getJob(jobId: string): Promise<SyncJob | undefined> {
+    try {
+      const setting = await prisma.userSetting.findFirst({
+        where: { key: jobId }
+      });
 
-    // Clean up old jobs
-    if (job.completedAt && Date.now() - job.completedAt > this.JOB_EXPIRY_MS) {
-      this.jobs.delete(jobId);
+      if (!setting) return undefined;
+
+      const job = setting.value as SyncJob;
+
+      // Clean up old jobs
+      if (job.completedAt && Date.now() - job.completedAt > this.JOB_EXPIRY_MS) {
+        await prisma.userSetting.delete({
+          where: {
+            userId_key: {
+              userId: setting.userId,
+              key: jobId
+            }
+          }
+        }).catch(() => {
+          // Ignore errors if already deleted
+        });
+        return undefined;
+      }
+
+      return job;
+    } catch (error) {
+      console.error('[SyncJobTracker] Error getting job:', error);
       return undefined;
     }
-
-    return job;
   }
 
   /**
-   * Clean up old jobs periodically
+   * Clean up old jobs
    */
-  cleanup(): void {
-    const now = Date.now();
-    for (const [jobId, job] of this.jobs.entries()) {
-      if (job.completedAt && now - job.completedAt > this.JOB_EXPIRY_MS) {
-        this.jobs.delete(jobId);
+  async cleanup(): Promise<void> {
+    try {
+      const now = Date.now();
+      const settings = await prisma.userSetting.findMany({
+        where: {
+          key: {
+            startsWith: 'sync-'
+          }
+        }
+      });
+
+      for (const setting of settings) {
+        const job = setting.value as SyncJob;
+        if (job.completedAt && now - job.completedAt > this.JOB_EXPIRY_MS) {
+          await prisma.userSetting.delete({
+            where: {
+              userId_key: {
+                userId: setting.userId,
+                key: setting.key
+              }
+            }
+          }).catch(() => {
+            // Ignore errors if already deleted
+          });
+        }
       }
+    } catch (error) {
+      console.error('[SyncJobTracker] Error cleaning up jobs:', error);
     }
   }
 }
 
 export const syncJobTracker = new SyncJobTracker();
-
-// Cleanup old jobs every minute
-setInterval(() => {
-  syncJobTracker.cleanup();
-}, 60 * 1000);

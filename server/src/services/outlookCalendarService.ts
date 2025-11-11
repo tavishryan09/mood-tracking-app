@@ -819,7 +819,7 @@ class OutlookCalendarService {
 
       // Report initial progress
       if (jobId) {
-        syncJobTracker.updateProgress(jobId, progress);
+        await syncJobTracker.updateProgress(jobId, progress);
       }
 
       // Step 2: Sync all tasks in parallel batches (optimized for speed)
@@ -840,7 +840,7 @@ class OutlookCalendarService {
 
         // Report progress after each batch
         if (jobId) {
-          syncJobTracker.updateProgress(jobId, progress);
+          await syncJobTracker.updateProgress(jobId, progress);
         }
       }
 
@@ -858,7 +858,7 @@ class OutlookCalendarService {
 
         // Report progress after each batch
         if (jobId) {
-          syncJobTracker.updateProgress(jobId, progress);
+          await syncJobTracker.updateProgress(jobId, progress);
         }
       }
 
@@ -921,7 +921,7 @@ class OutlookCalendarService {
 
       // Mark job as completed
       if (jobId) {
-        syncJobTracker.completeJob(jobId, progress);
+        await syncJobTracker.completeJob(jobId, progress);
       }
 
       return progress;
@@ -931,7 +931,7 @@ class OutlookCalendarService {
 
       // Mark job as failed
       if (jobId) {
-        syncJobTracker.failJob(jobId, error instanceof Error ? error.message : 'Unknown error');
+        await syncJobTracker.failJob(jobId, error instanceof Error ? error.message : 'Unknown error');
       }
 
       return progress;
