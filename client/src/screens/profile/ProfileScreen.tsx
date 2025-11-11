@@ -178,51 +178,73 @@ const ProfileScreen = ({ navigation }: any) => {
     try {
       console.log('[ProfileScreen] Starting Outlook sync...');
       setOutlookSyncing(true);
+
+      // Start the sync (returns immediately with jobId)
       const response = await outlookAPI.sync();
-      console.log('[ProfileScreen] Sync response:', response.data);
+      console.log('[ProfileScreen] Sync started, jobId:', response.data.jobId);
 
-      const { progress } = response.data;
+      const { jobId } = response.data;
 
-      // Create detailed message with sync progress
-      let message = response.data.message || 'Sync completed!';
-      if (progress) {
-        message += `\n\n📊 Sync Summary:`;
-        message += `\n• Total Tasks: ${progress.totalTasks}`;
-        message += `\n• Planning Tasks Synced: ${progress.syncedPlanningTasks}`;
-        message += `\n• Deadline Tasks Synced: ${progress.syncedDeadlineTasks}`;
-        message += `\n• Old Events Deleted: ${progress.deletedEvents}`;
+      // Poll for status every 2 seconds
+      const pollInterval = setInterval(async () => {
+        try {
+          const statusResponse = await outlookAPI.getSyncStatus(jobId);
+          const job = statusResponse.data;
 
-        if (progress.errors && progress.errors.length > 0) {
-          message += `\n\n⚠️ Errors (${progress.errors.length}):`;
-          progress.errors.slice(0, 3).forEach((err: string) => {
-            message += `\n• ${err}`;
-          });
-          if (progress.errors.length > 3) {
-            message += `\n• ... and ${progress.errors.length - 3} more`;
+          console.log('[ProfileScreen] Sync status:', job.status, job.progress);
+
+          if (job.status === 'completed' || job.status === 'failed') {
+            clearInterval(pollInterval);
+            setOutlookSyncing(false);
+
+            const { progress } = job;
+            let message = job.status === 'completed'
+              ? 'Sync completed successfully!'
+              : 'Sync completed with errors';
+
+            if (progress) {
+              message += `\n\n📊 Sync Summary:`;
+              message += `\n• Total Tasks: ${progress.totalTasks}`;
+              message += `\n• Planning Tasks Synced: ${progress.syncedPlanningTasks}`;
+              message += `\n• Deadline Tasks Synced: ${progress.syncedDeadlineTasks}`;
+              message += `\n• Old Events Deleted: ${progress.deletedEvents}`;
+
+              if (progress.errors && progress.errors.length > 0) {
+                message += `\n\n⚠️ Errors (${progress.errors.length}):`;
+                progress.errors.slice(0, 3).forEach((err: string) => {
+                  message += `\n• ${err}`;
+                });
+                if (progress.errors.length > 3) {
+                  message += `\n• ... and ${progress.errors.length - 3} more`;
+                }
+              }
+            }
+
+            setSuccessMessage(message);
+            setShowSuccessDialog(true);
           }
+        } catch (pollError: any) {
+          console.error('[ProfileScreen] Error polling sync status:', pollError);
+          clearInterval(pollInterval);
+          setOutlookSyncing(false);
+          setErrorMessage('Lost connection to sync job. Please check your Outlook calendar.');
+          setShowErrorDialog(true);
         }
-      }
+      }, 2000); // Poll every 2 seconds
 
-      setSuccessMessage(message);
-      setShowSuccessDialog(true);
+      // Timeout after 5 minutes
+      setTimeout(() => {
+        clearInterval(pollInterval);
+        setOutlookSyncing(false);
+        setErrorMessage('Sync is taking longer than expected. Please check your Outlook calendar.');
+        setShowErrorDialog(true);
+      }, 5 * 60 * 1000);
+
     } catch (error: any) {
-      console.error('[ProfileScreen] Error syncing Outlook:', error);
-      console.error('[ProfileScreen] Error details:', error.response?.data || error.message);
-
-      // Handle specific error cases
-      let errorMessage = 'Failed to sync tasks to Outlook calendar';
-      if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-        errorMessage = 'Sync timed out. If you have many tasks, some may have synced. Try checking your Outlook calendar and run sync again if needed.';
-      } else if (error.response?.status === 504) {
-        errorMessage = 'Sync timed out. If you have many tasks, some may have synced. Try checking your Outlook calendar and run sync again if needed.';
-      } else if (error.response?.data?.error) {
-        errorMessage = error.response.data.error;
-      }
-
-      setErrorMessage(errorMessage);
-      setShowErrorDialog(true);
-    } finally {
+      console.error('[ProfileScreen] Error starting sync:', error);
       setOutlookSyncing(false);
+      setErrorMessage(error.response?.data?.error || 'Failed to start sync');
+      setShowErrorDialog(true);
     }
   };
 
