@@ -19,6 +19,7 @@ interface CustomColorThemeContextType {
   getColorForElement: (section: string, element: string) => string;
   loadCustomColorPalettes: () => Promise<void>;
   reloadCustomTheme: () => Promise<void>;
+  isInitializing: boolean;
 }
 
 const CustomColorThemeContext = createContext<CustomColorThemeContextType | undefined>(undefined);
@@ -34,6 +35,7 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
   const [activeCustomTheme, setActiveCustomThemeState] = useState<CustomColorTheme | null>(null);
   const [isUsingCustomTheme, setIsUsingCustomTheme] = useState<boolean>(false);
   const [activePalette, setActivePalette] = useState<CustomColorPalette | null>(null);
+  const [isInitializing, setIsInitializing] = useState<boolean>(true);
 
   // Track if we've initialized for the current user
   const [initializedForUser, setInitializedForUser] = useState<string | null>(null);
@@ -48,8 +50,11 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
       const userId = user?.id?.toString() || 'no-user';
       if (initializedForUser === userId) {
         console.log('[CustomColorTheme] Already initialized for user:', userId);
+        setIsInitializing(false);
         return;
       }
+
+      setIsInitializing(true);
 
       try {
         // Create default theme if it doesn't exist
@@ -107,9 +112,13 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
         // Mark as initialized for this user
         if (isMounted) {
           setInitializedForUser(userId);
+          setIsInitializing(false);
         }
       } catch (error) {
         console.error('[CustomColorTheme] Error in initializeTheme:', error);
+        if (isMounted) {
+          setIsInitializing(false);
+        }
       }
     };
 
@@ -319,6 +328,7 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
     getColorForElement,
     loadCustomColorPalettes,
     reloadCustomTheme,
+    isInitializing,
   }), [
     customColorPalettes,
     activeCustomTheme,
@@ -328,7 +338,18 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
     getColorForElement,
     loadCustomColorPalettes,
     reloadCustomTheme,
+    isInitializing,
   ]);
+
+  // Show loading screen while initializing to prevent flash of wrong theme
+  if (isInitializing) {
+    return (
+      <CustomColorThemeContext.Provider value={value}>
+        {/* Render nothing while initializing to prevent theme flash */}
+        <div style={{ display: 'none' }}>{children}</div>
+      </CustomColorThemeContext.Provider>
+    );
+  }
 
   return (
     <CustomColorThemeContext.Provider value={value}>
