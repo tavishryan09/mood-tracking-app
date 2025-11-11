@@ -53,6 +53,12 @@ const ProfileScreen = ({ navigation }: any) => {
   const [outlookConnected, setOutlookConnected] = useState(false);
   const [outlookLoading, setOutlookLoading] = useState(false);
   const [outlookSyncing, setOutlookSyncing] = useState(false);
+  const [syncProgress, setSyncProgress] = useState<{
+    totalTasks: number;
+    syncedPlanningTasks: number;
+    syncedDeadlineTasks: number;
+    deletedEvents: number;
+  } | null>(null);
 
   // Manage Users modal state
   const [users, setUsers] = useState<any[]>([]);
@@ -178,6 +184,7 @@ const ProfileScreen = ({ navigation }: any) => {
     try {
       console.log('[ProfileScreen] Starting Outlook sync...');
       setOutlookSyncing(true);
+      setSyncProgress(null);
 
       // Start the sync (returns immediately with jobId)
       const response = await outlookAPI.sync();
@@ -193,9 +200,15 @@ const ProfileScreen = ({ navigation }: any) => {
 
           console.log('[ProfileScreen] Sync status:', job.status, job.progress);
 
+          // Update progress in real-time
+          if (job.progress) {
+            setSyncProgress(job.progress);
+          }
+
           if (job.status === 'completed' || job.status === 'failed') {
             clearInterval(pollInterval);
             setOutlookSyncing(false);
+            setSyncProgress(null);
 
             const { progress } = job;
             let message = job.status === 'completed'
@@ -227,6 +240,7 @@ const ProfileScreen = ({ navigation }: any) => {
           console.error('[ProfileScreen] Error polling sync status:', pollError);
           clearInterval(pollInterval);
           setOutlookSyncing(false);
+          setSyncProgress(null);
           setErrorMessage('Lost connection to sync job. Please check your Outlook calendar.');
           setShowErrorDialog(true);
         }
@@ -236,6 +250,7 @@ const ProfileScreen = ({ navigation }: any) => {
       setTimeout(() => {
         clearInterval(pollInterval);
         setOutlookSyncing(false);
+        setSyncProgress(null);
         setErrorMessage('Sync is taking longer than expected. Please check your Outlook calendar.');
         setShowErrorDialog(true);
       }, 5 * 60 * 1000);
@@ -243,6 +258,7 @@ const ProfileScreen = ({ navigation }: any) => {
     } catch (error: any) {
       console.error('[ProfileScreen] Error starting sync:', error);
       setOutlookSyncing(false);
+      setSyncProgress(null);
       setErrorMessage(error.response?.data?.error || 'Failed to start sync');
       setShowErrorDialog(true);
     }
@@ -1003,6 +1019,29 @@ const ProfileScreen = ({ navigation }: any) => {
             </View>
           )}
         />
+
+        {/* Real-time sync progress */}
+        {syncProgress && (
+          <Card style={{ margin: 16, backgroundColor: currentColors.background.bg300 }}>
+            <Card.Content>
+              <Paragraph style={{ color: currentColors.text, fontWeight: 'bold', marginBottom: 10 }}>
+                🔄 Syncing...
+              </Paragraph>
+              <Paragraph style={{ color: currentColors.textSecondary, fontSize: 12, marginBottom: 4 }}>
+                📋 Total Tasks: {syncProgress.totalTasks}
+              </Paragraph>
+              <Paragraph style={{ color: currentColors.textSecondary, fontSize: 12, marginBottom: 4 }}>
+                ✅ Planning Tasks: {syncProgress.syncedPlanningTasks} / {syncProgress.totalTasks}
+              </Paragraph>
+              <Paragraph style={{ color: currentColors.textSecondary, fontSize: 12, marginBottom: 4 }}>
+                📅 Deadline Tasks: {syncProgress.syncedDeadlineTasks} / {syncProgress.totalTasks}
+              </Paragraph>
+              <Paragraph style={{ color: currentColors.textSecondary, fontSize: 12 }}>
+                🗑️ Cleaned Up: {syncProgress.deletedEvents} old events
+              </Paragraph>
+            </Card.Content>
+          </Card>
+        )}
       </List.Section>
 
       <Divider style={styles.divider} />
