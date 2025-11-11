@@ -51,10 +51,10 @@ class SyncJobTracker {
       create: {
         userId,
         key: jobId,
-        value: job
+        value: job as any
       },
       update: {
-        value: job
+        value: job as any
       }
     });
 
@@ -71,7 +71,7 @@ class SyncJobTracker {
       });
 
       if (setting) {
-        const job = setting.value as SyncJob;
+        const job = setting.value as any as SyncJob;
         job.progress = { ...job.progress, ...progress };
 
         await prisma.userSetting.update({
@@ -81,7 +81,7 @@ class SyncJobTracker {
               key: jobId
             }
           },
-          data: { value: job }
+          data: { value: job as any }
         });
       }
     } catch (error) {
@@ -99,7 +99,7 @@ class SyncJobTracker {
       });
 
       if (setting) {
-        const job = setting.value as SyncJob;
+        const job = setting.value as any as SyncJob;
         job.status = 'completed';
         job.progress = finalProgress;
         job.completedAt = Date.now();
@@ -111,7 +111,7 @@ class SyncJobTracker {
               key: jobId
             }
           },
-          data: { value: job }
+          data: { value: job as any }
         });
       }
     } catch (error) {
@@ -129,7 +129,7 @@ class SyncJobTracker {
       });
 
       if (setting) {
-        const job = setting.value as SyncJob;
+        const job = setting.value as any as SyncJob;
         job.status = 'failed';
         job.progress.errors.push(error);
         job.completedAt = Date.now();
@@ -141,7 +141,7 @@ class SyncJobTracker {
               key: jobId
             }
           },
-          data: { value: job }
+          data: { value: job as any }
         });
       }
     } catch (error) {
@@ -160,7 +160,7 @@ class SyncJobTracker {
 
       if (!setting) return undefined;
 
-      const job = setting.value as SyncJob;
+      const job = setting.value as any as SyncJob;
 
       // Clean up old jobs
       if (job.completedAt && Date.now() - job.completedAt > this.JOB_EXPIRY_MS) {
@@ -199,7 +199,7 @@ class SyncJobTracker {
       });
 
       for (const setting of settings) {
-        const job = setting.value as SyncJob;
+        const job = setting.value as any as SyncJob;
         if (job.completedAt && now - job.completedAt > this.JOB_EXPIRY_MS) {
           await prisma.userSetting.delete({
             where: {
