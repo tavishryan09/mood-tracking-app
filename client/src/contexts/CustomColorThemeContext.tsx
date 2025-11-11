@@ -75,19 +75,24 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
 
           // If no user-specific theme is set, check for admin-defined default theme
           if (!hasUserTheme && isMounted) {
+            console.log('[CustomColorTheme] No user theme found, checking for admin default theme...');
             try {
               // Check if admin has set a default theme
               const defaultThemeResponse = await settingsAPI.app.get('default_custom_theme');
 
               if (!isMounted) return;
 
+              console.log('[CustomColorTheme] Default theme API response:', defaultThemeResponse.data);
+
               if (defaultThemeResponse.data?.value) {
                 const defaultThemeId = defaultThemeResponse.data.value;
                 console.log('[CustomColorTheme] Admin default theme found:', defaultThemeId);
+                console.log('[CustomColorTheme] Attempting to activate admin default theme...');
                 // Don't save to user settings - this is a temporary app-wide default
                 await setActiveCustomTheme(defaultThemeId, false);
-                console.log('[CustomColorTheme] Admin default theme activated (temporary)');
+                console.log('[CustomColorTheme] Admin default theme activated successfully (temporary)');
               } else {
+                console.log('[CustomColorTheme] No admin default theme value, falling back to built-in default');
                 // Fall back to built-in default theme
                 await setActiveCustomTheme('default_theme', false);
                 console.log('[CustomColorTheme] Built-in default theme auto-activated (temporary)');
@@ -95,8 +100,16 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
             } catch (error: any) {
               if (!isMounted) return;
 
+              console.error('[CustomColorTheme] Error in default theme loading:', error);
+              console.error('[CustomColorTheme] Error details:', {
+                status: error.response?.status,
+                data: error.response?.data,
+                message: error.message
+              });
+
               // If 404, no default theme set, use built-in default
               if (error.response?.status === 404) {
+                console.log('[CustomColorTheme] 404 response - no admin default theme set, using built-in default');
                 try {
                   await setActiveCustomTheme('default_theme', false);
                   console.log('[CustomColorTheme] Built-in default theme auto-activated (temporary, no admin default)');
@@ -104,9 +117,11 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
                   console.error('[CustomColorTheme] Error auto-activating built-in default theme:', err);
                 }
               } else {
-                console.error('[CustomColorTheme] Error loading default theme:', error);
+                console.error('[CustomColorTheme] Non-404 error loading default theme:', error);
               }
             }
+          } else if (hasUserTheme) {
+            console.log('[CustomColorTheme] User has a personal theme, skipping admin default');
           }
         }
 
@@ -199,9 +214,12 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
 
   const setActiveCustomTheme = useCallback(async (paletteId: string, saveToUserSettings: boolean = true) => {
     try {
+      console.log('[CustomColorTheme] setActiveCustomTheme called with paletteId:', paletteId, 'saveToUserSettings:', saveToUserSettings);
+
       if (!user) throw new Error('User not logged in');
 
       // Try to load from user settings, app settings (default), and shared themes
+      console.log('[CustomColorTheme] Fetching theme data from all sources...');
       const [palettesResult, mappingsResult, appPalettesResult, appMappingsResult, sharedPalettesResult, sharedMappingsResult] = await Promise.allSettled([
         settingsAPI.user.get(CUSTOM_COLOR_PALETTES_KEY),
         settingsAPI.user.get(ELEMENT_COLOR_MAPPING_KEY),
@@ -211,6 +229,15 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
         settingsAPI.app.get('shared_element_mappings'),
       ]);
 
+      console.log('[CustomColorTheme] Fetch results:', {
+        userPalettes: palettesResult.status,
+        userMappings: mappingsResult.status,
+        appPalettes: appPalettesResult.status,
+        appMappings: appMappingsResult.status,
+        sharedPalettes: sharedPalettesResult.status,
+        sharedMappings: sharedMappingsResult.status
+      });
+
       let palette: CustomColorPalette | null = null;
       let mapping: ElementColorMapping | null = null;
 
@@ -218,21 +245,26 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
       // Try user settings first
       if (palettesResult.status === 'fulfilled' && palettesResult.value?.data?.value?.[paletteId]) {
         palette = palettesResult.value.data.value[paletteId];
+        console.log('[CustomColorTheme] Loaded palette from user settings:', paletteId);
       }
       // Fall back to app settings if not found in user settings
       else if (appPalettesResult.status === 'fulfilled' && appPalettesResult.value?.data?.value?.[paletteId]) {
         palette = appPalettesResult.value.data.value[paletteId];
-        console.log('[CustomColorTheme] Loaded palette from app settings:', paletteId);
+        console.log('[CustomColorTheme] Loaded palette from app settings:', paletteId, 'Colors:', palette.colors.length);
       }
       // Fall back to shared themes if not found in app settings
       else if (sharedPalettesResult.status === 'fulfilled' && sharedPalettesResult.value?.data?.value?.[paletteId]) {
         palette = sharedPalettesResult.value.data.value[paletteId];
         console.log('[CustomColorTheme] Loaded palette from shared themes:', paletteId);
+      } else {
+        console.error('[CustomColorTheme] Could not find palette for ID:', paletteId);
+        console.error('[CustomColorTheme] App palettes data:', appPalettesResult.status === 'fulfilled' ? appPalettesResult.value?.data : 'rejected');
       }
 
       // Try user settings first for mapping
       if (mappingsResult.status === 'fulfilled' && mappingsResult.value?.data?.value?.[paletteId]) {
         mapping = mappingsResult.value.data.value[paletteId];
+        console.log('[CustomColorTheme] Loaded mapping from user settings:', paletteId);
       }
       // Fall back to app settings if not found in user settings
       else if (appMappingsResult.status === 'fulfilled' && appMappingsResult.value?.data?.value?.[paletteId]) {
@@ -243,6 +275,9 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
       else if (sharedMappingsResult.status === 'fulfilled' && sharedMappingsResult.value?.data?.value?.[paletteId]) {
         mapping = sharedMappingsResult.value.data.value[paletteId];
         console.log('[CustomColorTheme] Loaded mapping from shared themes:', paletteId);
+      } else {
+        console.error('[CustomColorTheme] Could not find mapping for ID:', paletteId);
+        console.error('[CustomColorTheme] App mappings data:', appMappingsResult.status === 'fulfilled' ? appMappingsResult.value?.data : 'rejected');
       }
 
       if (!palette || !mapping) {
