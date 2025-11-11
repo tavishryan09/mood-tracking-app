@@ -841,19 +841,42 @@ const PlanningScreen = () => {
         blockIndex: targetBlockIndex,
       });
 
+      // Format the task data the same way we do in loadData
+      const task = response.data;
+      const isStatusEvent = !task.projectId;
+      const hasOutOfOfficeMarker = task.task?.startsWith('[OUT_OF_OFFICE]');
+      const isProjectWithOutOfOffice = task.projectId && hasOutOfOfficeMarker;
+
+      let projectName: string;
+      let taskDescription: string | undefined;
+
+      if (isStatusEvent) {
+        // Pure status event (Out of Office, Time Off, Unavailable)
+        projectName = task.task || '';
+        taskDescription = undefined;
+      } else if (isProjectWithOutOfOffice) {
+        // Project + Out of Office - append status to project name
+        projectName = (task.project?.description || task.project?.name || '') + ' (Out of Office)';
+        // Extract task description after marker
+        taskDescription = task.task.replace('[OUT_OF_OFFICE]', '') || undefined;
+      } else {
+        // Regular project task
+        projectName = task.project?.description || task.project?.name || '';
+        taskDescription = task.task || undefined;
+      }
+
       // Update state
       setBlockAssignments(prev => {
         const newAssignments = { ...prev };
         // Remove from old location
         delete newAssignments[sourceBlockKey];
-        // Add to new location - keep the original display name from draggedTask
-        // (response.data.project?.name is the raw DB name, not the formatted display name)
+        // Add to new location with properly formatted display data
         newAssignments[targetBlockKey] = {
-          id: response.data.id,
-          projectId: draggedTask.projectId,
-          projectName: draggedTask.projectName, // Keep original display name (e.g., "Out of Office")
-          task: draggedTask.task,
-          span: draggedTask.span,
+          id: task.id,
+          projectId: task.projectId,
+          projectName: projectName,
+          task: taskDescription,
+          span: task.span,
         };
         return newAssignments;
       });
