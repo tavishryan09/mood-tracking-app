@@ -4,7 +4,8 @@ import { Client } from '@microsoft/microsoft-graph-client';
 const msalConfig = {
   auth: {
     clientId: process.env.MICROSOFT_CLIENT_ID || '',
-    authority: `https://login.microsoftonline.com/${process.env.MICROSOFT_TENANT_ID || 'common'}`,
+    // Use 'common' for multitenant + personal accounts, or specific tenant ID for single tenant
+    authority: `https://login.microsoftonline.com/common`,
     clientSecret: process.env.MICROSOFT_CLIENT_SECRET || '',
   },
 };
