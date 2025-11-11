@@ -462,16 +462,26 @@ export const deletePlanningTask = async (req: AuthRequest, res: Response) => {
       select: { userId: true, outlookEventId: true }
     });
 
-    // Delete from the assigned user's Outlook calendar BEFORE deleting from database
-    if (task?.userId && task?.outlookEventId) {
-      outlookCalendarService.deletePlanningTaskByEventId(task.outlookEventId, task.userId).catch((error) => {
-        console.error('[Outlook] Failed to delete planning task:', error);
-      });
-    }
-
+    // Delete from database first
     await prisma.planningTask.delete({
       where: { id },
     });
+
+    // Delete from Outlook calendar with timeout (after DB delete so task is gone even if Outlook fails)
+    if (task?.userId && task?.outlookEventId) {
+      try {
+        const deletePromise = outlookCalendarService.deletePlanningTaskByEventId(task.outlookEventId, task.userId);
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Outlook delete timeout')), 8000)
+        );
+
+        await Promise.race([deletePromise, timeoutPromise]);
+        console.log('[Outlook] Planning task deleted from calendar successfully');
+      } catch (error) {
+        console.error('[Outlook] Failed to delete planning task from calendar (non-fatal):', error);
+        // Don't fail the request - task was already deleted from database
+      }
+    }
 
     res.json({ message: 'Planning task deleted successfully' });
   } catch (error) {

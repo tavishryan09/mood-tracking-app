@@ -846,13 +846,14 @@ const PlanningScreen = () => {
         const newAssignments = { ...prev };
         // Remove from old location
         delete newAssignments[sourceBlockKey];
-        // Add to new location with updated data from response
+        // Add to new location - keep the original display name from draggedTask
+        // (response.data.project?.name is the raw DB name, not the formatted display name)
         newAssignments[targetBlockKey] = {
           id: response.data.id,
-          projectId: response.data.project?.id || draggedTask.projectId,
-          projectName: response.data.project?.name || draggedTask.projectName,
-          task: response.data.task || draggedTask.task,
-          span: response.data.span || draggedTask.span,
+          projectId: draggedTask.projectId,
+          projectName: draggedTask.projectName, // Keep original display name (e.g., "Out of Office")
+          task: draggedTask.task,
+          span: draggedTask.span,
         };
         return newAssignments;
       });
