@@ -36,7 +36,7 @@ const UnifiedColorContext = createContext<UnifiedColorContextType | undefined>(u
 
 export const UnifiedColorProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
-  const [selectedPalette, setSelectedPaletteState] = useState('ios_light');
+  const [selectedPalette, setSelectedPaletteState] = useState('default');
   const [customColorMappings, setCustomColorMappings] = useState<CustomColorMapping>({});
   const [planningColors, setPlanningColors] = useState<PlanningColors>({});
   const [isUsingCustomTheme, setIsUsingCustomTheme] = useState(false);
@@ -49,45 +49,36 @@ export const UnifiedColorProvider = ({ children }: { children: ReactNode }) => {
       try {
         // Load custom color mappings if user is logged in
         if (user) {
-          // Load selected palette from database
-          try {
-            const paletteResponse = await settingsAPI.user.get('selected_color_palette');
-            if (paletteResponse?.data?.value && isMounted) {
-              setSelectedPaletteState(paletteResponse.data.value);
-            }
-          } catch (error: any) {
-            if (error?.response?.status !== 404) {
-              console.error('[UnifiedColor] Error loading palette:', error);
-            }
+          // Load all settings in parallel to ensure they're all ready before rendering
+          const [paletteResult, mappingsResult, planningColorsResult] = await Promise.allSettled([
+            settingsAPI.user.get('selected_color_palette'),
+            settingsAPI.user.get('custom_color_mappings'),
+            settingsAPI.user.get('planning_colors'),
+          ]);
+
+          if (!isMounted) return;
+
+          // Process palette
+          if (paletteResult.status === 'fulfilled' && paletteResult.value?.data?.value) {
+            setSelectedPaletteState(paletteResult.value.data.value);
+          } else if (paletteResult.status === 'rejected' && paletteResult.reason?.response?.status !== 404) {
+            console.error('[UnifiedColor] Error loading palette:', paletteResult.reason);
           }
 
-          try {
-            const response = await settingsAPI.user.get('custom_color_mappings');
-            // Response is { data: { id, userId, key, value, ... } }
-            const customMappings = response?.data?.value;
-            if (customMappings && isMounted) {
-              setCustomColorMappings(customMappings);
-              setIsUsingCustomTheme(Object.keys(customMappings).length > 0);
-            }
-          } catch (error: any) {
-            // No custom mappings saved yet (404 is expected)
-            if (error?.response?.status !== 404) {
-              console.error('[UnifiedColor] Error loading custom mappings:', error);
-            }
+          // Process custom mappings
+          if (mappingsResult.status === 'fulfilled' && mappingsResult.value?.data?.value) {
+            const customMappings = mappingsResult.value.data.value;
+            setCustomColorMappings(customMappings);
+            setIsUsingCustomTheme(Object.keys(customMappings).length > 0);
+          } else if (mappingsResult.status === 'rejected' && mappingsResult.reason?.response?.status !== 404) {
+            console.error('[UnifiedColor] Error loading custom mappings:', mappingsResult.reason);
           }
 
-          try {
-            const response = await settingsAPI.user.get('planning_colors');
-            // Response is { data: { id, userId, key, value, ... } }
-            const savedPlanningColors = response?.data?.value;
-            if (savedPlanningColors && isMounted) {
-              setPlanningColors(savedPlanningColors);
-            }
-          } catch (error: any) {
-            // No planning colors saved yet (404 is expected)
-            if (error?.response?.status !== 404) {
-              console.error('[UnifiedColor] Error loading planning colors:', error);
-            }
+          // Process planning colors
+          if (planningColorsResult.status === 'fulfilled' && planningColorsResult.value?.data?.value) {
+            setPlanningColors(planningColorsResult.value.data.value);
+          } else if (planningColorsResult.status === 'rejected' && planningColorsResult.reason?.response?.status !== 404) {
+            console.error('[UnifiedColor] Error loading planning colors:', planningColorsResult.reason);
           }
         }
       } catch (error) {
