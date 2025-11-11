@@ -6,8 +6,21 @@ declare global {
   var prisma: PrismaClient | undefined;
 }
 
+// For serverless functions, ensure the DATABASE_URL includes pgbouncer parameter
+const databaseUrl = process.env.DATABASE_URL || '';
+const enhancedUrl = databaseUrl.includes('pgbouncer=true')
+  ? databaseUrl
+  : databaseUrl.includes('?')
+    ? `${databaseUrl}&pgbouncer=true&connect_timeout=15`
+    : `${databaseUrl}?pgbouncer=true&connect_timeout=15`;
+
 const prisma = global.prisma || new PrismaClient({
   log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+  datasources: {
+    db: {
+      url: enhancedUrl,
+    },
+  },
 });
 
 // In development, store the instance globally to prevent multiple connections
