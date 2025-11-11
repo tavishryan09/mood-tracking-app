@@ -14,7 +14,19 @@ export const initiateOutlookAuth = async (req: AuthRequest, res: Response) => {
     }
 
     console.log('[Outlook Auth] API_URL from env:', process.env.API_URL);
-    const redirectUri = `${process.env.API_URL || 'http://localhost:3000'}/api/outlook/callback`;
+    console.log('[Outlook Auth] NODE_ENV:', process.env.NODE_ENV);
+    console.log('[Outlook Auth] VERCEL_URL:', process.env.VERCEL_URL);
+
+    // Determine the base URL - prefer API_URL, fallback to VERCEL_URL for production
+    let baseUrl = process.env.API_URL;
+    if (!baseUrl && process.env.VERCEL_URL) {
+      baseUrl = `https://${process.env.VERCEL_URL}`;
+    }
+    if (!baseUrl) {
+      baseUrl = 'http://localhost:3000';
+    }
+
+    const redirectUri = `${baseUrl}/api/outlook/callback`;
     console.log('[Outlook Auth] Generated redirectUri:', redirectUri);
     const authUrl = outlookCalendarService.getAuthorizationUrl(redirectUri);
     console.log('[Outlook Auth] Final authUrl:', authUrl);
@@ -51,7 +63,16 @@ export const handleOutlookCallback = async (req: AuthRequest, res: Response) => 
       return res.status(400).send('Invalid state parameter');
     }
 
-    const redirectUri = `${process.env.API_URL || 'http://localhost:3000'}/api/outlook/callback`;
+    // Determine the base URL - prefer API_URL, fallback to VERCEL_URL for production
+    let baseUrl = process.env.API_URL;
+    if (!baseUrl && process.env.VERCEL_URL) {
+      baseUrl = `https://${process.env.VERCEL_URL}`;
+    }
+    if (!baseUrl) {
+      baseUrl = 'http://localhost:3000';
+    }
+
+    const redirectUri = `${baseUrl}/api/outlook/callback`;
     const refreshToken = await outlookCalendarService.exchangeCodeForTokens(code, redirectUri);
 
     if (!refreshToken) {
