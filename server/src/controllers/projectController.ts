@@ -599,11 +599,21 @@ export const removeProjectMember = async (req: AuthRequest, res: Response) => {
   try {
     const { id, memberId } = req.params;
 
+    // First try to find the member to get the userId
+    const member = await prisma.projectMember.findUnique({
+      where: { id: memberId },
+    });
+
+    if (!member) {
+      return res.status(404).json({ error: 'Project member not found' });
+    }
+
+    // Delete using the compound key
     await prisma.projectMember.delete({
       where: {
         projectId_userId: {
           projectId: id,
-          userId: memberId,
+          userId: member.userId,
         },
       },
     });

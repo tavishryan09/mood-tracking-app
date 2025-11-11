@@ -13,8 +13,6 @@ import axios from 'axios';
 const ProfileScreen = ({ navigation }: any) => {
   const { user, logout, refreshUser, token } = useAuth();
   const { selectedPalette, setSelectedPalette, currentColors, customPalettes, loadCustomPalettes: reloadThemeCustomPalettes } = useTheme();
-  const [showWeekendsDefault, setShowWeekendsDefault] = useState(false);
-  const [defaultProjectsTableView, setDefaultProjectsTableView] = useState(false);
 
   // Modal states
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
@@ -102,11 +100,8 @@ const ProfileScreen = ({ navigation }: any) => {
   });
   const [userDefaultPage, setUserDefaultPage] = useState('Dashboard');
   const [userMenuVisible, setUserMenuVisible] = useState(false);
-  const [adminShowWeekends, setAdminShowWeekends] = useState(false);
   const [adminDefaultProjectsTable, setAdminDefaultProjectsTable] = useState(false);
-  const [managerShowWeekends, setManagerShowWeekends] = useState(false);
   const [managerDefaultProjectsTable, setManagerDefaultProjectsTable] = useState(false);
-  const [userShowWeekends, setUserShowWeekends] = useState(false);
   const [userDefaultProjectsTable, setUserDefaultProjectsTable] = useState(false);
   const [savingTeamSettings, setSavingTeamSettings] = useState(false);
 
@@ -117,32 +112,6 @@ const ProfileScreen = ({ navigation }: any) => {
 
   const loadPreferences = async () => {
     try {
-      // Load calendar weekend preference from database
-      try {
-        const weekendResponse = await settingsAPI.user.get('calendar_show_weekends_default');
-        if (weekendResponse.data?.value !== undefined) {
-          setShowWeekendsDefault(weekendResponse.data.value === true);
-        }
-      } catch (error: any) {
-        // 404 means no setting exists, use default (false)
-        if (error.response?.status !== 404) {
-          throw error;
-        }
-      }
-
-      // Load projects table view preference from database
-      try {
-        const tableViewResponse = await settingsAPI.user.get('projects_default_table_view');
-        if (tableViewResponse.data?.value !== undefined) {
-          setDefaultProjectsTableView(tableViewResponse.data.value === true);
-        }
-      } catch (error: any) {
-        // 404 means no setting exists, use default (false)
-        if (error.response?.status !== 404) {
-          throw error;
-        }
-      }
-
       // Check Outlook connection status
       try {
         const outlookResponse = await outlookAPI.getStatus();
@@ -152,32 +121,6 @@ const ProfileScreen = ({ navigation }: any) => {
       }
     } catch (error) {
       console.error('[ProfileScreen] Error loading preferences:', error);
-    }
-  };
-
-  const handleWeekendToggle = async () => {
-    const newValue = !showWeekendsDefault;
-    setShowWeekendsDefault(newValue);
-    try {
-      await settingsAPI.user.set('calendar_show_weekends_default', newValue);
-      console.log('[ProfileScreen] Saved calendar weekend preference to database');
-    } catch (error) {
-      console.error('[ProfileScreen] Error saving preference:', error);
-      setErrorMessage('Failed to save preference');
-      setShowErrorDialog(true);
-    }
-  };
-
-  const handleProjectsTableViewToggle = async () => {
-    const newValue = !defaultProjectsTableView;
-    setDefaultProjectsTableView(newValue);
-    try {
-      await settingsAPI.user.set('projects_default_table_view', newValue);
-      console.log('[ProfileScreen] Saved projects table view preference to database');
-    } catch (error) {
-      console.error('[ProfileScreen] Error saving preference:', error);
-      setErrorMessage('Failed to save preference');
-      setShowErrorDialog(true);
     }
   };
 
@@ -624,15 +567,12 @@ const ProfileScreen = ({ navigation }: any) => {
   const SETTINGS_KEYS = {
     ADMIN_PAGE_ACCESS: 'team_view_admin_page_access',
     ADMIN_DEFAULT_PAGE: 'team_view_admin_default_page',
-    ADMIN_SHOW_WEEKENDS: 'team_view_admin_show_weekends',
     ADMIN_DEFAULT_PROJECTS_TABLE: 'team_view_admin_default_projects_table',
     MANAGER_PAGE_ACCESS: 'team_view_manager_page_access',
     MANAGER_DEFAULT_PAGE: 'team_view_manager_default_page',
-    MANAGER_SHOW_WEEKENDS: 'team_view_manager_show_weekends',
     MANAGER_DEFAULT_PROJECTS_TABLE: 'team_view_manager_default_projects_table',
     USER_PAGE_ACCESS: 'team_view_user_page_access',
     USER_DEFAULT_PAGE: 'team_view_user_default_page',
-    USER_SHOW_WEEKENDS: 'team_view_user_show_weekends',
     USER_DEFAULT_PROJECTS_TABLE: 'team_view_user_default_projects_table',
   };
 
@@ -662,44 +602,35 @@ const ProfileScreen = ({ navigation }: any) => {
       const [
         adminPageAccessValue,
         adminDefaultPageValue,
-        adminShowWeekendsValue,
         adminDefaultProjectsTableValue,
         managerPageAccessValue,
         managerDefaultPageValue,
-        managerShowWeekendsValue,
         managerDefaultProjectsTableValue,
         userPageAccessValue,
         userDefaultPageValue,
-        userShowWeekendsValue,
         userDefaultProjectsTableValue,
       ] = await Promise.all([
         loadSetting(SETTINGS_KEYS.ADMIN_PAGE_ACCESS),
         loadSetting(SETTINGS_KEYS.ADMIN_DEFAULT_PAGE),
-        loadSetting(SETTINGS_KEYS.ADMIN_SHOW_WEEKENDS),
         loadSetting(SETTINGS_KEYS.ADMIN_DEFAULT_PROJECTS_TABLE),
         loadSetting(SETTINGS_KEYS.MANAGER_PAGE_ACCESS),
         loadSetting(SETTINGS_KEYS.MANAGER_DEFAULT_PAGE),
-        loadSetting(SETTINGS_KEYS.MANAGER_SHOW_WEEKENDS),
         loadSetting(SETTINGS_KEYS.MANAGER_DEFAULT_PROJECTS_TABLE),
         loadSetting(SETTINGS_KEYS.USER_PAGE_ACCESS),
         loadSetting(SETTINGS_KEYS.USER_DEFAULT_PAGE),
-        loadSetting(SETTINGS_KEYS.USER_SHOW_WEEKENDS),
         loadSetting(SETTINGS_KEYS.USER_DEFAULT_PROJECTS_TABLE),
       ]);
 
       if (adminPageAccessValue) setAdminPageAccess(adminPageAccessValue);
       if (adminDefaultPageValue) setAdminDefaultPage(adminDefaultPageValue);
-      if (adminShowWeekendsValue !== undefined) setAdminShowWeekends(adminShowWeekendsValue);
       if (adminDefaultProjectsTableValue !== undefined) setAdminDefaultProjectsTable(adminDefaultProjectsTableValue);
 
       if (managerPageAccessValue) setManagerPageAccess(managerPageAccessValue);
       if (managerDefaultPageValue) setManagerDefaultPage(managerDefaultPageValue);
-      if (managerShowWeekendsValue !== undefined) setManagerShowWeekends(managerShowWeekendsValue);
       if (managerDefaultProjectsTableValue !== undefined) setManagerDefaultProjectsTable(managerDefaultProjectsTableValue);
 
       if (userPageAccessValue) setUserPageAccess(userPageAccessValue);
       if (userDefaultPageValue) setUserDefaultPage(userDefaultPageValue);
-      if (userShowWeekendsValue !== undefined) setUserShowWeekends(userShowWeekendsValue);
       if (userDefaultProjectsTableValue !== undefined) setUserDefaultProjectsTable(userDefaultProjectsTableValue);
     } catch (error) {
       console.error('[ProfileScreen] Error loading team view settings:', error);
@@ -753,15 +684,12 @@ const ProfileScreen = ({ navigation }: any) => {
       await Promise.all([
         settingsAPI.app.set(SETTINGS_KEYS.ADMIN_PAGE_ACCESS, adminPageAccess),
         settingsAPI.app.set(SETTINGS_KEYS.ADMIN_DEFAULT_PAGE, adminDefaultPage),
-        settingsAPI.app.set(SETTINGS_KEYS.ADMIN_SHOW_WEEKENDS, adminShowWeekends),
         settingsAPI.app.set(SETTINGS_KEYS.ADMIN_DEFAULT_PROJECTS_TABLE, adminDefaultProjectsTable),
         settingsAPI.app.set(SETTINGS_KEYS.MANAGER_PAGE_ACCESS, managerPageAccess),
         settingsAPI.app.set(SETTINGS_KEYS.MANAGER_DEFAULT_PAGE, managerDefaultPage),
-        settingsAPI.app.set(SETTINGS_KEYS.MANAGER_SHOW_WEEKENDS, managerShowWeekends),
         settingsAPI.app.set(SETTINGS_KEYS.MANAGER_DEFAULT_PROJECTS_TABLE, managerDefaultProjectsTable),
         settingsAPI.app.set(SETTINGS_KEYS.USER_PAGE_ACCESS, userPageAccess),
         settingsAPI.app.set(SETTINGS_KEYS.USER_DEFAULT_PAGE, userDefaultPage),
-        settingsAPI.app.set(SETTINGS_KEYS.USER_SHOW_WEEKENDS, userShowWeekends),
         settingsAPI.app.set(SETTINGS_KEYS.USER_DEFAULT_PROJECTS_TABLE, userDefaultProjectsTable),
       ]);
 
@@ -895,17 +823,6 @@ const ProfileScreen = ({ navigation }: any) => {
 
         <Divider style={{ marginVertical: 10 }} />
         <List.Item
-          title="Show Weekends in Week View"
-          description={`Default setting for ${roleLabel}s to display weekends in calendar week view`}
-          right={() => (
-            <Switch
-              value={showWeekends}
-              onValueChange={setShowWeekends}
-              color={currentColors.primary}
-            />
-          )}
-        />
-        <List.Item
           title="Default to Table View"
           description={`Default setting for ${roleLabel}s to open projects in table view`}
           right={() => (
@@ -990,22 +907,6 @@ const ProfileScreen = ({ navigation }: any) => {
       <Divider style={styles.divider} />
 
       <List.Section>
-        <List.Subheader>Calendar Preferences</List.Subheader>
-        <List.Item
-          title="Show Weekends in Week View"
-          description="Default setting for displaying weekends in calendar week view"
-          right={() => (
-            <Switch
-              value={showWeekendsDefault}
-              onValueChange={handleWeekendToggle}
-            />
-          )}
-        />
-      </List.Section>
-
-      <Divider style={styles.divider} />
-
-      <List.Section>
         <List.Subheader>Outlook Calendar Sync</List.Subheader>
         <List.Item
           title="Outlook Calendar"
@@ -1046,22 +947,6 @@ const ProfileScreen = ({ navigation }: any) => {
                 {outlookConnected ? "Disconnect" : "Connect"}
               </Button>
             </View>
-          )}
-        />
-      </List.Section>
-
-      <Divider style={styles.divider} />
-
-      <List.Section>
-        <List.Subheader>Projects Preferences</List.Subheader>
-        <List.Item
-          title="Default to Table View"
-          description="Open projects in table view by default"
-          right={() => (
-            <Switch
-              value={defaultProjectsTableView}
-              onValueChange={handleProjectsTableViewToggle}
-            />
           )}
         />
       </List.Section>

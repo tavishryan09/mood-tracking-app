@@ -143,6 +143,35 @@ export const createPlanningTask = async (req: AuthRequest, res: Response) => {
       },
     });
 
+    // If this task is associated with a project, automatically add the user as a team member
+    if (projectId) {
+      try {
+        // Check if user is already a member
+        const existingMember = await prisma.projectMember.findUnique({
+          where: {
+            projectId_userId: {
+              projectId,
+              userId,
+            },
+          },
+        });
+
+        // If not already a member, add them
+        if (!existingMember) {
+          await prisma.projectMember.create({
+            data: {
+              projectId,
+              userId,
+            },
+          });
+          console.log(`[PlanningTask] Automatically added user ${userId} to project ${projectId}`);
+        }
+      } catch (error) {
+        // Log but don't fail the planning task creation if team member addition fails
+        console.error('[PlanningTask] Failed to auto-add team member:', error);
+      }
+    }
+
     // Sync to the assigned user's Outlook calendar (non-blocking)
     outlookCalendarService.syncPlanningTask(planningTask.id, userId).catch((error) => {
       console.error('[Outlook] Failed to sync planning task:', error);

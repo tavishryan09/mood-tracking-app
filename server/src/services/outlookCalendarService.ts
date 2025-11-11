@@ -175,20 +175,26 @@ class OutlookCalendarService {
    * Sync a planning task to Outlook calendar
    */
   async syncPlanningTask(taskId: string, userId: string): Promise<boolean> {
-    console.log(`[Outlook] syncPlanningTask called - taskId: ${taskId}, userId: ${userId}`);
+    console.log('================================================================================');
+    console.log(`[Outlook] syncPlanningTask CALLED - taskId: ${taskId}, userId: ${userId}`);
+    console.log('================================================================================');
     try {
+      console.log('[Outlook] Step 1: Getting Graph client...');
       const client = await this.getGraphClient(userId);
       if (!client) {
-        console.log('[Outlook] No Graph client available - cannot sync planning task');
+        console.error('[Outlook] ERROR: No Graph client available - cannot sync planning task');
         return false;
       }
+      console.log('[Outlook] Step 1: SUCCESS - Graph client obtained');
 
       // Get or create the Mood Tracker calendar
+      console.log('[Outlook] Step 2: Getting/creating Mood Tracker calendar...');
       const calendarId = await this.getMoodTrackerCalendar(client);
       if (!calendarId) {
-        console.log('[Outlook] Could not get/create Mood Tracker calendar');
+        console.error('[Outlook] ERROR: Could not get/create Mood Tracker calendar');
         return false;
       }
+      console.log(`[Outlook] Step 2: SUCCESS - Mood Tracker calendar ID: ${calendarId}`);
 
       console.log('[Outlook] Graph client obtained, fetching task from database...');
       const task = await prisma.planningTask.findUnique({
@@ -754,12 +760,11 @@ class OutlookCalendarService {
       // First, ensure all master categories exist
       await this.ensureMasterCategories(userId);
 
-      // Get all planning tasks for the user, regardless of project membership
-      // If a user has a task assigned to them for a project, they should see it in their calendar
+      // Get all planning tasks for the user
+      // Include both project tasks AND status events (Time Off, Unavailable, Out of Office)
       const planningTasks = await prisma.planningTask.findMany({
         where: {
-          userId,
-          projectId: { not: null } // Only sync tasks that have a project assigned
+          userId
         }
       });
 

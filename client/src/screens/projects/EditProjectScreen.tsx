@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Platform, TouchableOpacity, FlatList, Text } from 'react-native';
-import { TextInput, Button, Title, List, RadioButton, SegmentedButtons, ActivityIndicator, Card, Paragraph, Switch } from 'react-native-paper';
+import { TextInput, Button, Title, List, ActivityIndicator, Card, Paragraph, Switch } from 'react-native-paper';
 import { projectsAPI, clientsAPI, usersAPI } from '../../services/api';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { useTheme } from '../../contexts/ThemeContext';
 import { CustomDialog } from '../../components/CustomDialog';
 
@@ -37,10 +36,6 @@ const EditProjectScreen = ({ route, navigation }: any) => {
   const [useStandardRate, setUseStandardRate] = useState(true);
   const [standardHourlyRate, setStandardHourlyRate] = useState('');
 
-  // Due date state
-  const [dueDate, setDueDate] = useState<Date | null>(null);
-  const [showDueDatePicker, setShowDueDatePicker] = useState(false);
-
   // Team members state
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
@@ -74,7 +69,6 @@ const EditProjectScreen = ({ route, navigation }: any) => {
       setStatus(project.status);
       setUseStandardRate(project.useStandardRate !== false);
       setStandardHourlyRate(project.standardHourlyRate?.toString() || '');
-      setDueDate(project.dueDate ? new Date(project.dueDate) : null);
       setTeamMembers(project.members || []);
 
       // Load existing member rates
@@ -181,7 +175,6 @@ const EditProjectScreen = ({ route, navigation }: any) => {
         status,
         useStandardRate,
         standardHourlyRate: standardHourlyRate ? parseFloat(standardHourlyRate) : null,
-        dueDate: dueDate ? dueDate.toISOString() : null,
       });
 
       // Update member rates if not using standard rate
@@ -304,19 +297,6 @@ const EditProjectScreen = ({ route, navigation }: any) => {
           style={styles.input}
         />
 
-        <Title style={[styles.sectionTitle, { color: currentColors.text }]}>Project Status</Title>
-        <SegmentedButtons
-          value={status}
-          onValueChange={setStatus}
-          buttons={[
-            { value: 'ACTIVE', label: 'Active' },
-            { value: 'ON_HOLD', label: 'On Hold' },
-            { value: 'COMPLETED', label: 'Completed' },
-            { value: 'ARCHIVED', label: 'Archived' },
-          ]}
-          style={styles.input}
-        />
-
         <Title style={[styles.sectionTitle, { color: currentColors.text }]}>Select Client *</Title>
         <View style={styles.clientInputContainer}>
           <TextInput
@@ -397,106 +377,6 @@ const EditProjectScreen = ({ route, navigation }: any) => {
             {!useStandardRate && (
               <Paragraph style={[styles.helpText, { color: currentColors.textSecondary }]}>
                 Custom rates can be set per team member when adding them to the project.
-              </Paragraph>
-            )}
-          </Card.Content>
-        </Card>
-
-        {/* Due Date Section */}
-        <Card style={[styles.dueDateSection, { backgroundColor: currentColors.background.bg300 }]}>
-          <Card.Content>
-            <Title style={[styles.sectionTitle, { color: currentColors.text }]}>Project Due Date</Title>
-
-            {Platform.OS === 'web' ? (
-              <View style={styles.dateInputContainer}>
-                <input
-                  type="date"
-                  value={dueDate ? dueDate.toISOString().split('T')[0] : ''}
-                  onChange={(e) => {
-                    const dateValue = e.target.value;
-                    if (dateValue) {
-                      setDueDate(new Date(dateValue));
-                    } else {
-                      setDueDate(null);
-                    }
-                  }}
-                  style={{
-                    padding: '12px',
-                    fontSize: '16px',
-                    borderRadius: '4px',
-                    border: `1px solid ${currentColors.border}`,
-                    backgroundColor: currentColors.background.bg700,
-                    color: currentColors.text,
-                    maxWidth: '300px',
-                  }}
-                />
-                {dueDate && (
-                  <Button
-                    mode="text"
-                    onPress={() => setDueDate(null)}
-                    style={styles.clearButton}
-                  >
-                    Clear
-                  </Button>
-                )}
-              </View>
-            ) : (
-              <View style={styles.dueDateRow}>
-                {dueDate ? (
-                  <>
-                    <Paragraph style={[styles.dueDateText, { color: currentColors.text }]}>
-                      Due: {dueDate.toLocaleDateString('en-US', {
-                        weekday: 'short',
-                        year: 'numeric',
-                        month: 'short',
-                        day: 'numeric'
-                      })}
-                    </Paragraph>
-                    <Button
-                      mode="outlined"
-                      onPress={() => setShowDueDatePicker(true)}
-                      style={styles.dateButton}
-                    >
-                      Change Date
-                    </Button>
-                    <Button
-                      mode="text"
-                      onPress={() => setDueDate(null)}
-                      style={styles.dateButton}
-                    >
-                      Clear
-                    </Button>
-                  </>
-                ) : (
-                  <Button
-                    mode="outlined"
-                    onPress={() => setShowDueDatePicker(true)}
-                    style={styles.dateButton}
-                  >
-                    Set Due Date
-                  </Button>
-                )}
-                {showDueDatePicker && (
-                  <DateTimePicker
-                    value={dueDate || new Date()}
-                    mode="date"
-                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                    onChange={(event, selectedDate) => {
-                      if (Platform.OS === 'android') {
-                        setShowDueDatePicker(false);
-                      }
-                      if (selectedDate) {
-                        setDueDate(selectedDate);
-                      }
-                    }}
-                  />
-                )}
-              </View>
-            )}
-
-            {dueDate && (
-              <Paragraph style={[styles.helpText, { color: currentColors.textSecondary }]}>
-                A deadline event will be automatically added to your calendar.
               </Paragraph>
             )}
           </Card.Content>
@@ -724,11 +604,6 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     elevation: 2,
   },
-  dueDateSection: {
-    marginTop: 15,
-    marginBottom: 15,
-    elevation: 2,
-  },
   teamSection: {
     marginTop: 15,
     marginBottom: 20,
@@ -744,25 +619,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontStyle: 'italic',
     marginTop: 8,
-  },
-  dueDateRow: {
-    marginBottom: 10,
-  },
-  dueDateText: {
-    fontSize: 16,
-    fontWeight: '500',
-    marginBottom: 10,
-  },
-  dateButton: {
-    marginTop: 5,
-  },
-  dateInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  clearButton: {
-    marginLeft: 10,
   },
   emptyText: {
     textAlign: 'center',

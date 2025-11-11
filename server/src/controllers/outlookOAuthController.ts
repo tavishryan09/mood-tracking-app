@@ -213,15 +213,15 @@ export const syncAllTasks = async (req: AuthRequest, res: Response) => {
 
     console.log('[Outlook] About to call syncAllUserTasks for user:', userId);
 
-    // Trigger sync (non-blocking)
+    // Trigger sync in background (non-blocking) to prevent timeouts with many tasks
     outlookCalendarService.syncAllUserTasks(userId).catch((error) => {
       console.error('[Outlook] Failed to sync tasks:', error);
     });
 
-    console.log('[Outlook] Returning success response to client');
+    console.log('[Outlook] Sync started in background');
     res.json({ message: 'Sync started. Your tasks will be synced to Outlook calendar shortly.' });
   } catch (error) {
     console.error('[Outlook] Error triggering sync:', error);
-    res.status(500).json({ error: 'Failed to trigger sync' });
+    res.status(500).json({ error: 'Failed to trigger sync', details: error instanceof Error ? error.message : 'Unknown error' });
   }
 };

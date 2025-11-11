@@ -154,18 +154,6 @@ const CreateProjectScreen = ({ navigation }: any) => {
           style={styles.input}
         />
 
-        <Title style={[styles.sectionTitle, { color: currentColors.text }]}>Project Status</Title>
-        <SegmentedButtons
-          value={status}
-          onValueChange={setStatus}
-          buttons={[
-            { value: 'ACTIVE', label: 'Active' },
-            { value: 'ON_HOLD', label: 'On Hold' },
-            { value: 'COMPLETED', label: 'Completed' },
-          ]}
-          style={styles.input}
-        />
-
         {/* Team Members Section */}
         <Card style={[styles.teamSection, { backgroundColor: currentColors.background.bg300 }]}>
           <Card.Content>
