@@ -214,6 +214,7 @@ export interface CustomColorTheme {
   paletteId: string;
   paletteName: string;
   elementMapping: ElementColorMapping;
+  source?: 'user' | 'app' | 'shared'; // Track where the theme came from
 }
 
 // Helper to get element labels for UI

@@ -170,34 +170,54 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
     try {
       if (!user) return false;
 
-      // Load active theme ID from database
+      // Load active theme info from database
       const activeThemeResponse = await settingsAPI.user.get(ACTIVE_CUSTOM_THEME_KEY);
-      const activeThemeId = activeThemeResponse?.data?.value;
+      const activeThemeData = activeThemeResponse?.data?.value;
 
-      if (activeThemeId) {
-        // Load the palette and mappings from database
-        const palettesResponse = await settingsAPI.user.get(CUSTOM_COLOR_PALETTES_KEY);
-        const mappingsResponse = await settingsAPI.user.get(ELEMENT_COLOR_MAPPING_KEY);
+      if (activeThemeData) {
+        // Support both old format (just string) and new format (object with id and source)
+        const activeThemeId = typeof activeThemeData === 'string' ? activeThemeData : activeThemeData.paletteId;
+        const activeSource = typeof activeThemeData === 'string' ? 'user' : (activeThemeData.source || 'user');
 
-        if (palettesResponse?.data?.value && mappingsResponse?.data?.value) {
-          const palettes: Record<string, CustomColorPalette> = palettesResponse.data.value;
-          const mappings: Record<string, ElementColorMapping> = mappingsResponse.data.value;
+        console.log('[CustomColorTheme] Loading active theme:', activeThemeId, 'from source:', activeSource);
 
-          const palette = palettes[activeThemeId];
-          const mapping = mappings[activeThemeId];
+        // Load the palette and mappings from the appropriate source
+        const [userPalettesResult, userMappingsResult, appPalettesResult, appMappingsResult, sharedPalettesResult, sharedMappingsResult] = await Promise.allSettled([
+          settingsAPI.user.get(CUSTOM_COLOR_PALETTES_KEY),
+          settingsAPI.user.get(ELEMENT_COLOR_MAPPING_KEY),
+          settingsAPI.app.get('custom_color_palettes'),
+          settingsAPI.app.get('element_color_mapping'),
+          settingsAPI.app.get('shared_custom_themes'),
+          settingsAPI.app.get('shared_element_mappings'),
+        ]);
 
-          if (palette && mapping) {
-            const theme: CustomColorTheme = {
-              paletteId: activeThemeId,
-              paletteName: palette.name,
-              elementMapping: mapping,
-            };
-            setActiveCustomThemeState(theme);
-            setActivePalette(palette);
-            setIsUsingCustomTheme(true);
-            console.log('[CustomColorTheme] User theme loaded:', activeThemeId);
-            return true;
-          }
+        let palette: CustomColorPalette | null = null;
+        let mapping: ElementColorMapping | null = null;
+
+        // Load from the correct source based on saved source
+        if (activeSource === 'user' && userPalettesResult.status === 'fulfilled' && userMappingsResult.status === 'fulfilled') {
+          palette = userPalettesResult.value?.data?.value?.[activeThemeId];
+          mapping = userMappingsResult.value?.data?.value?.[activeThemeId];
+        } else if (activeSource === 'app' && appPalettesResult.status === 'fulfilled' && appMappingsResult.status === 'fulfilled') {
+          palette = appPalettesResult.value?.data?.value?.[activeThemeId];
+          mapping = appMappingsResult.value?.data?.value?.[activeThemeId];
+        } else if (activeSource === 'shared' && sharedPalettesResult.status === 'fulfilled' && sharedMappingsResult.status === 'fulfilled') {
+          palette = sharedPalettesResult.value?.data?.value?.[activeThemeId];
+          mapping = sharedMappingsResult.value?.data?.value?.[activeThemeId];
+        }
+
+        if (palette && mapping) {
+          const theme: CustomColorTheme = {
+            paletteId: activeThemeId,
+            paletteName: palette.name,
+            elementMapping: mapping,
+            source: activeSource,
+          };
+          setActiveCustomThemeState(theme);
+          setActivePalette(palette);
+          setIsUsingCustomTheme(true);
+          console.log('[CustomColorTheme] User theme loaded:', activeThemeId, 'from source:', activeSource);
+          return true;
         }
       }
       // If no active theme or loading failed
@@ -244,21 +264,25 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
 
       let palette: CustomColorPalette | null = null;
       let mapping: ElementColorMapping | null = null;
+      let source: 'user' | 'app' | 'shared' = 'user';
 
       // Priority: user settings > app settings (default) > shared themes
       // Try user settings first
       if (palettesResult.status === 'fulfilled' && palettesResult.value?.data?.value?.[paletteId]) {
         palette = palettesResult.value.data.value[paletteId];
+        source = 'user';
         console.log('[CustomColorTheme] Loaded palette from user settings:', paletteId);
       }
       // Fall back to app settings if not found in user settings
       else if (appPalettesResult.status === 'fulfilled' && appPalettesResult.value?.data?.value?.[paletteId]) {
         palette = appPalettesResult.value.data.value[paletteId];
+        source = 'app';
         console.log('[CustomColorTheme] Loaded palette from app settings:', paletteId, 'Colors:', palette.colors.length);
       }
       // Fall back to shared themes if not found in app settings
       else if (sharedPalettesResult.status === 'fulfilled' && sharedPalettesResult.value?.data?.value?.[paletteId]) {
         palette = sharedPalettesResult.value.data.value[paletteId];
+        source = 'shared';
         console.log('[CustomColorTheme] Loaded palette from shared themes:', paletteId);
       } else {
         console.error('[CustomColorTheme] Could not find palette for ID:', paletteId);
@@ -292,13 +316,15 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
         paletteId,
         paletteName: palette.name,
         elementMapping: mapping,
+        source, // Track where the theme came from
       };
 
       // Only save to user settings if explicitly requested (default behavior)
       // When applying app-wide default theme, we don't want to save it to user settings
       if (saveToUserSettings) {
-        await settingsAPI.user.set(ACTIVE_CUSTOM_THEME_KEY, paletteId);
-        console.log('[CustomColorTheme] Theme saved to user settings:', paletteId);
+        // Save both paletteId and source to distinguish between themes with same ID
+        await settingsAPI.user.set(ACTIVE_CUSTOM_THEME_KEY, { paletteId, source });
+        console.log('[CustomColorTheme] Theme saved to user settings:', paletteId, 'source:', source);
       } else {
         console.log('[CustomColorTheme] Theme activated temporarily (not saved to user settings):', paletteId);
       }

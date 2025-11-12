@@ -415,7 +415,11 @@ const ManageCustomThemesScreen = ({ navigation }: any) => {
   };
 
   const renderPaletteCard = (paletteId: string, palette: CustomColorPalette, isShared: boolean = false) => {
-    const isActive = activeCustomTheme?.paletteId === paletteId && isUsingCustomTheme;
+    // Check if this theme is active by matching both paletteId AND source
+    const expectedSource = isShared ? 'shared' : 'user';
+    const isActive = activeCustomTheme?.paletteId === paletteId &&
+                     activeCustomTheme?.source === expectedSource &&
+                     isUsingCustomTheme;
     const isDefault = defaultThemeId === paletteId;
     const primaryColor = palette.colors.find(c => c.isPrimary);
     const secondaryColor = palette.colors.find(c => c.isSecondary);
