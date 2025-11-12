@@ -17,16 +17,22 @@ export const getSetting = async (req: Request, res: Response, next: NextFunction
   try {
     const { key } = req.params;
 
+    console.log('[getSetting] Fetching setting:', key);
+
     const setting = await prisma.appSetting.findUnique({
       where: { key },
     });
 
     if (!setting) {
+      console.log('[getSetting] Setting not found:', key);
       return res.status(404).json({ error: 'Setting not found' });
     }
 
+    console.log('[getSetting] Found setting:', key, 'Value type:', typeof setting.value);
+
     res.json(setting);
   } catch (error) {
+    console.error('[getSetting] Error fetching setting:', key, error);
     next(error);
   }
 };
