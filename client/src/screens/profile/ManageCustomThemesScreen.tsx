@@ -290,6 +290,63 @@ const ManageCustomThemesScreen = ({ navigation }: any) => {
     }
   };
 
+  const handleUnshareFromAllUsers = async (paletteId: string) => {
+    if (user?.role !== 'ADMIN') {
+      setErrorMessage('Only administrators can unshare themes');
+      setShowErrorDialog(true);
+      return;
+    }
+
+    setSharingTheme(paletteId);
+    try {
+      // Get the palette name before removing
+      const palette = sharedPalettes[paletteId];
+      if (!palette) {
+        throw new Error('Shared palette not found');
+      }
+
+      // Load existing shared themes and remove this one
+      let sharedThemes: Record<string, CustomColorPalette> = {};
+      let sharedMappings: any = {};
+
+      try {
+        const sharedResponse = await settingsAPI.app.get('shared_custom_themes');
+        if (sharedResponse?.data?.value) {
+          sharedThemes = sharedResponse.data.value;
+          delete sharedThemes[paletteId]; // Remove this theme
+        }
+      } catch (error: any) {
+        if (error?.response?.status !== 404) throw error;
+      }
+
+      try {
+        const mappingResponse = await settingsAPI.app.get('shared_element_mappings');
+        if (mappingResponse?.data?.value) {
+          sharedMappings = mappingResponse.data.value;
+          delete sharedMappings[paletteId]; // Remove this mapping
+        }
+      } catch (error: any) {
+        if (error?.response?.status !== 404) throw error;
+      }
+
+      // Save updated shared themes (without the removed theme)
+      await settingsAPI.app.set('shared_custom_themes', sharedThemes);
+      await settingsAPI.app.set('shared_element_mappings', sharedMappings);
+
+      // Reload palettes to show the updated shared status
+      await loadPalettes();
+
+      setSuccessMessage(`"${palette.name}" is no longer shared. Users will not see it in their theme selection.`);
+      setShowSuccessDialog(true);
+    } catch (error: any) {
+      console.error('Error unsharing theme:', error);
+      setErrorMessage(error.message || 'Failed to unshare theme');
+      setShowErrorDialog(true);
+    } finally {
+      setSharingTheme(null);
+    }
+  };
+
   const handleActivateTheme = async (paletteId: string) => {
     setActivating(true);
     try {
@@ -509,6 +566,19 @@ const ManageCustomThemesScreen = ({ navigation }: any) => {
                 icon="share-variant"
               >
                 Share with All Users
+              </Button>
+            )}
+            {user?.role === 'ADMIN' && isShared && (
+              <Button
+                mode="outlined"
+                onPress={() => handleUnshareFromAllUsers(paletteId)}
+                style={[styles.actionButton, { borderColor: currentColors.error }]}
+                loading={sharingTheme === paletteId}
+                disabled={sharingTheme === paletteId}
+                textColor={currentColors.error}
+                icon="share-off"
+              >
+                Unshare
               </Button>
             )}
           </View>
