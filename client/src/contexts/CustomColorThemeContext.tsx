@@ -450,8 +450,25 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
 
   const reloadCustomTheme = useCallback(async () => {
     await loadCustomColorPalettes();
-    await loadActiveCustomTheme();
-  }, [loadCustomColorPalettes, loadActiveCustomTheme]);
+    const hasUserTheme = await loadActiveCustomTheme();
+
+    // If no user theme found, ensure admin default theme is still loaded
+    if (!hasUserTheme && user) {
+      console.log('[CustomColorTheme] reloadCustomTheme: No user theme, checking for admin default...');
+      try {
+        const defaultThemeResponse = await settingsAPI.app.get('default_custom_theme');
+        if (defaultThemeResponse?.data?.value) {
+          const defaultThemeId = defaultThemeResponse.data.value;
+          console.log('[CustomColorTheme] reloadCustomTheme: Restoring admin default theme:', defaultThemeId);
+          await setActiveCustomTheme(defaultThemeId, false, 'app');
+        }
+      } catch (error: any) {
+        if (error?.response?.status !== 404) {
+          console.error('[CustomColorTheme] Error restoring admin default theme:', error);
+        }
+      }
+    }
+  }, [loadCustomColorPalettes, loadActiveCustomTheme, user, setActiveCustomTheme]);
 
   const value = useMemo(() => ({
     customColorPalettes,
