@@ -33,9 +33,11 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
 
   const [customColorPalettes, setCustomColorPalettes] = useState<Record<string, CustomColorPalette>>({});
   const [activeCustomTheme, setActiveCustomThemeState] = useState<CustomColorTheme | null>(null);
-  const [isUsingCustomTheme, setIsUsingCustomTheme] = useState<boolean>(false);
   const [activePalette, setActivePalette] = useState<CustomColorPalette | null>(null);
   const [isInitializing, setIsInitializing] = useState<boolean>(true);
+
+  // Computed value: we're using custom theme if we have an active theme
+  const isUsingCustomTheme = !!activeCustomTheme && !!activePalette;
 
   // Track if we've initialized for the current user
   const [initializedForUser, setInitializedForUser] = useState<string | null>(null);
@@ -216,7 +218,6 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
           };
           setActiveCustomThemeState(theme);
           setActivePalette(palette);
-          setIsUsingCustomTheme(true);
           console.log('[CustomColorTheme] User theme loaded:', activeThemeId, 'from source:', activeSource);
           return true;
         } else {
@@ -232,7 +233,6 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
       // If no active theme or loading failed
       setActiveCustomThemeState(null);
       setActivePalette(null);
-      setIsUsingCustomTheme(false);
       return false;
     } catch (error: any) {
       if (error?.response?.status !== 404) {
@@ -240,7 +240,6 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
       }
       setActiveCustomThemeState(null);
       setActivePalette(null);
-      setIsUsingCustomTheme(false);
       return false;
     }
   }, [user]);
@@ -356,7 +355,6 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
 
       setActiveCustomThemeState(theme);
       setActivePalette(palette);
-      setIsUsingCustomTheme(true);
       console.log('[CustomColorTheme] Theme activated:', paletteId, 'Colors:', palette.colors.length);
     } catch (error) {
       console.error('[CustomColorTheme] Error setting active custom theme:', error);
@@ -374,7 +372,6 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
       // Clear current theme
       setActiveCustomThemeState(null);
       setActivePalette(null);
-      setIsUsingCustomTheme(false);
 
       // Load app-level default theme (if one is set by admin)
       try {
@@ -434,20 +431,22 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
       return;
     }
 
-    if (isUsingCustomTheme && activeCustomTheme && activePalette) {
+    // ALWAYS inject the color resolver as long as we have an active theme
+    // This includes both user-specific themes AND admin default themes
+    if (activeCustomTheme && activePalette) {
       // Inject the color resolver
       setCustomColorResolver(getColorForElement);
       setThemeIsUsingCustomTheme(true);
-      console.log('[CustomColorTheme] Injected color resolver into ThemeContext');
+      console.log('[CustomColorTheme] Injected color resolver into ThemeContext for theme:', activeCustomTheme.paletteId);
     } else {
-      // Remove the color resolver
+      // Only remove if there's truly no theme at all
       setCustomColorResolver(null);
       setThemeIsUsingCustomTheme(false);
-      console.log('[CustomColorTheme] Removed color resolver from ThemeContext');
+      console.log('[CustomColorTheme] No active theme - removed color resolver from ThemeContext');
     }
     // Only depend on state changes, NOT on getColorForElement (which would cause infinite loop)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isUsingCustomTheme, activeCustomTheme, activePalette, setCustomColorResolver, setThemeIsUsingCustomTheme]);
+  }, [activeCustomTheme, activePalette, setCustomColorResolver, setThemeIsUsingCustomTheme]);
 
   const reloadCustomTheme = useCallback(async () => {
     await loadCustomColorPalettes();
