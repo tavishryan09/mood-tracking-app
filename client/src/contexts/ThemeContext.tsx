@@ -24,6 +24,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const { user } = useAuth();
   const [selectedPalette, setSelectedPaletteState] = useState<ColorPaletteName | string>('default');
   const [customPalettes, setCustomPalettes] = useState<Record<string, ColorPalette>>({});
+  const [adminDefaultPalette, setAdminDefaultPalette] = useState<ColorPalette | null>(null);
   const [customColorResolver, setCustomColorResolver] = useState<((section: string, element: string) => string) | null>(null);
   const [isUsingCustomTheme, setIsUsingCustomTheme] = useState<boolean>(false);
   const [userLoaded, setUserLoaded] = useState(false);
@@ -37,8 +38,8 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         const defaultPalette = defaultPaletteResponse.data.value;
         console.log('[ThemeContext] Loaded default color palette with actual color values');
 
-        // Override the hardcoded 'default' palette with the admin-defined colors
-        colorPalettes.default = defaultPalette;
+        // Store admin default in state instead of mutating imported object
+        setAdminDefaultPalette(defaultPalette);
 
         // Set it as selected
         setSelectedPaletteState('default');
@@ -141,13 +142,17 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     if (customPalettes[selectedPalette]) {
       return customPalettes[selectedPalette];
     }
+    // If selectedPalette is 'default' and we have admin default, use it
+    if (selectedPalette === 'default' && adminDefaultPalette) {
+      return adminDefaultPalette;
+    }
     // Then check predefined palettes
     if (colorPalettes[selectedPalette as ColorPaletteName]) {
       return colorPalettes[selectedPalette as ColorPaletteName];
     }
-    // Fallback to default
-    return colorPalettes.default;
-  }, [selectedPalette, customPalettes]);
+    // Fallback to hardcoded default (only if no admin default)
+    return adminDefaultPalette || colorPalettes.default;
+  }, [selectedPalette, customPalettes, adminDefaultPalette]);
 
   // Get current colors - either from custom theme or base palette
   const currentColors = useMemo((): ColorPalette => {
