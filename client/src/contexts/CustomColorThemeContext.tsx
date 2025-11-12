@@ -42,6 +42,9 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
   // Track if we've initialized for the current user
   const [initializedForUser, setInitializedForUser] = useState<string | null>(null);
 
+  // Track if we're currently reloading to prevent flash
+  const isReloadingRef = React.useRef(false);
+
   useEffect(() => {
     console.log('[CustomColorTheme] useEffect triggered, user:', user?.id, 'initializedForUser:', initializedForUser);
     let isMounted = true; // Track if component is mounted
@@ -438,8 +441,8 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
       setCustomColorResolver(getColorForElement);
       setThemeIsUsingCustomTheme(true);
       console.log('[CustomColorTheme] Injected color resolver into ThemeContext for theme:', activeCustomTheme.paletteId);
-    } else {
-      // Only remove if there's truly no theme at all
+    } else if (!isReloadingRef.current) {
+      // Only remove if there's truly no theme at all AND we're not in the middle of reloading
       setCustomColorResolver(null);
       setThemeIsUsingCustomTheme(false);
       console.log('[CustomColorTheme] No active theme - removed color resolver from ThemeContext');
@@ -449,38 +452,46 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
   }, [activeCustomTheme, activePalette, setCustomColorResolver, setThemeIsUsingCustomTheme]);
 
   const reloadCustomTheme = useCallback(async () => {
-    await loadCustomColorPalettes();
+    // Set reloading flag to prevent color resolver from being cleared during reload
+    isReloadingRef.current = true;
 
-    // Save current theme to prevent flash
-    const previousTheme = activeCustomTheme;
-    const previousPalette = activePalette;
+    try {
+      await loadCustomColorPalettes();
 
-    const hasUserTheme = await loadActiveCustomTheme();
+      // Save current theme to prevent flash
+      const previousTheme = activeCustomTheme;
+      const previousPalette = activePalette;
 
-    // If no user theme found, restore admin default or previous theme
-    if (!hasUserTheme && user) {
-      console.log('[CustomColorTheme] reloadCustomTheme: No user theme, checking for admin default...');
-      try {
-        const defaultThemeResponse = await settingsAPI.app.get('default_custom_theme');
-        if (defaultThemeResponse?.data?.value) {
-          const defaultThemeId = defaultThemeResponse.data.value;
+      const hasUserTheme = await loadActiveCustomTheme();
 
-          // Only reload if it's different from current theme
-          if (previousTheme?.paletteId !== defaultThemeId) {
-            console.log('[CustomColorTheme] reloadCustomTheme: Loading admin default theme:', defaultThemeId);
-            await setActiveCustomTheme(defaultThemeId, false, 'app');
-          } else {
-            // Restore previous theme state to prevent flash
-            console.log('[CustomColorTheme] reloadCustomTheme: Restoring previous theme state (no change needed)');
-            setActiveCustomThemeState(previousTheme);
-            setActivePalette(previousPalette);
+      // If no user theme found, restore admin default or previous theme
+      if (!hasUserTheme && user) {
+        console.log('[CustomColorTheme] reloadCustomTheme: No user theme, checking for admin default...');
+        try {
+          const defaultThemeResponse = await settingsAPI.app.get('default_custom_theme');
+          if (defaultThemeResponse?.data?.value) {
+            const defaultThemeId = defaultThemeResponse.data.value;
+
+            // Only reload if it's different from current theme
+            if (previousTheme?.paletteId !== defaultThemeId) {
+              console.log('[CustomColorTheme] reloadCustomTheme: Loading admin default theme:', defaultThemeId);
+              await setActiveCustomTheme(defaultThemeId, false, 'app');
+            } else {
+              // Restore previous theme state to prevent flash
+              console.log('[CustomColorTheme] reloadCustomTheme: Restoring previous theme state (no change needed)');
+              setActiveCustomThemeState(previousTheme);
+              setActivePalette(previousPalette);
+            }
+          }
+        } catch (error: any) {
+          if (error?.response?.status !== 404) {
+            console.error('[CustomColorTheme] Error restoring admin default theme:', error);
           }
         }
-      } catch (error: any) {
-        if (error?.response?.status !== 404) {
-          console.error('[CustomColorTheme] Error restoring admin default theme:', error);
-        }
       }
+    } finally {
+      // Clear reloading flag
+      isReloadingRef.current = false;
     }
   }, [loadCustomColorPalettes, loadActiveCustomTheme, user, setActiveCustomTheme, activeCustomTheme, activePalette]);
 
