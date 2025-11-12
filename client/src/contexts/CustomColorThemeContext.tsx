@@ -450,17 +450,31 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
 
   const reloadCustomTheme = useCallback(async () => {
     await loadCustomColorPalettes();
+
+    // Save current theme to prevent flash
+    const previousTheme = activeCustomTheme;
+    const previousPalette = activePalette;
+
     const hasUserTheme = await loadActiveCustomTheme();
 
-    // If no user theme found, ensure admin default theme is still loaded
+    // If no user theme found, restore admin default or previous theme
     if (!hasUserTheme && user) {
       console.log('[CustomColorTheme] reloadCustomTheme: No user theme, checking for admin default...');
       try {
         const defaultThemeResponse = await settingsAPI.app.get('default_custom_theme');
         if (defaultThemeResponse?.data?.value) {
           const defaultThemeId = defaultThemeResponse.data.value;
-          console.log('[CustomColorTheme] reloadCustomTheme: Restoring admin default theme:', defaultThemeId);
-          await setActiveCustomTheme(defaultThemeId, false, 'app');
+
+          // Only reload if it's different from current theme
+          if (previousTheme?.paletteId !== defaultThemeId) {
+            console.log('[CustomColorTheme] reloadCustomTheme: Loading admin default theme:', defaultThemeId);
+            await setActiveCustomTheme(defaultThemeId, false, 'app');
+          } else {
+            // Restore previous theme state to prevent flash
+            console.log('[CustomColorTheme] reloadCustomTheme: Restoring previous theme state (no change needed)');
+            setActiveCustomThemeState(previousTheme);
+            setActivePalette(previousPalette);
+          }
         }
       } catch (error: any) {
         if (error?.response?.status !== 404) {
@@ -468,7 +482,7 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
         }
       }
     }
-  }, [loadCustomColorPalettes, loadActiveCustomTheme, user, setActiveCustomTheme]);
+  }, [loadCustomColorPalettes, loadActiveCustomTheme, user, setActiveCustomTheme, activeCustomTheme, activePalette]);
 
   const value = useMemo(() => ({
     customColorPalettes,
