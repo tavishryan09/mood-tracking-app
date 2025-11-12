@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import {
   getAppSettings,
   getSetting,
@@ -15,15 +15,24 @@ import { authenticate, authorizeRoles } from '../middleware/auth';
 
 const router = Router();
 
+// Middleware to inject key from URL path for specific routes
+const injectKey = (key: string) => (req: Request, res: Response, next: NextFunction) => {
+  req.params.key = key;
+  next();
+};
+
 // App-wide settings (admin only)
 // GET /app - Get all app settings
 router.get('/app', authenticate, getAppSettings);
 
 // GET /app/:key - All authenticated users can read settings
-// Exceptions: these are public so they can be loaded before login
-router.get('/app/default_custom_theme', getSetting);
-router.get('/app/custom_color_palettes', getSetting);
-router.get('/app/element_color_mapping', getSetting);
+// Note: Specific routes must come BEFORE the catch-all :key route
+// Public routes (no authentication required) - loaded before login
+router.get('/app/default_custom_theme', injectKey('default_custom_theme'), getSetting);
+router.get('/app/custom_color_palettes', injectKey('custom_color_palettes'), getSetting);
+router.get('/app/element_color_mapping', injectKey('element_color_mapping'), getSetting);
+
+// Catch-all route for other settings (requires authentication)
 router.get('/app/:key', authenticate, getSetting);
 
 // PUT /:key - All users can write their own settings, admins can write any setting
