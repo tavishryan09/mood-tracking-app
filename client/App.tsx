@@ -129,11 +129,11 @@ export default function App() {
   return (
     <SafeAreaProvider style={{ flex: 1, height: '100%', width: '100%' }}>
       <AuthProvider>
-        <CustomColorThemeProvider>
-          <ThemeProvider>
+        <ThemeProvider>
+          <CustomColorThemeProvider>
             <ThemedApp />
-          </ThemeProvider>
-        </CustomColorThemeProvider>
+          </CustomColorThemeProvider>
+        </ThemeProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );
