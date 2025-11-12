@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm install --prefix api && npx prisma generate --schema=server/prisma/schema.prisma && npm install --prefix client && npm run --prefix client export:web",
+  "buildCommand": "npm install --prefix api && npm install --prefix client && npm run --prefix client export:web",
   "outputDirectory": "client/dist",
   "framework": null,
   "functions": {

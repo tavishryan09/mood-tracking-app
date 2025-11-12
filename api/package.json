@@ -32,6 +32,6 @@
     "@types/sharp": "^0.31.1"
   },
   "scripts": {
-    "postinstall": "npx prisma generate --schema=../server/prisma/schema.prisma"
+    "postinstall": "npx prisma generate --schema=./schema.prisma"
   }
 }
