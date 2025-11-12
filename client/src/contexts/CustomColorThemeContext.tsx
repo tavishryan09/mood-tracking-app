@@ -14,7 +14,7 @@ interface CustomColorThemeContextType {
   customColorPalettes: Record<string, CustomColorPalette>;
   activeCustomTheme: CustomColorTheme | null;
   isUsingCustomTheme: boolean;
-  setActiveCustomTheme: (paletteId: string, saveToUserSettings?: boolean) => Promise<void>;
+  setActiveCustomTheme: (paletteId: string, saveToUserSettings?: boolean, explicitSource?: 'user' | 'app' | 'shared') => Promise<void>;
   disableCustomTheme: () => Promise<void>;
   getColorForElement: (section: string, element: string) => string;
   loadCustomColorPalettes: () => Promise<void>;
@@ -236,9 +236,9 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
     }
   }, [user]);
 
-  const setActiveCustomTheme = useCallback(async (paletteId: string, saveToUserSettings: boolean = true) => {
+  const setActiveCustomTheme = useCallback(async (paletteId: string, saveToUserSettings: boolean = true, explicitSource?: 'user' | 'app' | 'shared') => {
     try {
-      console.log('[CustomColorTheme] setActiveCustomTheme called with paletteId:', paletteId, 'saveToUserSettings:', saveToUserSettings);
+      console.log('[CustomColorTheme] setActiveCustomTheme called with paletteId:', paletteId, 'saveToUserSettings:', saveToUserSettings, 'explicitSource:', explicitSource);
 
       if (!user) throw new Error('User not logged in');
 
@@ -264,48 +264,64 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
 
       let palette: CustomColorPalette | null = null;
       let mapping: ElementColorMapping | null = null;
-      let source: 'user' | 'app' | 'shared' = 'user';
+      let source: 'user' | 'app' | 'shared' = explicitSource || 'user';
 
-      // Priority: user settings > app settings (default) > shared themes
-      // Try user settings first
-      if (palettesResult.status === 'fulfilled' && palettesResult.value?.data?.value?.[paletteId]) {
-        palette = palettesResult.value.data.value[paletteId];
-        source = 'user';
-        console.log('[CustomColorTheme] Loaded palette from user settings:', paletteId);
-      }
-      // Fall back to app settings if not found in user settings
-      else if (appPalettesResult.status === 'fulfilled' && appPalettesResult.value?.data?.value?.[paletteId]) {
-        palette = appPalettesResult.value.data.value[paletteId];
-        source = 'app';
-        console.log('[CustomColorTheme] Loaded palette from app settings:', paletteId, 'Colors:', palette.colors.length);
-      }
-      // Fall back to shared themes if not found in app settings
-      else if (sharedPalettesResult.status === 'fulfilled' && sharedPalettesResult.value?.data?.value?.[paletteId]) {
-        palette = sharedPalettesResult.value.data.value[paletteId];
-        source = 'shared';
-        console.log('[CustomColorTheme] Loaded palette from shared themes:', paletteId);
+      // If explicit source is provided, load from that source only
+      if (explicitSource) {
+        console.log('[CustomColorTheme] Using explicit source:', explicitSource);
+        if (explicitSource === 'user') {
+          palette = palettesResult.status === 'fulfilled' ? palettesResult.value?.data?.value?.[paletteId] : null;
+          mapping = mappingsResult.status === 'fulfilled' ? mappingsResult.value?.data?.value?.[paletteId] : null;
+        } else if (explicitSource === 'app') {
+          palette = appPalettesResult.status === 'fulfilled' ? appPalettesResult.value?.data?.value?.[paletteId] : null;
+          mapping = appMappingsResult.status === 'fulfilled' ? appMappingsResult.value?.data?.value?.[paletteId] : null;
+        } else if (explicitSource === 'shared') {
+          palette = sharedPalettesResult.status === 'fulfilled' ? sharedPalettesResult.value?.data?.value?.[paletteId] : null;
+          mapping = sharedMappingsResult.status === 'fulfilled' ? sharedMappingsResult.value?.data?.value?.[paletteId] : null;
+        }
+        console.log('[CustomColorTheme] Loaded from explicit source:', explicitSource, 'palette:', !!palette, 'mapping:', !!mapping);
       } else {
-        console.error('[CustomColorTheme] Could not find palette for ID:', paletteId);
-        console.error('[CustomColorTheme] App palettes data:', appPalettesResult.status === 'fulfilled' ? appPalettesResult.value?.data : 'rejected');
-      }
+        // Auto-detect source with priority: user settings > app settings (default) > shared themes
+        // Try user settings first
+        if (palettesResult.status === 'fulfilled' && palettesResult.value?.data?.value?.[paletteId]) {
+          palette = palettesResult.value.data.value[paletteId];
+          source = 'user';
+          console.log('[CustomColorTheme] Loaded palette from user settings:', paletteId);
+        }
+        // Fall back to app settings if not found in user settings
+        else if (appPalettesResult.status === 'fulfilled' && appPalettesResult.value?.data?.value?.[paletteId]) {
+          palette = appPalettesResult.value.data.value[paletteId];
+          source = 'app';
+          console.log('[CustomColorTheme] Loaded palette from app settings:', paletteId, 'Colors:', palette.colors.length);
+        }
+        // Fall back to shared themes if not found in app settings
+        else if (sharedPalettesResult.status === 'fulfilled' && sharedPalettesResult.value?.data?.value?.[paletteId]) {
+          palette = sharedPalettesResult.value.data.value[paletteId];
+          source = 'shared';
+          console.log('[CustomColorTheme] Loaded palette from shared themes:', paletteId);
+        } else {
+          console.error('[CustomColorTheme] Could not find palette for ID:', paletteId);
+          console.error('[CustomColorTheme] App palettes data:', appPalettesResult.status === 'fulfilled' ? appPalettesResult.value?.data : 'rejected');
+        }
 
-      // Try user settings first for mapping
-      if (mappingsResult.status === 'fulfilled' && mappingsResult.value?.data?.value?.[paletteId]) {
-        mapping = mappingsResult.value.data.value[paletteId];
-        console.log('[CustomColorTheme] Loaded mapping from user settings:', paletteId);
-      }
-      // Fall back to app settings if not found in user settings
-      else if (appMappingsResult.status === 'fulfilled' && appMappingsResult.value?.data?.value?.[paletteId]) {
-        mapping = appMappingsResult.value.data.value[paletteId];
-        console.log('[CustomColorTheme] Loaded mapping from app settings:', paletteId);
-      }
-      // Fall back to shared element mappings if not found in app settings
-      else if (sharedMappingsResult.status === 'fulfilled' && sharedMappingsResult.value?.data?.value?.[paletteId]) {
-        mapping = sharedMappingsResult.value.data.value[paletteId];
-        console.log('[CustomColorTheme] Loaded mapping from shared themes:', paletteId);
-      } else {
-        console.error('[CustomColorTheme] Could not find mapping for ID:', paletteId);
-        console.error('[CustomColorTheme] App mappings data:', appMappingsResult.status === 'fulfilled' ? appMappingsResult.value?.data : 'rejected');
+        // Try user settings first for mapping
+        if (mappingsResult.status === 'fulfilled' && mappingsResult.value?.data?.value?.[paletteId]) {
+          mapping = mappingsResult.value.data.value[paletteId];
+          console.log('[CustomColorTheme] Loaded mapping from user settings:', paletteId);
+        }
+        // Fall back to app settings if not found in user settings
+        else if (appMappingsResult.status === 'fulfilled' && appMappingsResult.value?.data?.value?.[paletteId]) {
+          mapping = appMappingsResult.value.data.value[paletteId];
+          console.log('[CustomColorTheme] Loaded mapping from app settings:', paletteId);
+        }
+        // Fall back to shared element mappings if not found in app settings
+        else if (sharedMappingsResult.status === 'fulfilled' && sharedMappingsResult.value?.data?.value?.[paletteId]) {
+          mapping = sharedMappingsResult.value.data.value[paletteId];
+          console.log('[CustomColorTheme] Loaded mapping from shared themes:', paletteId);
+        } else {
+          console.error('[CustomColorTheme] Could not find mapping for ID:', paletteId);
+          console.error('[CustomColorTheme] App mappings data:', appMappingsResult.status === 'fulfilled' ? appMappingsResult.value?.data : 'rejected');
+        }
       }
 
       if (!palette || !mapping) {

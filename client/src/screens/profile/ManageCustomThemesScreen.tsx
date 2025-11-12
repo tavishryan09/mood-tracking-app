@@ -347,10 +347,12 @@ const ManageCustomThemesScreen = ({ navigation }: any) => {
     }
   };
 
-  const handleActivateTheme = async (paletteId: string) => {
+  const handleActivateTheme = async (paletteId: string, isShared: boolean = false) => {
     setActivating(true);
     try {
-      await setActiveCustomTheme(paletteId);
+      // Pass explicit source to avoid loading wrong theme when IDs collide
+      const source = isShared ? 'shared' : 'user';
+      await setActiveCustomTheme(paletteId, true, source);
       await reloadCustomTheme(); // Reload to update the active theme state
       setSuccessMessage('Custom theme activated successfully! Your colors are now applied throughout the app.');
       setShowSuccessDialog(true);
@@ -496,7 +498,7 @@ const ManageCustomThemesScreen = ({ navigation }: any) => {
             {!isActive && (
               <Button
                 mode="contained"
-                onPress={() => handleActivateTheme(paletteId)}
+                onPress={() => handleActivateTheme(paletteId, isShared)}
                 style={styles.actionButton}
                 loading={activating}
                 disabled={activating}
