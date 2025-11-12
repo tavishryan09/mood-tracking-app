@@ -120,62 +120,81 @@ const ManageCustomThemesScreen = ({ navigation }: any) => {
 
     setSettingDefault(true);
     try {
-      // Save the theme ID as default
+      // Get the palette and its element mapping
+      const palette = palettes[paletteId];
+      if (!palette) {
+        throw new Error('Palette not found');
+      }
+
+      // Get element mapping
+      const mappingsResponse = await settingsAPI.user.get('element_color_mapping');
+      if (!mappingsResponse?.data?.value?.[paletteId]) {
+        throw new Error('Element mapping not found for this palette. Please map elements first.');
+      }
+      const mapping = mappingsResponse.data.value[paletteId];
+
+      // Convert custom theme to base ColorPalette structure
+      // This creates actual color values that users without custom themes will see
+      const getColorByIdFromPalette = (colorId: string): string => {
+        const color = palette.colors.find(c => c.id === colorId);
+        return color?.hexCode || '#000000';
+      };
+
+      const defaultColorPalette = {
+        id: 'default',
+        name: 'Default',
+        // Global colors
+        primary: getColorByIdFromPalette(mapping.global.primaryButton),
+        secondary: getColorByIdFromPalette(mapping.global.secondaryButton),
+        text: getColorByIdFromPalette(mapping.global.textPrimary),
+        textSecondary: getColorByIdFromPalette(mapping.global.textSecondary),
+        textTertiary: getColorByIdFromPalette(mapping.global.textTertiary),
+        border: getColorByIdFromPalette(mapping.global.borderColor),
+        borderLight: getColorByIdFromPalette(mapping.global.borderColor), // Reuse border color
+        icon: getColorByIdFromPalette(mapping.global.iconDefault),
+        iconInactive: getColorByIdFromPalette(mapping.global.iconInactive),
+        white: getColorByIdFromPalette(mapping.global.cardBackground),
+        error: getColorByIdFromPalette(mapping.global.errorColor),
+        success: getColorByIdFromPalette(mapping.global.successColor),
+        warning: getColorByIdFromPalette(mapping.global.warningColor),
+        // Background colors
+        background: {
+          bg700: getColorByIdFromPalette(mapping.global.background),
+          bg500: getColorByIdFromPalette(mapping.planningGrid?.dateCellBackground || mapping.global.background),
+          bg300: getColorByIdFromPalette(mapping.planningGrid?.teamMemberCellBackground || mapping.global.background),
+        },
+        // Status colors (use project colors if available, otherwise fallback)
+        status: {
+          active: getColorByIdFromPalette(mapping.projects?.statusActiveColor || mapping.global.successColor),
+          onHold: getColorByIdFromPalette(mapping.projects?.statusOnHoldColor || mapping.global.warningColor),
+          completed: getColorByIdFromPalette(mapping.projects?.statusCompletedColor || mapping.global.primaryButton),
+          archived: getColorByIdFromPalette(mapping.projects?.statusArchivedColor || mapping.global.iconInactive),
+        },
+        // Planning colors
+        planning: {
+          marketingTask: getColorByIdFromPalette(mapping.planningTasks.marketingTaskBackground),
+          outOfOffice: getColorByIdFromPalette(mapping.planningTasks.outOfOfficeBackground),
+          outOfOfficeFont: getColorByIdFromPalette(mapping.planningTasks.outOfOfficeText),
+          unavailable: getColorByIdFromPalette(mapping.planningTasks?.unavailableBackground || mapping.global.iconInactive),
+          timeOff: getColorByIdFromPalette(mapping.planningTasks?.timeOffBackground || mapping.global.successColor),
+          deadline: getColorByIdFromPalette(mapping.planningTasks?.deadlineBackground || mapping.global.errorColor),
+          internalDeadline: getColorByIdFromPalette(mapping.planningTasks?.internalDeadlineBackground || mapping.global.warningColor),
+          milestone: getColorByIdFromPalette(mapping.planningTasks?.milestoneBackground || mapping.global.primaryButton),
+        },
+      };
+
+      // Save this as the actual default color palette that will be used by non-custom-theme users
+      await settingsAPI.app.set('default_color_palette', defaultColorPalette);
+
+      // Also keep the theme ID for reference (so we can show which theme is default in UI)
       await settingsAPI.app.set('default_custom_theme', paletteId);
 
-      // Load existing app palettes and merge with new one
-      if (palettes[paletteId]) {
-        try {
-          const existingPalettesResponse = await settingsAPI.app.get('custom_color_palettes');
-          const existingPalettes = existingPalettesResponse?.data?.value || {};
-
-          // Merge with existing app palettes to avoid overwriting other themes
-          await settingsAPI.app.set('custom_color_palettes', {
-            ...existingPalettes,
-            [paletteId]: palettes[paletteId]
-          });
-        } catch (error: any) {
-          // If 404, no existing palettes, just set this one
-          if (error.response?.status === 404) {
-            await settingsAPI.app.set('custom_color_palettes', { [paletteId]: palettes[paletteId] });
-          } else {
-            throw error;
-          }
-        }
-      }
-
-      // Load existing app mappings and merge with new one
-      try {
-        const mappingsResponse = await settingsAPI.user.get('element_color_mapping');
-        if (mappingsResponse?.data?.value?.[paletteId]) {
-          try {
-            const existingMappingsResponse = await settingsAPI.app.get('element_color_mapping');
-            const existingMappings = existingMappingsResponse?.data?.value || {};
-
-            // Merge with existing app mappings
-            await settingsAPI.app.set('element_color_mapping', {
-              ...existingMappings,
-              [paletteId]: mappingsResponse.data.value[paletteId]
-            });
-          } catch (error: any) {
-            // If 404, no existing mappings, just set this one
-            if (error.response?.status === 404) {
-              await settingsAPI.app.set('element_color_mapping', { [paletteId]: mappingsResponse.data.value[paletteId] });
-            } else {
-              throw error;
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error saving element mapping to app settings:', error);
-      }
-
       setDefaultThemeId(paletteId);
-      setSuccessMessage('This theme is now set as the default for all users who haven\'t selected their own theme');
+      setSuccessMessage('This theme\'s colors are now applied as the default for all users who haven\'t selected their own theme. They will see these exact colors.');
       setShowSuccessDialog(true);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error setting default theme:', error);
-      setErrorMessage('Failed to set default theme');
+      setErrorMessage(error.message || 'Failed to set default theme');
       setShowErrorDialog(true);
     } finally {
       setSettingDefault(false);
@@ -191,9 +210,12 @@ const ManageCustomThemesScreen = ({ navigation }: any) => {
 
     setSettingDefault(true);
     try {
+      // Clear both the theme ID and the actual default color palette
       await settingsAPI.app.delete('default_custom_theme');
+      await settingsAPI.app.delete('default_color_palette');
+
       setDefaultThemeId(null);
-      setSuccessMessage('Default theme cleared. Users will now use the system default theme');
+      setSuccessMessage('Default theme cleared. Users will now use the hardcoded default theme');
       setShowSuccessDialog(true);
     } catch (error) {
       console.error('Error clearing default theme:', error);

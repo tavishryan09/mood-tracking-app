@@ -31,32 +31,25 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   // Load app-level default theme immediately on mount (no auth required)
   const loadAppDefaultTheme = useCallback(async () => {
     try {
-      // First, get the default theme ID
-      const defaultThemeResponse = await settingsAPI.app.get('default_custom_theme');
-      if (defaultThemeResponse?.data?.value) {
-        const themeId = defaultThemeResponse.data.value;
-        console.log('[ThemeContext] Loaded app default theme ID:', themeId);
+      // Load the actual default color palette (not just a theme ID reference)
+      const defaultPaletteResponse = await settingsAPI.app.get('default_color_palette');
+      if (defaultPaletteResponse?.data?.value) {
+        const defaultPalette = defaultPaletteResponse.data.value;
+        console.log('[ThemeContext] Loaded default color palette with actual color values');
 
-        // Check if this is a custom palette (not in predefined palettes)
-        if (!colorPalettes[themeId as ColorPaletteName]) {
-          // It's a custom palette - we need to load it from the database
-          // Custom palettes are stored in user settings, so we need a user-agnostic way to load them
-          // For now, try to load from app settings first
-          try {
-            const customPalettesResponse = await settingsAPI.app.get('custom_color_palettes');
-            if (customPalettesResponse?.data?.value?.[themeId]) {
-              setCustomPalettes({ [themeId]: customPalettesResponse.data.value[themeId] });
-            }
-          } catch (err) {
-            console.log('[ThemeContext] Custom palette not in app settings, will load when user logs in');
-          }
-        }
+        // Override the hardcoded 'default' palette with the admin-defined colors
+        colorPalettes.default = defaultPalette;
 
-        setSelectedPaletteState(themeId);
+        // Set it as selected
+        setSelectedPaletteState('default');
+      } else {
+        console.log('[ThemeContext] No default_color_palette found, using hardcoded default');
       }
     } catch (error: any) {
       if (error?.response?.status !== 404) {
         console.error('[ThemeContext] Error loading app default theme:', error);
+      } else {
+        console.log('[ThemeContext] No default_color_palette found (404), using hardcoded default');
       }
     }
   }, []);
