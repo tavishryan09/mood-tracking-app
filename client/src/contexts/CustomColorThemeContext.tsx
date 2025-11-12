@@ -219,6 +219,14 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
           setIsUsingCustomTheme(true);
           console.log('[CustomColorTheme] User theme loaded:', activeThemeId, 'from source:', activeSource);
           return true;
+        } else {
+          // Theme was saved but data no longer exists - clean it up
+          console.log('[CustomColorTheme] Active theme data not found, deleting stale setting:', activeThemeId);
+          try {
+            await settingsAPI.user.delete(ACTIVE_CUSTOM_THEME_KEY);
+          } catch (err) {
+            console.error('[CustomColorTheme] Error deleting stale theme setting:', err);
+          }
         }
       }
       // If no active theme or loading failed
