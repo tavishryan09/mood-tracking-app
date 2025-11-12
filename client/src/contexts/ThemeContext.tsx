@@ -161,9 +161,12 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const currentColors = useMemo((): ColorPalette => {
     // If not using custom theme, return base colors
     if (!isUsingCustomTheme || !customColorResolver) {
+      console.log('[ThemeContext] currentColors using baseColors (not custom theme). isUsingCustomTheme:', isUsingCustomTheme, 'hasResolver:', !!customColorResolver);
+      console.log('[ThemeContext] baseColors primary:', baseColors.primary, 'background.bg700:', baseColors.background?.bg700);
       return baseColors;
     }
 
+    console.log('[ThemeContext] currentColors using custom theme resolver');
     // Build ColorPalette from custom theme
     const customColors: ColorPalette = {
       ...baseColors, // Start with defaults as fallback
@@ -207,6 +210,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       },
     };
 
+    console.log('[ThemeContext] customColors primary:', customColors.primary, 'background.bg700:', customColors.background.bg700);
     return customColors;
   }, [baseColors, isUsingCustomTheme, customColorResolver]);
 
