@@ -92,11 +92,10 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     if (!user) return;
 
     try {
-      // Load both user preference and app-level default in parallel
-      const [userPaletteResult, appDefaultResult, appCustomPalettesResult] = await Promise.allSettled([
+      // Load both user preference and app-level default theme ID
+      const [userPaletteResult, appDefaultResult] = await Promise.allSettled([
         settingsAPI.user.get(SELECTED_PALETTE_KEY),
         settingsAPI.app.get('default_custom_theme'),
-        settingsAPI.app.get('custom_color_palettes'),
       ]);
 
       let selectedTheme: string | null = null;
@@ -106,16 +105,11 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         // User has their own preference
         selectedTheme = userPaletteResult.value.data.value;
       } else if (appDefaultResult.status === 'fulfilled' && appDefaultResult.value?.data?.value) {
-        // No user preference, use app-level default set by admin
-        selectedTheme = appDefaultResult.value.data.value;
-
-        // If this is a custom palette, load it from app settings
-        if (selectedTheme && !colorPalettes[selectedTheme as ColorPaletteName]) {
-          if (appCustomPalettesResult.status === 'fulfilled' && appCustomPalettesResult.value?.data?.value?.[selectedTheme]) {
-            console.log('[ThemeContext] Loading custom palette from app settings:', selectedTheme);
-            setCustomPalettes(prev => ({ ...prev, [selectedTheme]: appCustomPalettesResult.value.data.value[selectedTheme] }));
-          }
-        }
+        // No user preference, admin set a default theme
+        // The admin default theme colors are already loaded in colorPalettes.default via loadAppDefaultTheme()
+        // So we just use 'default' as the theme name
+        console.log('[ThemeContext] Using admin default theme (already loaded in colorPalettes.default)');
+        selectedTheme = 'default';
       }
 
       if (selectedTheme) {
