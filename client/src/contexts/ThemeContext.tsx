@@ -144,13 +144,16 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
     // If selectedPalette is 'default' and we have admin default, use it
     if (selectedPalette === 'default' && adminDefaultPalette) {
+      console.log('[ThemeContext] Using admin default palette for base colors');
       return adminDefaultPalette;
     }
     // Then check predefined palettes
     if (colorPalettes[selectedPalette as ColorPaletteName]) {
+      console.log('[ThemeContext] Using predefined palette:', selectedPalette);
       return colorPalettes[selectedPalette as ColorPaletteName];
     }
     // Fallback to hardcoded default (only if no admin default)
+    console.log('[ThemeContext] Using fallback:', adminDefaultPalette ? 'admin default' : 'hardcoded default');
     return adminDefaultPalette || colorPalettes.default;
   }, [selectedPalette, customPalettes, adminDefaultPalette]);
 
