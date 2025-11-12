@@ -195,11 +195,11 @@ export const createDefaultCustomTheme = async (): Promise<void> => {
       },
     };
 
-    // Save default palette to database
+    // Save default palette to user database
     palettes[DEFAULT_THEME_ID] = defaultPalette;
     await settingsAPI.user.set(CUSTOM_COLOR_PALETTES_KEY, palettes);
 
-    // Save default mapping to database
+    // Save default mapping to user database
     let mappings: Record<string, ElementColorMapping> = {};
     try {
       const response = await settingsAPI.user.get(ELEMENT_COLOR_MAPPING_KEY);
@@ -215,6 +215,10 @@ export const createDefaultCustomTheme = async (): Promise<void> => {
 
     mappings[DEFAULT_THEME_ID] = defaultMapping;
     await settingsAPI.user.set(ELEMENT_COLOR_MAPPING_KEY, mappings);
+
+    // Also save to app settings so it's available as a fallback for all users
+    await settingsAPI.app.set('custom_color_palettes', { [DEFAULT_THEME_ID]: defaultPalette });
+    await settingsAPI.app.set('element_color_mapping', { [DEFAULT_THEME_ID]: defaultMapping });
 
     console.log('[DefaultTheme] Default custom theme created successfully in database');
   } catch (error) {

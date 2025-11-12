@@ -186,7 +186,11 @@ const ManageCustomThemesScreen = ({ navigation }: any) => {
       // Save this as the actual default color palette that will be used by non-custom-theme users
       await settingsAPI.app.set('default_color_palette', defaultColorPalette);
 
-      // Also keep the theme ID for reference (so we can show which theme is default in UI)
+      // Also save the custom theme palette and mapping to app settings so other users can use it
+      await settingsAPI.app.set('custom_color_palettes', { [paletteId]: palette });
+      await settingsAPI.app.set('element_color_mapping', { [paletteId]: mapping });
+
+      // Keep the theme ID for reference (so we can show which theme is default in UI)
       await settingsAPI.app.set('default_custom_theme', paletteId);
 
       setDefaultThemeId(paletteId);

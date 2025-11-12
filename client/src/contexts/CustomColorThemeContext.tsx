@@ -93,12 +93,13 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
                 console.log('[CustomColorTheme] Admin default theme found:', defaultThemeId);
                 console.log('[CustomColorTheme] Attempting to activate admin default theme...');
                 // Don't save to user settings - this is a temporary app-wide default
-                await setActiveCustomTheme(defaultThemeId, false);
+                // Use explicit source 'app' to load from app settings
+                await setActiveCustomTheme(defaultThemeId, false, 'app');
                 console.log('[CustomColorTheme] Admin default theme activated successfully (temporary)');
               } else {
                 console.log('[CustomColorTheme] No admin default theme value, falling back to built-in default');
                 // Fall back to built-in default theme
-                await setActiveCustomTheme('default_theme', false);
+                await setActiveCustomTheme('default_theme', false, 'app');
                 console.log('[CustomColorTheme] Built-in default theme auto-activated (temporary)');
               }
             } catch (error: any) {
@@ -115,7 +116,7 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
               if (error.response?.status === 404) {
                 console.log('[CustomColorTheme] 404 response - no admin default theme set, using built-in default');
                 try {
-                  await setActiveCustomTheme('default_theme', false);
+                  await setActiveCustomTheme('default_theme', false, 'app');
                   console.log('[CustomColorTheme] Built-in default theme auto-activated (temporary, no admin default)');
                 } catch (err) {
                   console.error('[CustomColorTheme] Error auto-activating built-in default theme:', err);
@@ -373,7 +374,8 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
         if (defaultThemeResponse?.data?.value) {
           const defaultThemeId = defaultThemeResponse.data.value;
           console.log('[CustomColorTheme] Loading app default theme after deactivation:', defaultThemeId);
-          await setActiveCustomTheme(defaultThemeId, false); // Don't save to user settings
+          // Don't save to user settings, load from app settings
+          await setActiveCustomTheme(defaultThemeId, false, 'app');
         } else {
           console.log('[CustomColorTheme] No app default theme set, using hardcoded default');
         }
