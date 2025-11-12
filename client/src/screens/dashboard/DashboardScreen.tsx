@@ -32,9 +32,11 @@ const DashboardScreen = ({ navigation }: any) => {
   const headerBg = getColorForElement('dashboard', 'headerBackground');
   const headerText = getColorForElement('dashboard', 'headerText');
 
-  // Calculate date ranges
+  // Calculate date ranges using local timezone
   const today = new Date();
-  const todayStr = today.toISOString().split('T')[0];
+  // Get local date string (YYYY-MM-DD) without timezone conversion
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
   const startOfWeek = new Date(today);
   startOfWeek.setDate(today.getDate() - today.getDay()); // Sunday
   const endOfWeek = new Date(startOfWeek);
@@ -48,9 +50,11 @@ const DashboardScreen = ({ navigation }: any) => {
     queryFn: async () => {
       const endDate = new Date(today);
       endDate.setDate(today.getDate() + 30);
+      // Use local date string without timezone conversion
+      const endDateStr = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`;
       const response = await deadlineTasksAPI.getAll({
         startDate: todayStr,
-        endDate: endDate.toISOString().split('T')[0],
+        endDate: endDateStr,
       });
       return response.data;
     },
@@ -61,10 +65,12 @@ const DashboardScreen = ({ navigation }: any) => {
   const { data: planningTasksData, isLoading: planningLoading, refetch: refetchPlanning } = useQuery({
     queryKey: ['planningTasks', 'dashboard', user?.id],
     queryFn: async () => {
+      // Use local date string without timezone conversion
+      const endOfMonthStr = `${endOfMonth.getFullYear()}-${String(endOfMonth.getMonth() + 1).padStart(2, '0')}-${String(endOfMonth.getDate()).padStart(2, '0')}`;
       const response = await planningTasksAPI.getAll({
         userId: user?.id,
         startDate: todayStr,
-        endDate: endOfMonth.toISOString().split('T')[0],
+        endDate: endOfMonthStr,
       });
       return response.data;
     },
@@ -81,8 +87,10 @@ const DashboardScreen = ({ navigation }: any) => {
     const thisMonth: any[] = [];
 
     planningTasksData.forEach((task: any) => {
-      const taskDate = new Date(task.date);
-      const taskDateStr = taskDate.toISOString().split('T')[0];
+      // Parse date as local date (task.date is stored as YYYY-MM-DD string)
+      const taskDate = new Date(task.date + 'T00:00:00'); // Treat as local midnight
+      // Get local date string without timezone conversion
+      const taskDateStr = `${taskDate.getFullYear()}-${String(taskDate.getMonth() + 1).padStart(2, '0')}-${String(taskDate.getDate()).padStart(2, '0')}`;
 
       if (taskDateStr === todayStr) {
         today.push(task);
@@ -128,7 +136,8 @@ const DashboardScreen = ({ navigation }: any) => {
   }
 
   const renderDeadlineItem = (deadline: any) => {
-    const deadlineDate = new Date(deadline.date);
+    // Parse as local date
+    const deadlineDate = new Date(deadline.date + 'T00:00:00');
     const formattedDate = deadlineDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
     const getDeadlineTypeLabel = (type: string) => {
@@ -219,7 +228,8 @@ const DashboardScreen = ({ navigation }: any) => {
 
   const renderTaskItem = (task: any, showCheckbox: boolean = false) => {
     console.log('=== RENDER TASK ITEM ===', task.project);
-    const taskDate = new Date(task.date);
+    // Parse as local date
+    const taskDate = new Date(task.date + 'T00:00:00');
     const formattedDate = taskDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     const isCompleted = task.completed || false;
 
