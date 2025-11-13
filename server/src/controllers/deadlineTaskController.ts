@@ -121,17 +121,21 @@ export const createDeadlineTask = async (req: AuthRequest, res: Response) => {
 export const updateDeadlineTask = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
-    const { clientId, description, deadlineType, projectId } = req.body;
+    const { date, slotIndex, clientId, description, deadlineType, projectId } = req.body;
     const userId = req.user?.userId;
+
+    // Build update data object
+    const updateData: any = {};
+    if (date !== undefined) updateData.date = new Date(date);
+    if (slotIndex !== undefined) updateData.slotIndex = parseInt(slotIndex);
+    if (clientId !== undefined) updateData.clientId = clientId;
+    if (description !== undefined) updateData.description = description;
+    if (deadlineType !== undefined) updateData.deadlineType = deadlineType;
+    if (projectId !== undefined) updateData.projectId = projectId;
 
     const deadlineTask = await prisma.deadlineTask.update({
       where: { id },
-      data: {
-        clientId: clientId || undefined,
-        description: description !== undefined ? description : undefined,
-        deadlineType: deadlineType || undefined,
-        projectId: projectId !== undefined ? projectId : undefined,
-      },
+      data: updateData,
       include: {
         client: {
           select: {
