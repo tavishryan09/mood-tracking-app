@@ -296,6 +296,7 @@ const MainTabs = () => {
 
   return (
     <Tab.Navigator
+      key={currentColors.primary} // Force re-render when theme changes
       screenOptions={({ route }) => ({
         // Performance: Only load screens when they're focused
         lazy: true,

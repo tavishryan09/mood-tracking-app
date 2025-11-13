@@ -356,6 +356,7 @@ function MainDrawer() {
 
   return (
     <Drawer.Navigator
+      key={currentColors.primary} // Force re-render when theme changes
       drawerContent={(props) => <CustomDrawerContent {...props} isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />}
       screenOptions={{
         drawerType: 'permanent',
@@ -409,6 +410,7 @@ const DesktopNavigator = () => {
 
   return (
     <Stack.Navigator
+      key={currentColors.primary} // Force re-render when theme changes
       screenOptions={{
         headerShown: false,
       }}
