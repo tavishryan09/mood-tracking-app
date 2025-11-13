@@ -4,7 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-import { Home09Icon, Folder01Icon, UserCircleIcon, Calendar04Icon } from '@hugeicons/core-free-icons';
+import { Home09Icon, Folder01Icon, UserCircleIcon, Calendar04Icon, UserGroupIcon } from '@hugeicons/core-free-icons';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useCustomColorTheme } from '../contexts/CustomColorThemeContext';
@@ -237,7 +237,7 @@ const MainTabs = () => {
   const loadTabSettings = async () => {
     try {
       if (!user || !user.role) {
-        setVisibleTabs(['Dashboard', 'Planning', 'Projects', 'Profile']);
+        setVisibleTabs(['Dashboard', 'Planning', 'Projects', 'Clients', 'Profile']);
         setTabsLoaded(true);
         return;
       }
@@ -263,6 +263,7 @@ const MainTabs = () => {
           if (pageAccess.Dashboard) tabs.push('Dashboard');
           if (pageAccess.Planning) tabs.push('Planning');
           if (pageAccess.Projects) tabs.push('Projects');
+          if (pageAccess.Clients) tabs.push('Clients');
           if (pageAccess.Profile) tabs.push('Profile');
 
           console.log('[AppNavigator] Filtered tabs:', tabs);
@@ -270,20 +271,20 @@ const MainTabs = () => {
         } else {
           // If no settings saved, show all tabs
           console.log('[AppNavigator] No saved settings, showing all tabs');
-          setVisibleTabs(['Dashboard', 'Planning', 'Projects', 'Profile']);
+          setVisibleTabs(['Dashboard', 'Planning', 'Projects', 'Clients', 'Profile']);
         }
       } catch (error: any) {
         // If 404, no settings exist yet - show all tabs
         if (error.response?.status === 404) {
           console.log('[AppNavigator] No saved settings (404), showing all tabs');
-          setVisibleTabs(['Dashboard', 'Planning', 'Projects', 'Profile']);
+          setVisibleTabs(['Dashboard', 'Planning', 'Projects', 'Clients', 'Profile']);
         } else {
           throw error;
         }
       }
     } catch (error) {
       console.error('[AppNavigator] Error loading tab settings:', error);
-      setVisibleTabs(['Dashboard', 'Planning', 'Projects', 'Profile']);
+      setVisibleTabs(['Dashboard', 'Planning', 'Projects', 'Clients', 'Profile']);
     } finally {
       setTabsLoaded(true);
     }
@@ -311,6 +312,8 @@ const MainTabs = () => {
             iconObject = Calendar04Icon;
           } else if (route.name === 'Projects') {
             iconObject = Folder01Icon;
+          } else if (route.name === 'Clients') {
+            iconObject = UserGroupIcon;
           } else if (route.name === 'Profile') {
             iconObject = UserCircleIcon;
           }
@@ -374,6 +377,14 @@ const MainTabs = () => {
           options={{ title: 'Projects' }}
         >
           {(props) => <SmartProjectsScreen {...props} />}
+        </Tab.Screen>
+      )}
+      {visibleTabs.includes('Clients') && (
+        <Tab.Screen
+          name="Clients"
+          options={{ title: 'Clients' }}
+        >
+          {(props) => <SuspenseWrapper component={ClientsListScreen} {...props} />}
         </Tab.Screen>
       )}
       {visibleTabs.includes('Profile') && (
