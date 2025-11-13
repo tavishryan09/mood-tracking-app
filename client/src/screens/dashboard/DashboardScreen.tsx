@@ -100,8 +100,21 @@ const DashboardScreen = ({ navigation }: any) => {
         task: task.task
       });
 
+      // Skip tasks with no date or invalid date
+      if (!task.date) {
+        console.log('[Dashboard] Skipping task with no date:', task.id);
+        return;
+      }
+
       // Parse date as local date (task.date is stored as YYYY-MM-DD string)
       const taskDate = new Date(task.date + 'T00:00:00'); // Treat as local midnight
+
+      // Check if date is valid
+      if (isNaN(taskDate.getTime())) {
+        console.log('[Dashboard] Skipping task with invalid date:', task.id, task.date);
+        return;
+      }
+
       // Get local date string without timezone conversion
       const taskDateStr = `${taskDate.getFullYear()}-${String(taskDate.getMonth() + 1).padStart(2, '0')}-${String(taskDate.getDate()).padStart(2, '0')}`;
 
