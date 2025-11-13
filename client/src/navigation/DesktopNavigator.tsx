@@ -697,7 +697,7 @@ const styles = StyleSheet.create({
   sidebarHeader: {
     padding: 20,
     borderBottomWidth: 0,
-    borderBottomColor: currentColors.border,
+    borderBottomColor: '#C6C6C8',
     marginBottom: 10,
     backgroundColor: iOSColors.systemGroupedBackground,
     alignItems: 'center',
