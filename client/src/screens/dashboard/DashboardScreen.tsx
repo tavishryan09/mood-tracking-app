@@ -93,10 +93,27 @@ const DashboardScreen = ({ navigation }: any) => {
     const thisMonth: any[] = [];
 
     planningTasksData.forEach((task: any) => {
+      console.log('[Dashboard] Processing task:', {
+        id: task.id,
+        rawDate: task.date,
+        project: task.project?.name,
+        task: task.task
+      });
+
       // Parse date as local date (task.date is stored as YYYY-MM-DD string)
       const taskDate = new Date(task.date + 'T00:00:00'); // Treat as local midnight
       // Get local date string without timezone conversion
       const taskDateStr = `${taskDate.getFullYear()}-${String(taskDate.getMonth() + 1).padStart(2, '0')}-${String(taskDate.getDate()).padStart(2, '0')}`;
+
+      console.log('[Dashboard] Task date comparison:', {
+        taskDateStr,
+        todayStr,
+        isToday: taskDateStr === todayStr,
+        taskDate: taskDate.toISOString(),
+        startOfWeek: startOfWeek.toISOString(),
+        endOfWeek: endOfWeek.toISOString(),
+        isThisWeek: taskDate >= startOfWeek && taskDate <= endOfWeek
+      });
 
       if (taskDateStr === todayStr) {
         today.push(task);
