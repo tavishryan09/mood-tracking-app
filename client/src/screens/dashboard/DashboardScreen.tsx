@@ -28,6 +28,7 @@ const DashboardScreen = ({ navigation }: any) => {
   });
 
   // Get dashboard colors from Element Color Mapper
+  const dashboardBg = getColorForElement('dashboard', 'background');
   const cardBg = getColorForElement('dashboard', 'cardBackground');
   const headerBg = getColorForElement('dashboard', 'headerBackground');
   const headerText = getColorForElement('dashboard', 'headerText');
@@ -174,7 +175,7 @@ const DashboardScreen = ({ navigation }: any) => {
 
   if (loading) {
     return (
-      <View style={[styles.centered, { backgroundColor: currentColors.background.bg700 }]}>
+      <View style={[styles.centered, { backgroundColor: dashboardBg }]}>
         <ActivityIndicator size="large" color={currentColors.primary} />
       </View>
     );
@@ -365,7 +366,7 @@ const DashboardScreen = ({ navigation }: any) => {
 
   return (
     <ScrollView
-      style={[styles.container, { backgroundColor: currentColors.background.bg700 }]}
+      style={[styles.container, { backgroundColor: dashboardBg }]}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
       <View style={[styles.header, { backgroundColor: headerBg }]}>
