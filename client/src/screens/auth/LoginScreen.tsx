@@ -9,11 +9,10 @@ import {
 } from 'react-native';
 import { TextInput, Button, Title, Text, HelperText } from 'react-native-paper';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-import { ViewIcon, ViewOffIcon, UserIcon, LockPasswordIcon, UserGroupIcon } from '@hugeicons/core-free-icons';
+import { ViewIcon, ViewOffIcon, UserIcon, LockPasswordIcon } from '@hugeicons/core-free-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { CustomDialog } from '../../components/CustomDialog';
-import axios from 'axios';
 
 const LoginScreen = ({ navigation }: any) => {
   const [email, setEmail] = useState('');
@@ -95,44 +94,6 @@ const LoginScreen = ({ navigation }: any) => {
     setDialogVisible(true);
   };
 
-  const handleMicrosoftLogin = async () => {
-    try {
-      setLoading(true);
-      setErrorMessage('');
-
-      // Get API URL based on platform
-      const getApiUrl = () => {
-        if (Platform.OS === 'web') {
-          if (typeof window !== 'undefined' && window.location.hostname.match(/^192\.168\./)) {
-            return `http://${window.location.hostname}:3000/api`;
-          }
-          return 'http://localhost:3000/api';
-        }
-        return 'http://192.168.100.117:3000/api';
-      };
-
-      const apiUrl = getApiUrl();
-      console.log('[Microsoft Login] Fetching auth URL from:', `${apiUrl}/auth/microsoft`);
-
-      const response = await axios.get(`${apiUrl}/auth/microsoft`);
-      const { authUrl } = response.data;
-
-      console.log('[Microsoft Login] Redirecting to:', authUrl);
-
-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        // For web, redirect to Microsoft login
-        window.location.href = authUrl;
-      } else {
-        // For mobile, you would use WebBrowser from expo
-        setErrorMessage('Microsoft login is only supported on web for now');
-        setLoading(false);
-      }
-    } catch (error: any) {
-      console.error('[Microsoft Login] Error:', error);
-      setErrorMessage('Failed to initiate Microsoft login. Please try again.');
-      setLoading(false);
-    }
-  };
 
   const dynamicStyles = createStyles(currentColors);
 
@@ -226,32 +187,6 @@ const LoginScreen = ({ navigation }: any) => {
           >
             Forgot Password?
           </Button>
-
-          <View style={dynamicStyles.dividerContainer}>
-            <View style={[dynamicStyles.divider, { backgroundColor: currentColors.border }]} />
-            <Text style={[dynamicStyles.dividerText, { color: currentColors.textSecondary }]}>OR</Text>
-            <View style={[dynamicStyles.divider, { backgroundColor: currentColors.border }]} />
-          </View>
-
-          <Button
-            mode="outlined"
-            onPress={handleMicrosoftLogin}
-            disabled={loading}
-            style={dynamicStyles.microsoftButton}
-            icon={() => (
-              <HugeiconsIcon
-                icon={UserGroupIcon}
-                size={20}
-                color={currentColors.primary}
-              />
-            )}
-          >
-            Sign in with Microsoft
-          </Button>
-
-          <HelperText type="info" style={dynamicStyles.helpText}>
-            Access must be granted by an administrator
-          </HelperText>
         </View>
       </ScrollView>
 
@@ -304,28 +239,6 @@ const createStyles = (currentColors: any) => StyleSheet.create({
   },
   forgotButton: {
     marginTop: 10,
-  },
-  helpText: {
-    marginTop: 15,
-    textAlign: 'center',
-  },
-  dividerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginVertical: 20,
-  },
-  divider: {
-    flex: 1,
-    height: 1,
-  },
-  dividerText: {
-    marginHorizontal: 15,
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  microsoftButton: {
-    marginTop: 5,
-    paddingVertical: 5,
   },
 });
 

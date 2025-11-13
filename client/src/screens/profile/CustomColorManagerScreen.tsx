@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { Button, Title, IconButton, Checkbox } from 'react-native-paper';
+import { HugeiconsIcon } from '@hugeicons/react-native';
+import { CheckmarkCircle01Icon, Cancel01Icon } from '@hugeicons/core-free-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import { CustomColor, CustomColorPalette } from '../../types/customColors';
 import { CustomDialog } from '../../components/CustomDialog';
@@ -198,33 +200,40 @@ const CustomColorManagerScreen = ({ navigation, route }: any) => {
       <View key={color.id} style={[styles.colorCard, { backgroundColor: '#FFFFFF', borderColor: currentColors.borderLight }]}>
         <View style={styles.colorCardHeader}>
           <Text style={[styles.colorCardTitle, { color: currentColors.text }]}>Color {index + 1}</Text>
-          <IconButton
-            icon="delete"
-            size={20}
+          <TouchableOpacity
             onPress={() => confirmDeleteColor(color.id)}
-            iconColor={currentColors.error}
-          />
+            style={{ padding: 8 }}
+          >
+            <HugeiconsIcon
+              icon={Cancel01Icon}
+              size={20}
+              color={currentColors.error}
+            />
+          </TouchableOpacity>
         </View>
 
-        {/* Color Name */}
-        <View style={styles.inputGroup}>
-          <Text style={[styles.label, { color: currentColors.textSecondary }]}>Color Name</Text>
-          <TextInput
-            style={[styles.input, { color: currentColors.text, borderColor: currentColors.border, backgroundColor: currentColors.background.bg700 }]}
-            value={color.name}
-            onChangeText={(text) => updateColor(color.id, 'name', text)}
-            placeholder="e.g., Ocean Blue"
-            placeholderTextColor={currentColors.textTertiary}
-          />
-        </View>
+        {/* Inline Form Row */}
+        <View style={styles.inlineFormRow}>
+          {/* Color Preview */}
+          <View style={[styles.colorPreview, { backgroundColor: color.hexCode, borderColor: currentColors.border }]} />
 
-        {/* Hex Code */}
-        <View style={styles.inputGroup}>
-          <Text style={[styles.label, { color: currentColors.textSecondary }]}>Hex Code</Text>
-          <View style={styles.hexInputContainer}>
-            <View style={[styles.colorPreview, { backgroundColor: color.hexCode, borderColor: currentColors.border }]} />
+          {/* Color Name Input */}
+          <View style={styles.inlineInputContainer}>
+            <Text style={[styles.inlineLabel, { color: currentColors.textSecondary }]}>Color Name</Text>
             <TextInput
-              style={[styles.hexInput, { color: currentColors.text, borderColor: currentColors.border, backgroundColor: currentColors.background.bg700 }]}
+              style={[styles.inlineInput, { color: currentColors.text, borderColor: currentColors.border, backgroundColor: currentColors.background.bg700 }]}
+              value={color.name}
+              onChangeText={(text) => updateColor(color.id, 'name', text)}
+              placeholder="e.g., Mood Pink"
+              placeholderTextColor={currentColors.textTertiary}
+            />
+          </View>
+
+          {/* Hex Code Input */}
+          <View style={styles.inlineInputContainer}>
+            <Text style={[styles.inlineLabel, { color: currentColors.textSecondary }]}>Hex Code</Text>
+            <TextInput
+              style={[styles.inlineInput, { color: currentColors.text, borderColor: currentColors.border, backgroundColor: currentColors.background.bg700 }]}
               value={color.hexCode}
               onChangeText={(text) => {
                 // Ensure it starts with #
@@ -234,38 +243,37 @@ const CustomColorManagerScreen = ({ navigation, route }: any) => {
                 }
                 updateColor(color.id, 'hexCode', formatted);
               }}
-              placeholder="#000000"
+              placeholder="#dd3e7f"
               placeholderTextColor={currentColors.textTertiary}
               maxLength={7}
               autoCapitalize="characters"
             />
           </View>
-        </View>
 
-        {/* Primary & Secondary Checkboxes */}
-        <View style={styles.checkboxContainer}>
+          {/* Primary Checkbox */}
           <TouchableOpacity
-            style={styles.checkboxRow}
+            style={styles.inlineCheckbox}
             onPress={() => updateColor(color.id, 'isPrimary', !color.isPrimary)}
           >
-            <Checkbox
-              status={color.isPrimary ? 'checked' : 'unchecked'}
-              onPress={() => updateColor(color.id, 'isPrimary', !color.isPrimary)}
-              color={currentColors.primary}
+            <HugeiconsIcon
+              icon={CheckmarkCircle01Icon}
+              size={20}
+              color={color.isPrimary ? currentColors.primary : currentColors.textTertiary}
             />
-            <Text style={[styles.checkboxLabel, { color: currentColors.text }]}>Set as Primary Color</Text>
+            <Text style={[styles.inlineCheckboxLabel, { color: currentColors.text }]}>Set as Primary Color</Text>
           </TouchableOpacity>
 
+          {/* Secondary Checkbox */}
           <TouchableOpacity
-            style={styles.checkboxRow}
+            style={styles.inlineCheckbox}
             onPress={() => updateColor(color.id, 'isSecondary', !color.isSecondary)}
           >
-            <Checkbox
-              status={color.isSecondary ? 'checked' : 'unchecked'}
-              onPress={() => updateColor(color.id, 'isSecondary', !color.isSecondary)}
-              color={currentColors.secondary}
+            <HugeiconsIcon
+              icon={CheckmarkCircle01Icon}
+              size={20}
+              color={color.isSecondary ? currentColors.secondary : currentColors.textTertiary}
             />
-            <Text style={[styles.checkboxLabel, { color: currentColors.text }]}>Set as Secondary Color</Text>
+            <Text style={[styles.inlineCheckboxLabel, { color: currentColors.text }]}>Set as Secondary Color</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -479,6 +487,35 @@ const styles = StyleSheet.create({
   checkboxLabel: {
     fontSize: 14,
     marginLeft: 8,
+  },
+  inlineFormRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  inlineInputContainer: {
+    flex: 1,
+    minWidth: 150,
+  },
+  inlineLabel: {
+    fontSize: 12,
+    marginBottom: 4,
+    fontWeight: '500',
+  },
+  inlineInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 8,
+    fontSize: 14,
+  },
+  inlineCheckbox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  inlineCheckboxLabel: {
+    fontSize: 13,
   },
   addColorButton: {
     marginTop: 10,

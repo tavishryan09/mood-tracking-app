@@ -3,7 +3,7 @@ import { View, StyleSheet, FlatList, TouchableOpacity, Modal, Text } from 'react
 import { Card, Title, Paragraph, FAB, ActivityIndicator, Searchbar, IconButton, Menu, Divider } from 'react-native-paper';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-import { Search01Icon } from '@hugeicons/core-free-icons';
+import { Search01Icon, AddCircleIcon, PencilEdit02Icon, Cancel01Icon } from '@hugeicons/core-free-icons';
 import { clientsAPI } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 
@@ -124,7 +124,7 @@ const ClientsListScreen = () => {
                     (navigation as any).navigate('EditClient', { clientId: item.id });
                   }}
                   title="Edit"
-                  leadingIcon="pencil"
+                  leadingIcon={() => <HugeiconsIcon icon={PencilEdit02Icon} size={20} color={currentColors.icon} />}
                 />
                 <Divider />
                 <Menu.Item
@@ -133,7 +133,7 @@ const ClientsListScreen = () => {
                     handleDeleteClick(item.id);
                   }}
                   title="Delete"
-                  leadingIcon="delete"
+                  leadingIcon={() => <HugeiconsIcon icon={Cancel01Icon} size={20} color={currentColors.error} />}
                 />
               </Menu>
             </View>
@@ -212,7 +212,7 @@ const ClientsListScreen = () => {
 
       <FAB
         style={[styles.fab, { backgroundColor: currentColors.primary }]}
-        icon="plus"
+        icon={() => <HugeiconsIcon icon={AddCircleIcon} size={24} color="#FFFFFF" />}
         label="New Client"
         onPress={() => {
           (navigation as any).navigate('CreateClient');

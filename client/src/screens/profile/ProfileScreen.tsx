@@ -868,27 +868,35 @@ const ProfileScreen = ({ navigation }: any) => {
           title="Default Page"
           description={`Page to show when ${roleLabel}s log in`}
           right={() => (
-            <Menu
-              visible={menuVisible}
-              onDismiss={() => setMenuVisible(false)}
-              anchor={
-                <Button mode="outlined" onPress={() => setMenuVisible(true)}>
-                  {PAGES.find((p) => p.key === defaultPage)?.label || 'Select'}
-                </Button>
-              }
-            >
-              {availablePages.map((page) => (
-                <Menu.Item
-                  key={page.key}
-                  onPress={() => {
-                    setDefaultPage(page.key);
-                    setMenuVisible(false);
-                  }}
-                  title={page.label}
-                  leadingIcon={page.key === defaultPage ? 'check' : undefined}
-                />
-              ))}
-            </Menu>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <Menu
+                visible={menuVisible}
+                onDismiss={() => setMenuVisible(false)}
+                contentStyle={{ backgroundColor: currentColors.background.bg500 }}
+                anchor={
+                  <Button
+                    mode="outlined"
+                    onPress={() => setMenuVisible(true)}
+                    style={{ minWidth: 120 }}
+                  >
+                    {PAGES.find((p) => p.key === defaultPage)?.label || 'Select'}
+                  </Button>
+                }
+              >
+                {availablePages.map((page) => (
+                  <Menu.Item
+                    key={page.key}
+                    onPress={() => {
+                      setDefaultPage(page.key);
+                      setMenuVisible(false);
+                    }}
+                    title={page.label}
+                    leadingIcon={page.key === defaultPage ? 'check' : undefined}
+                    titleStyle={{ color: currentColors.text }}
+                  />
+                ))}
+              </Menu>
+            </View>
           )}
         />
 
@@ -1052,7 +1060,7 @@ const ProfileScreen = ({ navigation }: any) => {
         <List.Item
           title="Manage Custom Themes"
           description="Create and customize your color themes"
-          right={() => <HugeiconsIcon icon={Calendar04Icon} size={24} color={currentColors.icon} />}
+          right={() => <HugeiconsIcon icon={PencilEdit02Icon} size={24} color={currentColors.icon} />}
           onPress={() => navigation.navigate('ManageCustomThemes')}
         />
       </List.Section>

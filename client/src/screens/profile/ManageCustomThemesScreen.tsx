@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Text, TouchableOpacity } from 'react-native';
 import { Button, Title, Card, IconButton, Chip } from 'react-native-paper';
+import { HugeiconsIcon } from '@hugeicons/react-native';
+import { ArrowLeft01Icon, Cancel01Icon, Share03Icon, AddCircleIcon } from '@hugeicons/core-free-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCustomColorTheme } from '../../contexts/CustomColorThemeContext';
@@ -465,13 +467,17 @@ const ManageCustomThemesScreen = ({ navigation }: any) => {
               </View>
             </View>
             {!isShared && (
-              <IconButton
-                icon="delete"
-                size={20}
+              <TouchableOpacity
                 onPress={() => confirmDelete(paletteId)}
-                iconColor={currentColors.error}
                 disabled={deleting === paletteId || isDefault}
-              />
+                style={{ padding: 8, opacity: (deleting === paletteId || isDefault) ? 0.5 : 1 }}
+              >
+                <HugeiconsIcon
+                  icon={Cancel01Icon}
+                  size={20}
+                  color={currentColors.error}
+                />
+              </TouchableOpacity>
             )}
           </View>
 
@@ -573,7 +579,7 @@ const ManageCustomThemesScreen = ({ navigation }: any) => {
                 loading={sharingTheme === paletteId}
                 disabled={sharingTheme === paletteId}
                 textColor="#4CAF50"
-                icon="share-variant"
+                icon={() => <HugeiconsIcon icon={Share03Icon} size={16} color="#4CAF50" />}
               >
                 Share with All Users
               </Button>
@@ -586,7 +592,7 @@ const ManageCustomThemesScreen = ({ navigation }: any) => {
                 loading={sharingTheme === paletteId}
                 disabled={sharingTheme === paletteId}
                 textColor={currentColors.error}
-                icon="share-off"
+                icon={() => <HugeiconsIcon icon={Cancel01Icon} size={16} color={currentColors.error} />}
               >
                 Unshare
               </Button>
@@ -601,13 +607,16 @@ const ManageCustomThemesScreen = ({ navigation }: any) => {
     <ScrollView style={[styles.container, { backgroundColor: currentColors.background.bg700 }]}>
       <View style={styles.content}>
         <View style={styles.header}>
-          <IconButton
-            icon="arrow-left"
-            size={24}
+          <TouchableOpacity
             onPress={() => navigation.goBack()}
-            iconColor={currentColors.text}
             style={styles.backButton}
-          />
+          >
+            <HugeiconsIcon
+              icon={ArrowLeft01Icon}
+              size={24}
+              color={currentColors.text}
+            />
+          </TouchableOpacity>
           <Title style={[styles.title, { color: currentColors.text }]}>Manage Custom Themes</Title>
           <View style={styles.placeholder} />
         </View>
@@ -652,7 +661,7 @@ const ManageCustomThemesScreen = ({ navigation }: any) => {
               mode="outlined"
               onPress={() => navigation.navigate('CustomColorManager')}
               style={styles.createNewButton}
-              icon="plus"
+              icon={() => <HugeiconsIcon icon={AddCircleIcon} size={20} color={currentColors.primary} />}
             >
               Create New Palette
             </Button>
