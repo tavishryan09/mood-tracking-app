@@ -933,8 +933,10 @@ const PlanningScreen = () => {
       return;
     }
 
+    // Use local date (not UTC) since targetDate is already a local Date object representing the day
     const targetDateString = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}-${String(targetDate.getDate()).padStart(2, '0')}`;
     const sourceDateObj = new Date(draggedDeadlineTask.date);
+    // Use UTC for source since it comes from the database as UTC
     const sourceDateString = `${sourceDateObj.getUTCFullYear()}-${String(sourceDateObj.getUTCMonth() + 1).padStart(2, '0')}-${String(sourceDateObj.getUTCDate()).padStart(2, '0')}`;
 
     // Can't drop on the same slot
@@ -960,8 +962,11 @@ const PlanningScreen = () => {
     }
 
     try {
-      // Create ISO string for the target date at UTC midnight
-      const targetDateISO = `${targetDateString}T00:00:00.000Z`;
+      // Store as 12:01 AM Pacific Time (PT is UTC-8, so 08:01 UTC = 00:01 PST)
+      // This ensures the date is correct for both Pacific and Eastern timezones
+      const targetDateISO = `${targetDateString}T08:01:00.000Z`;
+
+      console.log('[DRAG DEADLINE] Updating task', draggedDeadlineTask.id, 'from', draggedDeadlineTask.date, 'slot', draggedDeadlineTask.slotIndex, 'to', targetDateISO, 'slot', targetSlotIndex);
 
       // Update the deadline task
       const response = await deadlineTasksAPI.update(draggedDeadlineTask.id, {
@@ -969,10 +974,17 @@ const PlanningScreen = () => {
         slotIndex: targetSlotIndex,
       });
 
-      // Update state
-      setDeadlineTasks(deadlineTasks.map((task) =>
+      console.log('[DRAG DEADLINE] API response:', response.data);
+
+      // Update state with new array to trigger re-render
+      const updatedTasks = deadlineTasks.map((task) =>
         task.id === draggedDeadlineTask.id ? response.data : task
-      ));
+      );
+
+      console.log('[DRAG DEADLINE] Old tasks count:', deadlineTasks.length, 'New tasks count:', updatedTasks.length);
+      console.log('[DRAG DEADLINE] Updated task in state:', updatedTasks.find(t => t.id === draggedDeadlineTask.id));
+
+      setDeadlineTasks(updatedTasks);
 
       console.log('[DRAG DEADLINE] Deadline task moved successfully to', targetDateISO, 'slot', targetSlotIndex);
     } catch (error) {
@@ -1967,8 +1979,13 @@ const PlanningScreen = () => {
         ));
       } else {
         // Create new task
+        // Store as 12:01 AM Pacific Time (PT is UTC-8, so 08:01 UTC = 00:01 PST)
+        const date = selectedDeadlineSlot.date;
+        const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        const dateISO = `${dateString}T08:01:00.000Z`;
+
         const response = await deadlineTasksAPI.create({
-          date: selectedDeadlineSlot.date.toISOString(),
+          date: dateISO,
           slotIndex: selectedDeadlineSlot.slotIndex,
           ...data,
         });
@@ -2574,7 +2591,11 @@ const PlanningScreen = () => {
                         const taskDate = new Date(task.date);
                         // Use UTC methods to avoid timezone issues
                         const taskDateString = `${taskDate.getUTCFullYear()}-${String(taskDate.getUTCMonth() + 1).padStart(2, '0')}-${String(taskDate.getUTCDate()).padStart(2, '0')}`;
-                        return taskDateString === dateString && task.slotIndex === slotIndex;
+                        const matches = taskDateString === dateString && task.slotIndex === slotIndex;
+                        if (matches) {
+                          console.log('[RENDER DEADLINE] Found task:', task.id, 'for date:', dateString, 'slot:', slotIndex, 'task date:', task.date, 'taskDateString:', taskDateString);
+                        }
+                        return matches;
                       });
 
                       // Check if this day is a weekend
