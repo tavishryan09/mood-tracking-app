@@ -17,7 +17,7 @@ const ElementColorMapperScreen = ({ navigation, route }: any) => {
   const [elementMapping, setElementMapping] = useState<ElementColorMapping | null>(null);
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [saving, setSaving] = useState<boolean>(false);
-  const [expandedSections, setExpandedSections] = useState<string[]>(['navigation', 'global']);
+  const [expandedSections, setExpandedSections] = useState<string[]>([]);
 
   // Dialog states
   const [showSuccessDialog, setShowSuccessDialog] = useState<boolean>(false);
