@@ -137,8 +137,8 @@ const DashboardScreen = ({ navigation }: any) => {
 
       if (taskDateStr === todayStr) {
         today.push(task);
-      }
-      if (taskDate >= startOfWeek && taskDate <= endOfWeek) {
+      } else if (taskDate >= startOfWeek && taskDate <= endOfWeek) {
+        // Only add to "This Week" if it's NOT today
         thisWeek.push(task);
       }
       if (taskDate >= startOfMonth && taskDate <= endOfMonth) {
@@ -181,8 +181,15 @@ const DashboardScreen = ({ navigation }: any) => {
   }
 
   const renderDeadlineItem = (deadline: any) => {
-    // Parse as local date
-    const deadlineDate = new Date(deadline.date + 'T00:00:00');
+    // Parse date - handle both formats: 'YYYY-MM-DD' and 'YYYY-MM-DDTHH:mm:ss.sssZ'
+    let deadlineDate: Date;
+    if (deadline.date.includes('T')) {
+      // Already a full timestamp, parse directly
+      deadlineDate = new Date(deadline.date);
+    } else {
+      // Date-only string, treat as local midnight
+      deadlineDate = new Date(deadline.date + 'T00:00:00');
+    }
     const formattedDate = deadlineDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
     const getDeadlineTypeLabel = (type: string) => {
@@ -273,8 +280,15 @@ const DashboardScreen = ({ navigation }: any) => {
 
   const renderTaskItem = (task: any, showCheckbox: boolean = false) => {
     console.log('=== RENDER TASK ITEM ===', task.project);
-    // Parse as local date
-    const taskDate = new Date(task.date + 'T00:00:00');
+    // Parse date - handle both formats: 'YYYY-MM-DD' and 'YYYY-MM-DDTHH:mm:ss.sssZ'
+    let taskDate: Date;
+    if (task.date.includes('T')) {
+      // Already a full timestamp, parse directly
+      taskDate = new Date(task.date);
+    } else {
+      // Date-only string, treat as local midnight
+      taskDate = new Date(task.date + 'T00:00:00');
+    }
     const formattedDate = taskDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     const isCompleted = task.completed || false;
 
