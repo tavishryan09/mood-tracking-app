@@ -366,7 +366,7 @@ function MainDrawer() {
         },
         headerStyle: {
           backgroundColor: currentColors.primary,
-          borderBottomColor: iOSColors.separator,
+          borderBottomColor: currentColors.border,
           borderBottomWidth: 0.5,
           elevation: 0,
           shadowOpacity: 0,
@@ -422,7 +422,7 @@ const DesktopNavigator = () => {
           title: 'Create Event',
           headerStyle: {
             backgroundColor: currentColors.primary,
-            borderBottomColor: iOSColors.separator,
+            borderBottomColor: currentColors.border,
             borderBottomWidth: 0.5,
           },
           headerTitleStyle: {
@@ -441,7 +441,7 @@ const DesktopNavigator = () => {
           title: 'Edit Event',
           headerStyle: {
             backgroundColor: currentColors.primary,
-            borderBottomColor: iOSColors.separator,
+            borderBottomColor: currentColors.border,
             borderBottomWidth: 0.5,
           },
           headerTitleStyle: {
@@ -460,7 +460,7 @@ const DesktopNavigator = () => {
           title: 'Create Project',
           headerStyle: {
             backgroundColor: currentColors.primary,
-            borderBottomColor: iOSColors.separator,
+            borderBottomColor: currentColors.border,
             borderBottomWidth: 0.5,
           },
           headerTitleStyle: {
@@ -479,7 +479,7 @@ const DesktopNavigator = () => {
           title: 'Edit Project',
           headerStyle: {
             backgroundColor: currentColors.primary,
-            borderBottomColor: iOSColors.separator,
+            borderBottomColor: currentColors.border,
             borderBottomWidth: 0.5,
           },
           headerTitleStyle: {
@@ -498,7 +498,7 @@ const DesktopNavigator = () => {
           title: 'Create Client',
           headerStyle: {
             backgroundColor: currentColors.primary,
-            borderBottomColor: iOSColors.separator,
+            borderBottomColor: currentColors.border,
             borderBottomWidth: 0.5,
           },
           headerTitleStyle: {
@@ -517,7 +517,7 @@ const DesktopNavigator = () => {
           title: 'Edit Client',
           headerStyle: {
             backgroundColor: currentColors.primary,
-            borderBottomColor: iOSColors.separator,
+            borderBottomColor: currentColors.border,
             borderBottomWidth: 0.5,
           },
           headerTitleStyle: {
@@ -536,7 +536,7 @@ const DesktopNavigator = () => {
           title: 'Manage Users',
           headerStyle: {
             backgroundColor: currentColors.primary,
-            borderBottomColor: iOSColors.separator,
+            borderBottomColor: currentColors.border,
             borderBottomWidth: 0.5,
           },
           headerTitleStyle: {
@@ -555,7 +555,7 @@ const DesktopNavigator = () => {
           title: 'Edit User',
           headerStyle: {
             backgroundColor: currentColors.primary,
-            borderBottomColor: iOSColors.separator,
+            borderBottomColor: currentColors.border,
             borderBottomWidth: 0.5,
           },
           headerTitleStyle: {
@@ -574,7 +574,7 @@ const DesktopNavigator = () => {
           title: 'Invite User',
           headerStyle: {
             backgroundColor: currentColors.primary,
-            borderBottomColor: iOSColors.separator,
+            borderBottomColor: currentColors.border,
             borderBottomWidth: 0.5,
           },
           headerTitleStyle: {
@@ -593,7 +593,7 @@ const DesktopNavigator = () => {
           title: 'Manage User Rates',
           headerStyle: {
             backgroundColor: currentColors.primary,
-            borderBottomColor: iOSColors.separator,
+            borderBottomColor: currentColors.border,
             borderBottomWidth: 0.5,
           },
           headerTitleStyle: {
@@ -612,7 +612,7 @@ const DesktopNavigator = () => {
           title: 'Team View Settings',
           headerStyle: {
             backgroundColor: currentColors.primary,
-            borderBottomColor: iOSColors.separator,
+            borderBottomColor: currentColors.border,
             borderBottomWidth: 0.5,
           },
           headerTitleStyle: {
@@ -639,7 +639,7 @@ const DesktopNavigator = () => {
           title: 'Planning Page Colors',
           headerStyle: {
             backgroundColor: currentColors.primary,
-            borderBottomColor: iOSColors.separator,
+            borderBottomColor: currentColors.border,
             borderBottomWidth: 0.5,
           },
           headerTitleStyle: {
@@ -658,7 +658,7 @@ const DesktopNavigator = () => {
           title: 'Custom Color Manager',
           headerStyle: {
             backgroundColor: currentColors.primary,
-            borderBottomColor: iOSColors.separator,
+            borderBottomColor: currentColors.border,
             borderBottomWidth: 0.5,
           },
           headerTitleStyle: {
@@ -695,7 +695,7 @@ const styles = StyleSheet.create({
   sidebarHeader: {
     padding: 20,
     borderBottomWidth: 0,
-    borderBottomColor: iOSColors.separator,
+    borderBottomColor: currentColors.border,
     marginBottom: 10,
     backgroundColor: iOSColors.systemGroupedBackground,
     alignItems: 'center',

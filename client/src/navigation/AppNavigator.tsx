@@ -335,7 +335,7 @@ const MainTabs = () => {
         headerShown: true,
         headerStyle: {
           backgroundColor: currentColors.primary,
-          borderBottomColor: iOSColors.separator,
+          borderBottomColor: currentColors.border,
           borderBottomWidth: 0.5,
           elevation: 0,
           shadowOpacity: 0,
