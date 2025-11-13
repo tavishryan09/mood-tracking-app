@@ -110,8 +110,9 @@ const DashboardScreen = ({ navigation }: any) => {
       // Parse date - handle both formats: 'YYYY-MM-DD' and 'YYYY-MM-DDTHH:mm:ss.sssZ'
       let taskDate: Date;
       if (task.date.includes('T')) {
-        // Already a full timestamp, parse directly
-        taskDate = new Date(task.date);
+        // ISO timestamp - extract date part only and treat as local
+        const datePart = task.date.split('T')[0]; // Get 'YYYY-MM-DD'
+        taskDate = new Date(datePart + 'T00:00:00');
       } else {
         // Date-only string, treat as local midnight
         taskDate = new Date(task.date + 'T00:00:00');
@@ -185,8 +186,9 @@ const DashboardScreen = ({ navigation }: any) => {
     // Parse date - handle both formats: 'YYYY-MM-DD' and 'YYYY-MM-DDTHH:mm:ss.sssZ'
     let deadlineDate: Date;
     if (deadline.date.includes('T')) {
-      // Already a full timestamp, parse directly
-      deadlineDate = new Date(deadline.date);
+      // ISO timestamp - extract date part only and treat as local
+      const datePart = deadline.date.split('T')[0]; // Get 'YYYY-MM-DD'
+      deadlineDate = new Date(datePart + 'T00:00:00');
     } else {
       // Date-only string, treat as local midnight
       deadlineDate = new Date(deadline.date + 'T00:00:00');
@@ -284,8 +286,9 @@ const DashboardScreen = ({ navigation }: any) => {
     // Parse date - handle both formats: 'YYYY-MM-DD' and 'YYYY-MM-DDTHH:mm:ss.sssZ'
     let taskDate: Date;
     if (task.date.includes('T')) {
-      // Already a full timestamp, parse directly
-      taskDate = new Date(task.date);
+      // ISO timestamp - extract date part only and treat as local
+      const datePart = task.date.split('T')[0]; // Get 'YYYY-MM-DD'
+      taskDate = new Date(datePart + 'T00:00:00');
     } else {
       // Date-only string, treat as local midnight
       taskDate = new Date(task.date + 'T00:00:00');
