@@ -2624,7 +2624,7 @@ const PlanningScreen = () => {
                           }}
                         >
                           {deadlineTask && (
-                            <div style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '2px', height: '100%', justifyContent: 'center' }}>
+                            <div style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '2px', height: '100%', justifyContent: 'center', pointerEvents: 'none' }}>
                               {deadlineTask.project && (
                                 <div style={{ fontWeight: '700', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                   {deadlineTask.project.description || deadlineTask.project.name}
