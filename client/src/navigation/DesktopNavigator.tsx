@@ -3,7 +3,7 @@ import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { createStackNavigator } from '@react-navigation/stack';
 import { createDrawerNavigator, DrawerContentScrollView, DrawerItem } from '@react-navigation/drawer';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-import { Home09Icon, Folder01Icon, UserCircleIcon, UserGroupIcon, MultiplicationSignIcon } from '@hugeicons/core-free-icons';
+import { Home09Icon, Folder01Icon, UserCircleIcon, UserGroupIcon, MultiplicationSignIcon, Calendar04Icon } from '@hugeicons/core-free-icons';
 import { Title, Paragraph } from 'react-native-paper';
 import { iOSColors } from '../theme/iosTheme';
 import { useAuth } from '../contexts/AuthContext';
@@ -106,7 +106,7 @@ const SmartProjectsScreen = (props: any) => {
 
 const allMenuItems = [
   { name: 'Dashboard', icon: Home09Icon, label: 'Dashboard', component: DashboardScreen },
-  { name: 'Planning', icon: Home09Icon, label: 'Planning', component: PlanningScreen },
+  { name: 'Planning', icon: Calendar04Icon, label: 'Planning', component: PlanningScreen },
   { name: 'Projects', icon: Folder01Icon, label: 'Projects', component: SmartProjectsScreen },
   { name: 'Clients', icon: UserGroupIcon, label: 'Clients', component: ClientsListScreen },
   { name: 'Profile', icon: UserCircleIcon, label: 'Profile', component: ProfileScreen },
