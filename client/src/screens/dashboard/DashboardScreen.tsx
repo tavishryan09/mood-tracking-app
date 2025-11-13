@@ -342,11 +342,11 @@ const DashboardScreen = ({ navigation }: any) => {
             )}
             <View style={styles.taskTextContainer}>
               {task.project ? (
-                <Text style={[styles.taskProjectName, { color: currentColors.textSecondary }]}>
+                <Text style={[styles.taskProjectName, { color: currentColors.textSecondary, textDecorationLine: isCompleted ? 'line-through' : 'none', opacity: isCompleted ? 0.6 : 1 }]}>
                   {task.project.description || task.project.name}{taskTypeLabel}
                 </Text>
               ) : taskTypeLabel ? (
-                <Text style={[styles.taskProjectName, { color: currentColors.textSecondary }]}>
+                <Text style={[styles.taskProjectName, { color: currentColors.textSecondary, textDecorationLine: isCompleted ? 'line-through' : 'none', opacity: isCompleted ? 0.6 : 1 }]}>
                   {taskTypeLabel.trim().replace(/^\(|\)$/g, '')}
                 </Text>
               ) : null}
