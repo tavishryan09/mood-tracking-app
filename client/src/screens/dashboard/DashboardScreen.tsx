@@ -41,9 +41,12 @@ const DashboardScreen = ({ navigation }: any) => {
   console.log('[Dashboard] Today\'s date:', todayStr, 'Full date object:', today);
 
   const startOfWeek = new Date(today);
-  startOfWeek.setDate(today.getDate() - today.getDay()); // Sunday
+  // Calculate Monday as start of week (getDay() returns 0 for Sunday, 1 for Monday, etc.)
+  const dayOfWeek = today.getDay();
+  const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // If Sunday, go back 6 days to Monday
+  startOfWeek.setDate(today.getDate() - daysFromMonday); // Monday
   const endOfWeek = new Date(startOfWeek);
-  endOfWeek.setDate(startOfWeek.getDate() + 6); // Saturday
+  endOfWeek.setDate(startOfWeek.getDate() + 6); // Sunday
   const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
   const endOfMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0);
 
