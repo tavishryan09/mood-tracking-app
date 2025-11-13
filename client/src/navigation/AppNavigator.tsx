@@ -334,7 +334,7 @@ const MainTabs = () => {
         // iOS-style header
         headerShown: true,
         headerStyle: {
-          backgroundColor: iOSColors.systemBackground,
+          backgroundColor: currentColors.primary,
           borderBottomColor: iOSColors.separator,
           borderBottomWidth: 0.5,
           elevation: 0,
@@ -343,9 +343,9 @@ const MainTabs = () => {
         headerTitleStyle: {
           fontSize: 17,
           fontWeight: '600',
-          color: iOSColors.label,
+          color: '#FFFFFF',
         },
-        headerTintColor: currentColors.primary,
+        headerTintColor: '#FFFFFF',
       })}
     >
       {visibleTabs.includes('Dashboard') && (
