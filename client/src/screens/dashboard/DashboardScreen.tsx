@@ -106,8 +106,15 @@ const DashboardScreen = ({ navigation }: any) => {
         return;
       }
 
-      // Parse date as local date (task.date is stored as YYYY-MM-DD string)
-      const taskDate = new Date(task.date + 'T00:00:00'); // Treat as local midnight
+      // Parse date - handle both formats: 'YYYY-MM-DD' and 'YYYY-MM-DDTHH:mm:ss.sssZ'
+      let taskDate: Date;
+      if (task.date.includes('T')) {
+        // Already a full timestamp, parse directly
+        taskDate = new Date(task.date);
+      } else {
+        // Date-only string, treat as local midnight
+        taskDate = new Date(task.date + 'T00:00:00');
+      }
 
       // Check if date is valid
       if (isNaN(taskDate.getTime())) {
