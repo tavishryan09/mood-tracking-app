@@ -960,9 +960,12 @@ const PlanningScreen = () => {
     }
 
     try {
+      // Create ISO string for the target date at UTC midnight
+      const targetDateISO = `${targetDateString}T00:00:00.000Z`;
+
       // Update the deadline task
       const response = await deadlineTasksAPI.update(draggedDeadlineTask.id, {
-        date: targetDate.toISOString(),
+        date: targetDateISO,
         slotIndex: targetSlotIndex,
       });
 
@@ -971,7 +974,7 @@ const PlanningScreen = () => {
         task.id === draggedDeadlineTask.id ? response.data : task
       ));
 
-      console.log('[DRAG DEADLINE] Deadline task moved successfully');
+      console.log('[DRAG DEADLINE] Deadline task moved successfully to', targetDateISO, 'slot', targetSlotIndex);
     } catch (error) {
       console.error('[DRAG DEADLINE] Error moving deadline task:', error);
       setErrorMessage('Failed to move deadline task');
