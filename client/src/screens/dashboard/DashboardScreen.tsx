@@ -412,7 +412,7 @@ const DashboardScreen = ({ navigation }: any) => {
           <Title style={{ color: currentColors.text }}>This Week's Tasks</Title>
           {tasksByPeriod.thisWeek.length > 0 ? (
             <View style={styles.tasksList}>
-              {tasksByPeriod.thisWeek.slice(0, 5).map((task) => renderTaskItem(task, true))}
+              {tasksByPeriod.thisWeek.map((task) => renderTaskItem(task, true))}
             </View>
           ) : (
             <Text style={[styles.emptyText, { color: currentColors.textSecondary }]}>
