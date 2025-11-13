@@ -909,8 +909,12 @@ const PlanningScreen = () => {
   };
 
   // Handle deadline task drag start
-  const handleDeadlineTaskDragStart = (task: DeadlineTask) => {
+  const handleDeadlineTaskDragStart = (e: React.DragEvent, task: DeadlineTask) => {
+    e.stopPropagation();
     setDraggedDeadlineTask(task);
+    if (e.dataTransfer) {
+      e.dataTransfer.effectAllowed = 'move';
+    }
   };
 
   // Handle deadline cell drag over
@@ -2583,7 +2587,7 @@ const PlanningScreen = () => {
                         <td
                           key={`${dateString}-deadline-${slotIndex}`}
                           draggable={!!deadlineTask}
-                          onDragStart={() => deadlineTask && handleDeadlineTaskDragStart(deadlineTask)}
+                          onDragStart={(e) => deadlineTask && handleDeadlineTaskDragStart(e, deadlineTask)}
                           onDragOver={(e) => handleDeadlineCellDragOver(e, day, slotIndex)}
                           onDrop={(e) => handleDeadlineTaskDrop(e, day, slotIndex)}
                           onDragEnd={handleDeadlineTaskDragEnd}
