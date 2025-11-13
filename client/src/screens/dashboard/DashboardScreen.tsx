@@ -37,6 +37,8 @@ const DashboardScreen = ({ navigation }: any) => {
   // Get local date string (YYYY-MM-DD) without timezone conversion
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
 
+  console.log('[Dashboard] Today\'s date:', todayStr, 'Full date object:', today);
+
   const startOfWeek = new Date(today);
   startOfWeek.setDate(today.getDate() - today.getDay()); // Sunday
   const endOfWeek = new Date(startOfWeek);
@@ -52,10 +54,12 @@ const DashboardScreen = ({ navigation }: any) => {
       endDate.setDate(today.getDate() + 30);
       // Use local date string without timezone conversion
       const endDateStr = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`;
+      console.log('[Dashboard] Fetching deadlines from', todayStr, 'to', endDateStr);
       const response = await deadlineTasksAPI.getAll({
         startDate: todayStr,
         endDate: endDateStr,
       });
+      console.log('[Dashboard] Deadlines response:', response.data);
       return response.data;
     },
     staleTime: 2 * 60 * 1000, // 2 minutes
@@ -67,11 +71,13 @@ const DashboardScreen = ({ navigation }: any) => {
     queryFn: async () => {
       // Use local date string without timezone conversion
       const endOfMonthStr = `${endOfMonth.getFullYear()}-${String(endOfMonth.getMonth() + 1).padStart(2, '0')}-${String(endOfMonth.getDate()).padStart(2, '0')}`;
+      console.log('[Dashboard] Fetching planning tasks from', todayStr, 'to', endOfMonthStr, 'for user', user?.id);
       const response = await planningTasksAPI.getAll({
         userId: user?.id,
         startDate: todayStr,
         endDate: endOfMonthStr,
       });
+      console.log('[Dashboard] Planning tasks response:', response.data);
       return response.data;
     },
     enabled: !!user?.id,
@@ -104,11 +110,13 @@ const DashboardScreen = ({ navigation }: any) => {
     });
 
     console.log('=== DASHBOARD TASKS DEBUG ===');
-    console.log('Today tasks:', today.map(t => ({ id: t.id, project: t.project, task: t.task })));
-    console.log('This week tasks:', thisWeek.map(t => ({ id: t.id, project: t.project, task: t.task })));
+    console.log('Today tasks:', today.map(t => ({ id: t.id, date: t.date, project: t.project?.name, task: t.task })));
+    console.log('This week tasks:', thisWeek.map(t => ({ id: t.id, date: t.date, project: t.project?.name, task: t.task })));
+    console.log('Today string for comparison:', todayStr);
+    console.log('Week range:', { start: startOfWeek.toISOString(), end: endOfWeek.toISOString() });
 
     return { today, thisWeek, thisMonth };
-  }, [planningTasksData, todayStr]);
+  }, [planningTasksData, todayStr, startOfWeek, endOfWeek]);
 
   const loading = deadlinesLoading || planningLoading;
   const refreshing = false;
