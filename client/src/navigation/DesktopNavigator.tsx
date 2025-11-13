@@ -365,7 +365,7 @@ function MainDrawer() {
           borderRightWidth: 0,
         },
         headerStyle: {
-          backgroundColor: iOSColors.systemBackground,
+          backgroundColor: currentColors.primary,
           borderBottomColor: iOSColors.separator,
           borderBottomWidth: 0.5,
           elevation: 0,
@@ -374,9 +374,9 @@ function MainDrawer() {
         headerTitleStyle: {
           fontSize: 17,
           fontWeight: '600',
-          color: iOSColors.label,
+          color: '#FFFFFF',
         },
-        headerTintColor: currentColors.primary,
+        headerTintColor: '#FFFFFF',
       }}
     >
       {visibleMenuItems.map((item) => (
@@ -421,16 +421,16 @@ const DesktopNavigator = () => {
           headerShown: true,
           title: 'Create Event',
           headerStyle: {
-            backgroundColor: iOSColors.systemBackground,
+            backgroundColor: currentColors.primary,
             borderBottomColor: iOSColors.separator,
             borderBottomWidth: 0.5,
           },
           headerTitleStyle: {
             fontSize: 17,
             fontWeight: '600',
-            color: iOSColors.label,
+            color: '#FFFFFF',
           },
-          headerTintColor: currentColors.primary,
+          headerTintColor: '#FFFFFF',
         }}
       />
       <Stack.Screen
@@ -440,16 +440,16 @@ const DesktopNavigator = () => {
           headerShown: true,
           title: 'Edit Event',
           headerStyle: {
-            backgroundColor: iOSColors.systemBackground,
+            backgroundColor: currentColors.primary,
             borderBottomColor: iOSColors.separator,
             borderBottomWidth: 0.5,
           },
           headerTitleStyle: {
             fontSize: 17,
             fontWeight: '600',
-            color: iOSColors.label,
+            color: '#FFFFFF',
           },
-          headerTintColor: currentColors.primary,
+          headerTintColor: '#FFFFFF',
         }}
       />
       <Stack.Screen
@@ -459,16 +459,16 @@ const DesktopNavigator = () => {
           headerShown: true,
           title: 'Create Project',
           headerStyle: {
-            backgroundColor: iOSColors.systemBackground,
+            backgroundColor: currentColors.primary,
             borderBottomColor: iOSColors.separator,
             borderBottomWidth: 0.5,
           },
           headerTitleStyle: {
             fontSize: 17,
             fontWeight: '600',
-            color: iOSColors.label,
+            color: '#FFFFFF',
           },
-          headerTintColor: currentColors.primary,
+          headerTintColor: '#FFFFFF',
         }}
       />
       <Stack.Screen
@@ -478,16 +478,16 @@ const DesktopNavigator = () => {
           headerShown: true,
           title: 'Edit Project',
           headerStyle: {
-            backgroundColor: iOSColors.systemBackground,
+            backgroundColor: currentColors.primary,
             borderBottomColor: iOSColors.separator,
             borderBottomWidth: 0.5,
           },
           headerTitleStyle: {
             fontSize: 17,
             fontWeight: '600',
-            color: iOSColors.label,
+            color: '#FFFFFF',
           },
-          headerTintColor: currentColors.primary,
+          headerTintColor: '#FFFFFF',
         }}
       />
       <Stack.Screen
@@ -497,16 +497,16 @@ const DesktopNavigator = () => {
           headerShown: true,
           title: 'Create Client',
           headerStyle: {
-            backgroundColor: iOSColors.systemBackground,
+            backgroundColor: currentColors.primary,
             borderBottomColor: iOSColors.separator,
             borderBottomWidth: 0.5,
           },
           headerTitleStyle: {
             fontSize: 17,
             fontWeight: '600',
-            color: iOSColors.label,
+            color: '#FFFFFF',
           },
-          headerTintColor: currentColors.primary,
+          headerTintColor: '#FFFFFF',
         }}
       />
       <Stack.Screen
@@ -516,16 +516,16 @@ const DesktopNavigator = () => {
           headerShown: true,
           title: 'Edit Client',
           headerStyle: {
-            backgroundColor: iOSColors.systemBackground,
+            backgroundColor: currentColors.primary,
             borderBottomColor: iOSColors.separator,
             borderBottomWidth: 0.5,
           },
           headerTitleStyle: {
             fontSize: 17,
             fontWeight: '600',
-            color: iOSColors.label,
+            color: '#FFFFFF',
           },
-          headerTintColor: currentColors.primary,
+          headerTintColor: '#FFFFFF',
         }}
       />
       <Stack.Screen
@@ -535,16 +535,16 @@ const DesktopNavigator = () => {
           headerShown: true,
           title: 'Manage Users',
           headerStyle: {
-            backgroundColor: iOSColors.systemBackground,
+            backgroundColor: currentColors.primary,
             borderBottomColor: iOSColors.separator,
             borderBottomWidth: 0.5,
           },
           headerTitleStyle: {
             fontSize: 17,
             fontWeight: '600',
-            color: iOSColors.label,
+            color: '#FFFFFF',
           },
-          headerTintColor: currentColors.primary,
+          headerTintColor: '#FFFFFF',
         }}
       />
       <Stack.Screen
@@ -554,16 +554,16 @@ const DesktopNavigator = () => {
           headerShown: true,
           title: 'Edit User',
           headerStyle: {
-            backgroundColor: iOSColors.systemBackground,
+            backgroundColor: currentColors.primary,
             borderBottomColor: iOSColors.separator,
             borderBottomWidth: 0.5,
           },
           headerTitleStyle: {
             fontSize: 17,
             fontWeight: '600',
-            color: iOSColors.label,
+            color: '#FFFFFF',
           },
-          headerTintColor: currentColors.primary,
+          headerTintColor: '#FFFFFF',
         }}
       />
       <Stack.Screen
@@ -573,16 +573,16 @@ const DesktopNavigator = () => {
           headerShown: true,
           title: 'Invite User',
           headerStyle: {
-            backgroundColor: iOSColors.systemBackground,
+            backgroundColor: currentColors.primary,
             borderBottomColor: iOSColors.separator,
             borderBottomWidth: 0.5,
           },
           headerTitleStyle: {
             fontSize: 17,
             fontWeight: '600',
-            color: iOSColors.label,
+            color: '#FFFFFF',
           },
-          headerTintColor: currentColors.primary,
+          headerTintColor: '#FFFFFF',
         }}
       />
       <Stack.Screen
@@ -592,16 +592,16 @@ const DesktopNavigator = () => {
           headerShown: true,
           title: 'Manage User Rates',
           headerStyle: {
-            backgroundColor: iOSColors.systemBackground,
+            backgroundColor: currentColors.primary,
             borderBottomColor: iOSColors.separator,
             borderBottomWidth: 0.5,
           },
           headerTitleStyle: {
             fontSize: 17,
             fontWeight: '600',
-            color: iOSColors.label,
+            color: '#FFFFFF',
           },
-          headerTintColor: currentColors.primary,
+          headerTintColor: '#FFFFFF',
         }}
       />
       <Stack.Screen
@@ -611,22 +611,22 @@ const DesktopNavigator = () => {
           headerShown: true,
           title: 'Team View Settings',
           headerStyle: {
-            backgroundColor: iOSColors.systemBackground,
+            backgroundColor: currentColors.primary,
             borderBottomColor: iOSColors.separator,
             borderBottomWidth: 0.5,
           },
           headerTitleStyle: {
             fontSize: 17,
             fontWeight: '600',
-            color: iOSColors.label,
+            color: '#FFFFFF',
           },
-          headerTintColor: currentColors.primary,
+          headerTintColor: '#FFFFFF',
           headerLeft: () => (
             <TouchableOpacity
               onPress={() => navigation.goBack()}
               style={{ marginLeft: 16 }}
             >
-              <HugeiconsIcon icon={MultiplicationSignIcon} size={24} color={currentColors.primary} />
+              <HugeiconsIcon icon={MultiplicationSignIcon} size={24} color="#FFFFFF" />
             </TouchableOpacity>
           ),
         })}
@@ -638,16 +638,16 @@ const DesktopNavigator = () => {
           headerShown: true,
           title: 'Planning Page Colors',
           headerStyle: {
-            backgroundColor: iOSColors.systemBackground,
+            backgroundColor: currentColors.primary,
             borderBottomColor: iOSColors.separator,
             borderBottomWidth: 0.5,
           },
           headerTitleStyle: {
             fontSize: 17,
             fontWeight: '600',
-            color: iOSColors.label,
+            color: '#FFFFFF',
           },
-          headerTintColor: currentColors.primary,
+          headerTintColor: '#FFFFFF',
         }}
       />
       <Stack.Screen
@@ -657,16 +657,16 @@ const DesktopNavigator = () => {
           headerShown: true,
           title: 'Custom Color Manager',
           headerStyle: {
-            backgroundColor: iOSColors.systemBackground,
+            backgroundColor: currentColors.primary,
             borderBottomColor: iOSColors.separator,
             borderBottomWidth: 0.5,
           },
           headerTitleStyle: {
             fontSize: 17,
             fontWeight: '600',
-            color: iOSColors.label,
+            color: '#FFFFFF',
           },
-          headerTintColor: currentColors.primary,
+          headerTintColor: '#FFFFFF',
         }}
       />
       <Stack.Screen
