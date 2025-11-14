@@ -401,12 +401,14 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
   const getColorForElement = useCallback((section: string, element: string): string => {
     if (!activeCustomTheme || !isUsingCustomTheme || !activePalette) {
       // Return default color from current theme
-      console.log(`[CustomColorTheme] No active theme for ${section}.${element}, using defaults`);
+      console.log(`[CustomColorTheme] No active theme for ${section}.${element}, using defaults. isUsingCustomTheme:`, isUsingCustomTheme, 'activeCustomTheme:', !!activeCustomTheme, 'activePalette:', !!activePalette);
       return getDefaultColorForElement(section, element, currentColors);
     }
 
     try {
-      const colorId = (activeCustomTheme.elementMapping[section as keyof ElementColorMapping] as any)?.[element];
+      const sectionMapping = activeCustomTheme.elementMapping[section as keyof ElementColorMapping];
+      console.log(`[CustomColorTheme] Section mapping for ${section}:`, sectionMapping);
+      const colorId = (sectionMapping as any)?.[element];
       console.log(`[CustomColorTheme] Getting color for ${section}.${element}, colorId:`, colorId);
       if (!colorId) {
         console.log(`[CustomColorTheme] No colorId found for ${section}.${element}, using defaults`);
@@ -419,7 +421,7 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
         console.log(`[CustomColorTheme] Found color for ${section}.${element}:`, color.hexCode);
         return color.hexCode;
       }
-      console.log(`[CustomColorTheme] Color not found in palette for ${section}.${element}`);
+      console.log(`[CustomColorTheme] Color not found in palette for ${section}.${element}, palette has ${activePalette.colors.length} colors`);
     } catch (error) {
       console.error('[CustomColorTheme] Error getting color for element:', error);
     }
