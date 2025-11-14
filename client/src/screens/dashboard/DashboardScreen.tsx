@@ -230,8 +230,11 @@ const DashboardScreen = ({ navigation }: any) => {
       }
     };
 
+    const deadlineBgColor = getDeadlineBgColor(deadline.deadlineType);
+    const deadlineBorderColor = getDeadlineBorderColor(deadline.deadlineType);
+
     return (
-      <View key={deadline.id} style={[styles.deadlineItem, { borderLeftColor: getDeadlineColor(deadline.deadlineType) }]}>
+      <View key={deadline.id} style={[styles.deadlineItem, { borderLeftColor: deadlineBorderColor, backgroundColor: deadlineBgColor }]}>
         <View style={styles.deadlineHeader}>
           <Text style={[styles.deadlineType, { color: currentColors.textSecondary }]}>
             {getDeadlineTypeLabel(deadline.deadlineType)}
@@ -250,7 +253,18 @@ const DashboardScreen = ({ navigation }: any) => {
     );
   };
 
-  const getDeadlineColor = (type: string) => {
+  // Get planning color for deadline borders (from planning colors context)
+  const getDeadlineBorderColor = (type: string) => {
+    switch (type) {
+      case 'DEADLINE': return planningColors.deadlineBg || currentColors.primary;
+      case 'INTERNAL_DEADLINE': return planningColors.internalDeadlineBg || currentColors.primary;
+      case 'MILESTONE': return planningColors.milestoneBg || currentColors.primary;
+      default: return currentColors.primary;
+    }
+  };
+
+  // Get dashboard background color for deadline items
+  const getDeadlineBgColor = (type: string) => {
     switch (type) {
       case 'DEADLINE': return dashboardDeadlineBg || currentColors.primary;
       case 'INTERNAL_DEADLINE': return dashboardInternalDeadlineBg || currentColors.primary;
@@ -259,10 +273,50 @@ const DashboardScreen = ({ navigation }: any) => {
     }
   };
 
-  const getTaskColor = (project: any, taskDescription: string = '') => {
+  // Get planning color for borders and checkboxes (from planning colors context)
+  const getPlanningColor = (project: any, taskDescription: string = '') => {
     const taskDescLower = taskDescription.toLowerCase();
 
-    console.log('[Dashboard] getTaskColor called:', { project, taskDescription });
+    // Check task description for category markers FIRST
+    if (taskDescription.includes('[OUT_OF_OFFICE]') || taskDescription.includes('[OUT OF OFFICE]') || taskDescription === 'Out of Office') {
+      return planningColors.outOfOfficeBg || currentColors.primary;
+    }
+    if (taskDescription.includes('[TIME_OFF]') || taskDescription.includes('[TIME OFF]') || taskDescLower.includes('[time off]') || taskDescription === 'Time Off') {
+      return planningColors.timeOffBg || currentColors.primary;
+    }
+    if (taskDescription.includes('[UNAVAILABLE]') || taskDescLower.includes('[unavailable]') || taskDescription === 'Unavailable') {
+      return planningColors.unavailableBg || currentColors.primary;
+    }
+
+    // If no project, return default project task color
+    if (!project) {
+      return planningColors.projectTaskBg || currentColors.primary;
+    }
+
+    const projectName = project.name || '';
+    const projectColor = project.color;
+    const projectNameLower = projectName.toLowerCase();
+
+    // If project has a custom color assigned, use it
+    if (projectColor) {
+      return projectColor;
+    }
+
+    // Task types based on project name
+    if (projectNameLower.includes('admin')) {
+      return planningColors.adminTaskBg || currentColors.primary;
+    } else if (projectNameLower.includes('marketing')) {
+      return planningColors.marketingTaskBg || currentColors.primary;
+    }
+
+    return planningColors.projectTaskBg || currentColors.primary;
+  };
+
+  // Get dashboard background color for task items
+  const getTaskBgColor = (project: any, taskDescription: string = '') => {
+    const taskDescLower = taskDescription.toLowerCase();
+
+    console.log('[Dashboard] getTaskBgColor called:', { project, taskDescription });
 
     // Check task description for category markers FIRST (works for tasks with OR without projects)
     if (taskDescription.includes('[OUT_OF_OFFICE]') || taskDescription.includes('[OUT OF OFFICE]') || taskDescription === 'Out of Office') {
@@ -285,14 +339,7 @@ const DashboardScreen = ({ navigation }: any) => {
     }
 
     const projectName = project.name || '';
-    const projectColor = project.color;
     const projectNameLower = projectName.toLowerCase();
-
-    // If project has a custom color assigned, use it
-    if (projectColor) {
-      console.log('[Dashboard] Using project custom color:', projectColor);
-      return projectColor;
-    }
 
     // Task types based on project name
     if (projectNameLower.includes('admin')) {
@@ -322,9 +369,10 @@ const DashboardScreen = ({ navigation }: any) => {
     const formattedDate = taskDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     const isCompleted = task.completed || false;
 
-    // Get task background color based on project (use project color if set, otherwise category-based colors)
-    const taskBgColor = getTaskColor(task.project, task.task || '');
-    console.log('=== TASK COLOR RESULT ===', task.project?.name, 'task:', task.task, '→', taskBgColor);
+    // Get colors - dashboard bg for background, planning color for border/checkbox
+    const taskBgColor = getTaskBgColor(task.project, task.task || '');
+    const taskBorderColor = getPlanningColor(task.project, task.task || '');
+    console.log('=== TASK COLOR RESULT ===', task.project?.name, 'task:', task.task, 'bg:', taskBgColor, 'border:', taskBorderColor);
 
     // Determine task type label (for project name display only)
     const taskDescription = task.task || '';
@@ -355,7 +403,7 @@ const DashboardScreen = ({ navigation }: any) => {
       .trim();
 
     return (
-      <View key={task.id} style={[styles.taskItemNew, { borderLeftColor: taskBgColor }]}>
+      <View key={task.id} style={[styles.taskItemNew, { borderLeftColor: taskBorderColor, backgroundColor: taskBgColor }]}>
         <View style={styles.taskRowWithCheckbox}>
           {showCheckbox && (
             <TouchableOpacity
@@ -365,7 +413,7 @@ const DashboardScreen = ({ navigation }: any) => {
               <HugeiconsIcon
                 icon={isCompleted ? CheckmarkCircle01Icon : CircleIcon}
                 size={20}
-                color={taskBgColor}
+                color={taskBorderColor}
               />
             </TouchableOpacity>
           )}
