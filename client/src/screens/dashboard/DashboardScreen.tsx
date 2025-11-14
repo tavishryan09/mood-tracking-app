@@ -51,10 +51,23 @@ const DashboardScreen = ({ navigation }: any) => {
   const dashboardUnavailableBg = getColorForElement('dashboard', 'unavailableBackground');
   const dashboardTimeOffBg = getColorForElement('dashboard', 'timeOffBackground');
 
+  // Task type text colors
+  const dashboardProjectTaskText = getColorForElement('dashboard', 'projectTaskText');
+  const dashboardAdminTaskText = getColorForElement('dashboard', 'adminTaskText');
+  const dashboardMarketingTaskText = getColorForElement('dashboard', 'marketingTaskText');
+  const dashboardOutOfOfficeText = getColorForElement('dashboard', 'outOfOfficeText');
+  const dashboardUnavailableText = getColorForElement('dashboard', 'unavailableText');
+  const dashboardTimeOffText = getColorForElement('dashboard', 'timeOffText');
+
   // Deadline type backgrounds
   const dashboardDeadlineBg = getColorForElement('dashboard', 'deadlineBackground');
   const dashboardInternalDeadlineBg = getColorForElement('dashboard', 'internalDeadlineBackground');
   const dashboardMilestoneBg = getColorForElement('dashboard', 'milestoneBackground');
+
+  // Deadline type text colors
+  const dashboardDeadlineText = getColorForElement('dashboard', 'deadlineText');
+  const dashboardInternalDeadlineText = getColorForElement('dashboard', 'internalDeadlineText');
+  const dashboardMilestoneText = getColorForElement('dashboard', 'milestoneText');
 
   // Calculate date ranges using local timezone
   const today = new Date();
@@ -232,20 +245,21 @@ const DashboardScreen = ({ navigation }: any) => {
 
     const deadlineBgColor = getDeadlineBgColor(deadline.deadlineType);
     const deadlineBorderColor = getDeadlineBorderColor(deadline.deadlineType);
+    const deadlineTextColor = getDeadlineTextColor(deadline.deadlineType);
 
     return (
       <View key={deadline.id} style={[styles.deadlineItem, { borderLeftColor: deadlineBorderColor, backgroundColor: deadlineBgColor }]}>
         <View style={styles.deadlineHeader}>
-          <Text style={[styles.deadlineType, { color: currentColors.textSecondary }]}>
+          <Text style={[styles.deadlineType, { color: deadlineTextColor }]}>
             {getDeadlineTypeLabel(deadline.deadlineType)}
           </Text>
-          <Text style={[styles.deadlineDate, { color: currentColors.textSecondary }]}>{formattedDate}</Text>
+          <Text style={[styles.deadlineDate, { color: deadlineTextColor, opacity: 0.8 }]}>{formattedDate}</Text>
         </View>
         {deadline.description && (
-          <Text style={[styles.deadlineDescription, { color: currentColors.text }]}>{deadline.description}</Text>
+          <Text style={[styles.deadlineDescription, { color: deadlineTextColor }]}>{deadline.description}</Text>
         )}
         {deadline.project && (
-          <Text style={[styles.deadlineClient, { color: currentColors.textSecondary }]}>
+          <Text style={[styles.deadlineClient, { color: deadlineTextColor, opacity: 0.7 }]}>
             {deadline.project.description || deadline.project.name}
           </Text>
         )}
@@ -270,6 +284,16 @@ const DashboardScreen = ({ navigation }: any) => {
       case 'INTERNAL_DEADLINE': return dashboardInternalDeadlineBg || currentColors.primary;
       case 'MILESTONE': return dashboardMilestoneBg || currentColors.primary;
       default: return currentColors.primary;
+    }
+  };
+
+  // Get dashboard text color for deadline items
+  const getDeadlineTextColor = (type: string) => {
+    switch (type) {
+      case 'DEADLINE': return dashboardDeadlineText || currentColors.text;
+      case 'INTERNAL_DEADLINE': return dashboardInternalDeadlineText || currentColors.text;
+      case 'MILESTONE': return dashboardMilestoneText || currentColors.text;
+      default: return currentColors.text;
     }
   };
 
@@ -354,6 +378,39 @@ const DashboardScreen = ({ navigation }: any) => {
     return dashboardProjectTaskBg || currentColors.primary; // Default color for regular projects
   };
 
+  // Get dashboard text color for task items
+  const getTaskTextColor = (project: any, taskDescription: string = '') => {
+    const taskDescLower = taskDescription.toLowerCase();
+
+    // Check task description for category markers FIRST
+    if (taskDescription.includes('[OUT_OF_OFFICE]') || taskDescription.includes('[OUT OF OFFICE]') || taskDescription === 'Out of Office') {
+      return dashboardOutOfOfficeText || currentColors.text;
+    }
+    if (taskDescription.includes('[TIME_OFF]') || taskDescription.includes('[TIME OFF]') || taskDescLower.includes('[time off]') || taskDescription === 'Time Off') {
+      return dashboardTimeOffText || currentColors.text;
+    }
+    if (taskDescription.includes('[UNAVAILABLE]') || taskDescLower.includes('[unavailable]') || taskDescription === 'Unavailable') {
+      return dashboardUnavailableText || currentColors.text;
+    }
+
+    // If no project, return default project task text color
+    if (!project) {
+      return dashboardProjectTaskText || currentColors.text;
+    }
+
+    const projectName = project.name || '';
+    const projectNameLower = projectName.toLowerCase();
+
+    // Task types based on project name
+    if (projectNameLower.includes('admin')) {
+      return dashboardAdminTaskText || currentColors.text;
+    } else if (projectNameLower.includes('marketing')) {
+      return dashboardMarketingTaskText || currentColors.text;
+    }
+
+    return dashboardProjectTaskText || currentColors.text;
+  };
+
   const renderTaskItem = (task: any, showCheckbox: boolean = false) => {
     console.log('=== RENDER TASK ITEM ===', task.project);
     // Parse date - handle both formats: 'YYYY-MM-DD' and 'YYYY-MM-DDTHH:mm:ss.sssZ'
@@ -369,10 +426,11 @@ const DashboardScreen = ({ navigation }: any) => {
     const formattedDate = taskDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     const isCompleted = task.completed || false;
 
-    // Get colors - dashboard bg for background, planning color for border/checkbox
+    // Get colors - dashboard bg for background, planning color for border/checkbox, dashboard text for text
     const taskBgColor = getTaskBgColor(task.project, task.task || '');
     const taskBorderColor = getPlanningColor(task.project, task.task || '');
-    console.log('=== TASK COLOR RESULT ===', task.project?.name, 'task:', task.task, 'bg:', taskBgColor, 'border:', taskBorderColor);
+    const taskTextColor = getTaskTextColor(task.project, task.task || '');
+    console.log('=== TASK COLOR RESULT ===', task.project?.name, 'task:', task.task, 'bg:', taskBgColor, 'border:', taskBorderColor, 'text:', taskTextColor);
 
     // Determine task type label (for project name display only)
     const taskDescription = task.task || '';
@@ -421,19 +479,19 @@ const DashboardScreen = ({ navigation }: any) => {
             <View style={styles.taskHeader}>
               <View style={styles.taskTextContainer}>
                 {task.project ? (
-                  <Text style={[styles.taskProjectName, { color: currentColors.textSecondary, textDecorationLine: isCompleted ? 'line-through' : 'none', opacity: isCompleted ? 0.6 : 1 }]}>
+                  <Text style={[styles.taskProjectName, { color: taskTextColor, textDecorationLine: isCompleted ? 'line-through' : 'none', opacity: isCompleted ? 0.6 : 1 }]}>
                     {task.project.description || task.project.name}{taskTypeLabel}
                   </Text>
                 ) : taskTypeLabel ? (
-                  <Text style={[styles.taskProjectName, { color: currentColors.textSecondary, textDecorationLine: isCompleted ? 'line-through' : 'none', opacity: isCompleted ? 0.6 : 1 }]}>
+                  <Text style={[styles.taskProjectName, { color: taskTextColor, textDecorationLine: isCompleted ? 'line-through' : 'none', opacity: isCompleted ? 0.6 : 1 }]}>
                     {taskTypeLabel.trim().replace(/^\(|\)$/g, '')}
                   </Text>
                 ) : null}
               </View>
-              <Text style={[styles.taskDateRight, { color: currentColors.textSecondary }]}>{formattedDate}</Text>
+              <Text style={[styles.taskDateRight, { color: taskTextColor, opacity: 0.8 }]}>{formattedDate}</Text>
             </View>
             {displayTaskDescription && (task.project || !taskTypeLabel) && (
-              <Text style={[styles.taskDescriptionText, { color: currentColors.text, textDecorationLine: isCompleted ? 'line-through' : 'none', opacity: isCompleted ? 0.6 : 1 }]}>
+              <Text style={[styles.taskDescriptionText, { color: taskTextColor, textDecorationLine: isCompleted ? 'line-through' : 'none', opacity: isCompleted ? 0.6 : 1 }]}>
                 {displayTaskDescription}
               </Text>
             )}

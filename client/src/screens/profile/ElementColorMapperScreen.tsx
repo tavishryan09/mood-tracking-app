@@ -205,10 +205,21 @@ const ElementColorMapperScreen = ({ navigation, route }: any) => {
         outOfOfficeBackground: secondaryColor.id,
         unavailableBackground: textColor.id,
         timeOffBackground: primaryColor.id,
+        // Task type text colors
+        projectTaskText: bgColor.id,
+        adminTaskText: bgColor.id,
+        marketingTaskText: bgColor.id,
+        outOfOfficeText: bgColor.id,
+        unavailableText: bgColor.id,
+        timeOffText: bgColor.id,
         // Deadline type backgrounds
         deadlineBackground: secondaryColor.id,
         internalDeadlineBackground: secondaryColor.id,
         milestoneBackground: primaryColor.id,
+        // Deadline type text colors
+        deadlineText: bgColor.id,
+        internalDeadlineText: bgColor.id,
+        milestoneText: bgColor.id,
         // Section card backgrounds
         upcomingDeadlinesCardBackground: bgColor.id,
         todaysTasksCardBackground: bgColor.id,

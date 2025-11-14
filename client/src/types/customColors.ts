@@ -72,10 +72,21 @@ export interface ElementColorMapping {
     outOfOfficeBackground: string;
     unavailableBackground: string;
     timeOffBackground: string;
+    // Task type text colors
+    projectTaskText: string;
+    adminTaskText: string;
+    marketingTaskText: string;
+    outOfOfficeText: string;
+    unavailableText: string;
+    timeOffText: string;
     // Deadline type backgrounds (on dashboard cards)
     deadlineBackground: string;
     internalDeadlineBackground: string;
     milestoneBackground: string;
+    // Deadline type text colors
+    deadlineText: string;
+    internalDeadlineText: string;
+    milestoneText: string;
     // Section card backgrounds
     upcomingDeadlinesCardBackground: string;
     todaysTasksCardBackground: string;
@@ -296,10 +307,21 @@ export const ElementLabels = {
       outOfOfficeBackground: 'Out of Office Task Item Background',
       unavailableBackground: 'Unavailable Task Item Background',
       timeOffBackground: 'Time Off Task Item Background',
+      // Task type text colors
+      projectTaskText: 'Project Task Item Text',
+      adminTaskText: 'Admin Task Item Text',
+      marketingTaskText: 'Marketing Task Item Text',
+      outOfOfficeText: 'Out of Office Task Item Text',
+      unavailableText: 'Unavailable Task Item Text',
+      timeOffText: 'Time Off Task Item Text',
       // Deadline type backgrounds
       deadlineBackground: 'Deadline Item Background',
       internalDeadlineBackground: 'Internal Deadline Item Background',
       milestoneBackground: 'Milestone Item Background',
+      // Deadline type text colors
+      deadlineText: 'Deadline Item Text',
+      internalDeadlineText: 'Internal Deadline Item Text',
+      milestoneText: 'Milestone Item Text',
       // Section card backgrounds
       upcomingDeadlinesCardBackground: 'Upcoming Deadlines Card Background',
       todaysTasksCardBackground: 'Today\'s Tasks Card Background',
