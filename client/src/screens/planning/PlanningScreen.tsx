@@ -2867,8 +2867,28 @@ const PlanningScreen = () => {
 
                                       return projectTaskBg; // Default color for regular projects
                                     })() : 'transparent'))),
+                                    borderWidth: copiedCell && selectedCell === blockKey ? 3 : 0,
+                                    borderColor: copiedCell && selectedCell === blockKey ? currentColors.primary : 'transparent',
+                                    borderStyle: 'solid',
                                   }}
                                   onClick={() => handleBlockClick(user.id, dateString, blockIndex)}
+                                  onTouchStart={(e) => {
+                                    if (assignment) {
+                                      // For filled cells, let the inner div handle it
+                                      return;
+                                    }
+                                    // For empty cells, handle tap for paste
+                                    e.stopPropagation();
+                                  }}
+                                  onTouchEnd={(e) => {
+                                    if (assignment) {
+                                      // For filled cells, let the inner div handle it
+                                      return;
+                                    }
+                                    // For empty cells, handle tap for paste
+                                    e.stopPropagation();
+                                    handleMobileCellTap(user.id, dateString, blockIndex, e);
+                                  }}
                                 >
                                   {/* Draggable top edge */}
                                   {assignment && showTopEdge && (
@@ -2924,9 +2944,6 @@ const PlanningScreen = () => {
                                           justifyContent: 'center',
                                           alignItems: 'center',
                                           padding: '4px',
-                                          borderWidth: copiedCell && selectedCell === blockKey ? 3 : 0,
-                                          borderColor: copiedCell && selectedCell === blockKey ? currentColors.primary : 'transparent',
-                                          borderStyle: 'solid',
                                         }}
                                       >
                                         <div style={{
