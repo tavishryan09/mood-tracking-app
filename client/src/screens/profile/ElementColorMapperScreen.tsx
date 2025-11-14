@@ -196,10 +196,23 @@ const ElementColorMapperScreen = ({ navigation, route }: any) => {
         background: bgColor.id,
         cardBackground: bgColor.id,
         cardText: textColor.id,
-        statNumberColor: primaryColor.id,
-        statLabelColor: textColor.id,
-        chartPrimary: primaryColor.id,
-        chartSecondary: secondaryColor.id,
+        headerBackground: primaryColor.id,
+        headerText: bgColor.id,
+        // Task type backgrounds
+        projectTaskBackground: primaryColor.id,
+        adminTaskBackground: secondaryColor.id,
+        marketingTaskBackground: primaryColor.id,
+        outOfOfficeBackground: secondaryColor.id,
+        unavailableBackground: textColor.id,
+        timeOffBackground: primaryColor.id,
+        // Deadline type backgrounds
+        deadlineBackground: secondaryColor.id,
+        internalDeadlineBackground: secondaryColor.id,
+        milestoneBackground: primaryColor.id,
+        // Section card backgrounds
+        upcomingDeadlinesCardBackground: bgColor.id,
+        todaysTasksCardBackground: bgColor.id,
+        thisWeeksTasksCardBackground: bgColor.id,
       },
       projects: {
         background: bgColor.id,

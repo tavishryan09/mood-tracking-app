@@ -33,6 +33,24 @@ const DashboardScreen = ({ navigation }: any) => {
   const headerBg = getColorForElement('dashboard', 'headerBackground');
   const headerText = getColorForElement('dashboard', 'headerText');
 
+  // Section card backgrounds
+  const upcomingDeadlinesCardBg = getColorForElement('dashboard', 'upcomingDeadlinesCardBackground');
+  const todaysTasksCardBg = getColorForElement('dashboard', 'todaysTasksCardBackground');
+  const thisWeeksTasksCardBg = getColorForElement('dashboard', 'thisWeeksTasksCardBackground');
+
+  // Task type backgrounds
+  const dashboardProjectTaskBg = getColorForElement('dashboard', 'projectTaskBackground');
+  const dashboardAdminTaskBg = getColorForElement('dashboard', 'adminTaskBackground');
+  const dashboardMarketingTaskBg = getColorForElement('dashboard', 'marketingTaskBackground');
+  const dashboardOutOfOfficeBg = getColorForElement('dashboard', 'outOfOfficeBackground');
+  const dashboardUnavailableBg = getColorForElement('dashboard', 'unavailableBackground');
+  const dashboardTimeOffBg = getColorForElement('dashboard', 'timeOffBackground');
+
+  // Deadline type backgrounds
+  const dashboardDeadlineBg = getColorForElement('dashboard', 'deadlineBackground');
+  const dashboardInternalDeadlineBg = getColorForElement('dashboard', 'internalDeadlineBackground');
+  const dashboardMilestoneBg = getColorForElement('dashboard', 'milestoneBackground');
+
   // Calculate date ranges using local timezone
   const today = new Date();
   // Get local date string (YYYY-MM-DD) without timezone conversion
@@ -229,9 +247,9 @@ const DashboardScreen = ({ navigation }: any) => {
 
   const getDeadlineColor = (type: string) => {
     switch (type) {
-      case 'DEADLINE': return planningColors.deadlineBg || '#ef4444';
-      case 'INTERNAL_DEADLINE': return planningColors.internalDeadlineBg || '#f59e0b';
-      case 'MILESTONE': return planningColors.milestoneBg || '#8b5cf6';
+      case 'DEADLINE': return dashboardDeadlineBg || currentColors.primary;
+      case 'INTERNAL_DEADLINE': return dashboardInternalDeadlineBg || currentColors.primary;
+      case 'MILESTONE': return dashboardMilestoneBg || currentColors.primary;
       default: return currentColors.primary;
     }
   };
@@ -243,22 +261,22 @@ const DashboardScreen = ({ navigation }: any) => {
 
     // Check task description for category markers FIRST (works for tasks with OR without projects)
     if (taskDescription.includes('[OUT_OF_OFFICE]') || taskDescription.includes('[OUT OF OFFICE]') || taskDescription === 'Out of Office') {
-      console.log('[Dashboard] Task is OUT_OF_OFFICE, returning:', planningColors.outOfOfficeBg);
-      return planningColors.outOfOfficeBg || currentColors.primary;
+      console.log('[Dashboard] Task is OUT_OF_OFFICE, returning:', dashboardOutOfOfficeBg);
+      return dashboardOutOfOfficeBg || currentColors.primary;
     }
     if (taskDescription.includes('[TIME_OFF]') || taskDescription.includes('[TIME OFF]') || taskDescLower.includes('[time off]') || taskDescription === 'Time Off') {
-      console.log('[Dashboard] Task is TIME_OFF, returning:', planningColors.timeOffBg);
-      return planningColors.timeOffBg || currentColors.primary;
+      console.log('[Dashboard] Task is TIME_OFF, returning:', dashboardTimeOffBg);
+      return dashboardTimeOffBg || currentColors.primary;
     }
     if (taskDescription.includes('[UNAVAILABLE]') || taskDescLower.includes('[unavailable]') || taskDescription === 'Unavailable') {
-      console.log('[Dashboard] Task is UNAVAILABLE, returning:', planningColors.unavailableBg);
-      return planningColors.unavailableBg || currentColors.primary;
+      console.log('[Dashboard] Task is UNAVAILABLE, returning:', dashboardUnavailableBg);
+      return dashboardUnavailableBg || currentColors.primary;
     }
 
     // If no project, return default project task color
     if (!project) {
-      console.log('[Dashboard] No project, returning default projectTaskBg:', planningColors.projectTaskBg);
-      return planningColors.projectTaskBg || currentColors.primary;
+      console.log('[Dashboard] No project, returning default projectTaskBg:', dashboardProjectTaskBg);
+      return dashboardProjectTaskBg || currentColors.primary;
     }
 
     const projectName = project.name || '';
@@ -273,15 +291,15 @@ const DashboardScreen = ({ navigation }: any) => {
 
     // Task types based on project name
     if (projectNameLower.includes('admin')) {
-      console.log('[Dashboard] Matched Admin, returning:', planningColors.adminTaskBg);
-      return planningColors.adminTaskBg || currentColors.primary;
+      console.log('[Dashboard] Matched Admin, returning:', dashboardAdminTaskBg);
+      return dashboardAdminTaskBg || currentColors.primary;
     } else if (projectNameLower.includes('marketing')) {
-      console.log('[Dashboard] Matched Marketing, returning:', planningColors.marketingTaskBg);
-      return planningColors.marketingTaskBg || currentColors.primary;
+      console.log('[Dashboard] Matched Marketing, returning:', dashboardMarketingTaskBg);
+      return dashboardMarketingTaskBg || currentColors.primary;
     }
 
-    console.log('[Dashboard] No match, returning default projectTaskBg:', planningColors.projectTaskBg);
-    return planningColors.projectTaskBg || currentColors.primary; // Default color for regular projects
+    console.log('[Dashboard] No match, returning default projectTaskBg:', dashboardProjectTaskBg);
+    return dashboardProjectTaskBg || currentColors.primary; // Default color for regular projects
   };
 
   const renderTaskItem = (task: any, showCheckbox: boolean = false) => {
@@ -333,39 +351,41 @@ const DashboardScreen = ({ navigation }: any) => {
 
     return (
       <View key={task.id} style={[styles.taskItemNew, { borderLeftColor: taskBgColor }]}>
-        <View style={styles.taskHeader}>
-          <View style={styles.taskLeftContent}>
-            {showCheckbox && (
-              <TouchableOpacity
-                onPress={handleToggleComplete}
-                style={styles.checkboxContainer}
-              >
-                <HugeiconsIcon
-                  icon={isCompleted ? CheckmarkCircle01Icon : CircleIcon}
-                  size={20}
-                  color={taskBgColor}
-                />
-              </TouchableOpacity>
-            )}
-            <View style={styles.taskTextContainer}>
-              {task.project ? (
-                <Text style={[styles.taskProjectName, { color: currentColors.textSecondary, textDecorationLine: isCompleted ? 'line-through' : 'none', opacity: isCompleted ? 0.6 : 1 }]}>
-                  {task.project.description || task.project.name}{taskTypeLabel}
-                </Text>
-              ) : taskTypeLabel ? (
-                <Text style={[styles.taskProjectName, { color: currentColors.textSecondary, textDecorationLine: isCompleted ? 'line-through' : 'none', opacity: isCompleted ? 0.6 : 1 }]}>
-                  {taskTypeLabel.trim().replace(/^\(|\)$/g, '')}
-                </Text>
-              ) : null}
+        <View style={styles.taskRowWithCheckbox}>
+          {showCheckbox && (
+            <TouchableOpacity
+              onPress={handleToggleComplete}
+              style={styles.checkboxContainer}
+            >
+              <HugeiconsIcon
+                icon={isCompleted ? CheckmarkCircle01Icon : CircleIcon}
+                size={20}
+                color={taskBgColor}
+              />
+            </TouchableOpacity>
+          )}
+          <View style={styles.taskContent}>
+            <View style={styles.taskHeader}>
+              <View style={styles.taskTextContainer}>
+                {task.project ? (
+                  <Text style={[styles.taskProjectName, { color: currentColors.textSecondary, textDecorationLine: isCompleted ? 'line-through' : 'none', opacity: isCompleted ? 0.6 : 1 }]}>
+                    {task.project.description || task.project.name}{taskTypeLabel}
+                  </Text>
+                ) : taskTypeLabel ? (
+                  <Text style={[styles.taskProjectName, { color: currentColors.textSecondary, textDecorationLine: isCompleted ? 'line-through' : 'none', opacity: isCompleted ? 0.6 : 1 }]}>
+                    {taskTypeLabel.trim().replace(/^\(|\)$/g, '')}
+                  </Text>
+                ) : null}
+              </View>
+              <Text style={[styles.taskDateRight, { color: currentColors.textSecondary }]}>{formattedDate}</Text>
             </View>
+            {displayTaskDescription && (task.project || !taskTypeLabel) && (
+              <Text style={[styles.taskDescriptionText, { color: currentColors.text, textDecorationLine: isCompleted ? 'line-through' : 'none', opacity: isCompleted ? 0.6 : 1 }]}>
+                {displayTaskDescription}
+              </Text>
+            )}
           </View>
-          <Text style={[styles.taskDateRight, { color: currentColors.textSecondary }]}>{formattedDate}</Text>
         </View>
-        {displayTaskDescription && (task.project || !taskTypeLabel) && (
-          <Text style={[styles.taskDescriptionText, { color: currentColors.text, textDecorationLine: isCompleted ? 'line-through' : 'none', opacity: isCompleted ? 0.6 : 1 }]}>
-            {displayTaskDescription}
-          </Text>
-        )}
       </View>
     );
   };
@@ -376,7 +396,7 @@ const DashboardScreen = ({ navigation }: any) => {
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
       {/* Upcoming Deadlines Section */}
-      <Card style={[styles.sectionCard, { backgroundColor: cardBg }]}>
+      <Card style={[styles.sectionCard, { backgroundColor: upcomingDeadlinesCardBg }]}>
         <Card.Content>
           <Title style={{ color: currentColors.text }}>Upcoming Deadlines / Milestones</Title>
           {deadlinesData && deadlinesData.length > 0 ? (
@@ -392,7 +412,7 @@ const DashboardScreen = ({ navigation }: any) => {
       </Card>
 
       {/* Today's Tasks Section */}
-      <Card style={[styles.sectionCard, { backgroundColor: cardBg }]}>
+      <Card style={[styles.sectionCard, { backgroundColor: todaysTasksCardBg }]}>
         <Card.Content>
           <Title style={{ color: currentColors.text }}>Today's Tasks</Title>
           {tasksByPeriod.today.length > 0 ? (
@@ -408,7 +428,7 @@ const DashboardScreen = ({ navigation }: any) => {
       </Card>
 
       {/* This Week's Tasks Section */}
-      <Card style={[styles.sectionCard, { backgroundColor: cardBg }]}>
+      <Card style={[styles.sectionCard, { backgroundColor: thisWeeksTasksCardBg }]}>
         <Card.Content>
           <Title style={{ color: currentColors.text }}>This Week's Tasks</Title>
           {tasksByPeriod.thisWeek.length > 0 ? (
@@ -488,18 +508,21 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     borderRadius: 4,
   },
-  taskHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  taskLeftContent: {
+  taskRowWithCheckbox: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
   },
   checkboxContainer: {
     marginRight: 8,
+    alignSelf: 'center',
+  },
+  taskContent: {
+    flex: 1,
+  },
+  taskHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
   },
   taskTextContainer: {
     flex: 1,
@@ -515,7 +538,6 @@ const styles = StyleSheet.create({
   taskDescriptionText: {
     fontSize: 14,
     marginTop: 4,
-    marginLeft: 28,
   },
   emptyText: {
     fontSize: 14,

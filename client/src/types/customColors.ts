@@ -65,6 +65,21 @@ export interface ElementColorMapping {
     cardText: string;
     headerBackground: string;
     headerText: string;
+    // Task type backgrounds (on dashboard cards)
+    projectTaskBackground: string;
+    adminTaskBackground: string;
+    marketingTaskBackground: string;
+    outOfOfficeBackground: string;
+    unavailableBackground: string;
+    timeOffBackground: string;
+    // Deadline type backgrounds (on dashboard cards)
+    deadlineBackground: string;
+    internalDeadlineBackground: string;
+    milestoneBackground: string;
+    // Section card backgrounds
+    upcomingDeadlinesCardBackground: string;
+    todaysTasksCardBackground: string;
+    thisWeeksTasksCardBackground: string;
   };
 
   // Projects Screen
@@ -270,6 +285,21 @@ export const ElementLabels = {
       cardText: 'Card Text',
       headerBackground: 'Header Background',
       headerText: 'Header Text',
+      // Task type backgrounds
+      projectTaskBackground: 'Project Task Item Background',
+      adminTaskBackground: 'Admin Task Item Background',
+      marketingTaskBackground: 'Marketing Task Item Background',
+      outOfOfficeBackground: 'Out of Office Task Item Background',
+      unavailableBackground: 'Unavailable Task Item Background',
+      timeOffBackground: 'Time Off Task Item Background',
+      // Deadline type backgrounds
+      deadlineBackground: 'Deadline Item Background',
+      internalDeadlineBackground: 'Internal Deadline Item Background',
+      milestoneBackground: 'Milestone Item Background',
+      // Section card backgrounds
+      upcomingDeadlinesCardBackground: 'Upcoming Deadlines Card Background',
+      todaysTasksCardBackground: 'Today\'s Tasks Card Background',
+      thisWeeksTasksCardBackground: 'This Week\'s Tasks Card Background',
     },
   },
   projects: {
