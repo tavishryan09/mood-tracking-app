@@ -139,6 +139,24 @@ const PlanningScreen = () => {
   } | null>(null);
   const [repositionMode, setRepositionMode] = useState(false);
 
+  // Deadline task copy/paste state
+  const [copiedDeadlineTask, setCopiedDeadlineTask] = useState<{
+    projectId: string | null;
+    clientId: string | null;
+    description: string;
+    deadlineType: 'DEADLINE' | 'INTERNAL_DEADLINE' | 'MILESTONE';
+    sourceId?: string; // ID of the original task (for reposition mode)
+    sourceSlotKey?: string; // Slot key of source cell (for reposition mode)
+  } | null>(null);
+  const [longPressDeadlineAction, setLongPressDeadlineAction] = useState<{
+    task: DeadlineTask;
+    date: Date;
+    slotIndex: number;
+  } | null>(null);
+  const [longPressDeadlineTimer, setLongPressDeadlineTimer] = useState<NodeJS.Timeout | null>(null);
+  const [repositionDeadlineMode, setRepositionDeadlineMode] = useState(false);
+  const [selectedDeadlineCell, setSelectedDeadlineCell] = useState<string | null>(null);
+
   // CustomDialog states
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null);
@@ -1604,6 +1622,134 @@ const PlanningScreen = () => {
 
   // Mobile pan handlers removed - using long-press menu instead
 
+  // Deadline task mobile long-press handlers
+  const handleDeadlineLongPressStart = (task: DeadlineTask, date: Date, slotIndex: number, e: any) => {
+    console.log('[DEADLINE LONG PRESS] Starting long press timer');
+
+    // Start 800ms timer to show action menu
+    const timer = setTimeout(() => {
+      console.log('[DEADLINE LONG PRESS] Timer completed - showing action menu');
+      setLongPressDeadlineAction({
+        task,
+        date,
+        slotIndex,
+      });
+    }, 800);
+
+    setLongPressDeadlineTimer(timer);
+  };
+
+  const handleDeadlineLongPressEnd = () => {
+    if (longPressDeadlineTimer) {
+      console.log('[DEADLINE LONG PRESS] Cancelled - released early');
+      clearTimeout(longPressDeadlineTimer);
+      setLongPressDeadlineTimer(null);
+    }
+  };
+
+  const handleDeadlineCellTap = (date: Date, slotIndex: number, e: any) => {
+    const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const slotKey = `${dateString}-${slotIndex}`;
+
+    // Set this cell as selected
+    setSelectedDeadlineCell(slotKey);
+
+    // Check if there's an existing task in this slot
+    const existingTask = deadlineTasks.find(
+      (task) => {
+        const taskDate = new Date(task.date);
+        const taskDateString = `${taskDate.getUTCFullYear()}-${String(taskDate.getUTCMonth() + 1).padStart(2, '0')}-${String(taskDate.getUTCDate()).padStart(2, '0')}`;
+        return taskDateString === dateString && task.slotIndex === slotIndex;
+      }
+    );
+
+    // If empty cell and we have copied deadline task, paste it
+    if (!existingTask && copiedDeadlineTask) {
+      handleDeadlinePaste(date, slotIndex);
+    }
+  };
+
+  const handleDeadlinePaste = async (date: Date, slotIndex: number) => {
+    if (!copiedDeadlineTask) return;
+
+    const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const slotKey = `${dateString}-${slotIndex}`;
+
+    // Check if target slot is already occupied
+    const existingTask = deadlineTasks.find(
+      (task) => {
+        const taskDate = new Date(task.date);
+        const taskDateString = `${taskDate.getUTCFullYear()}-${String(taskDate.getUTCMonth() + 1).padStart(2, '0')}-${String(taskDate.getUTCDate()).padStart(2, '0')}`;
+        return taskDateString === dateString && task.slotIndex === slotIndex;
+      }
+    );
+
+    if (existingTask) {
+      console.log('[DEADLINE PASTE] Cannot paste - slot is not empty');
+      setShowSuccessDialog(false);
+      setSuccessMessage('');
+      setErrorMessage('Cannot paste to an occupied slot');
+      setShowErrorDialog(true);
+      return;
+    }
+
+    console.log('[DEADLINE PASTE] Pasting to slot:', slotKey, 'Reposition mode:', repositionDeadlineMode);
+
+    try {
+      // Create the new deadline task
+      const dateISO = `${dateString}T08:01:00.000Z`; // Store as 12:01 AM Pacific Time
+      const response = await deadlineTasksAPI.create({
+        date: dateISO,
+        slotIndex,
+        projectId: copiedDeadlineTask.projectId,
+        clientId: copiedDeadlineTask.clientId,
+        description: copiedDeadlineTask.description,
+        deadlineType: copiedDeadlineTask.deadlineType,
+      });
+
+      setDeadlineTasks([...deadlineTasks, response.data]);
+
+      // If in reposition mode, delete the original task
+      if (repositionDeadlineMode && copiedDeadlineTask.sourceId) {
+        console.log('[DEADLINE PASTE] Deleting source task:', copiedDeadlineTask.sourceId);
+        try {
+          await deadlineTasksAPI.delete(copiedDeadlineTask.sourceId);
+
+          // Remove from deadline tasks list
+          setDeadlineTasks(prev => prev.filter(task => task.id !== copiedDeadlineTask.sourceId));
+
+          console.log('[DEADLINE PASTE] Reposition successful');
+          setTimeout(() => {
+            setShowErrorDialog(false);
+            setErrorMessage('');
+            setSuccessMessage('Deadline task repositioned successfully');
+            setShowSuccessDialog(true);
+          }, 0);
+        } catch (deleteError) {
+          console.error('[DEADLINE PASTE] Error deleting source task:', deleteError);
+          setWarningMessage('Task copied but original could not be deleted');
+          setShowWarningDialog(true);
+        }
+      } else {
+        console.log('[DEADLINE PASTE] Copy successful');
+        setTimeout(() => {
+          setShowErrorDialog(false);
+          setErrorMessage('');
+          setSuccessMessage('Deadline task copied successfully');
+          setShowSuccessDialog(true);
+        }, 0);
+      }
+
+      // Clear copied task and reposition mode
+      setCopiedDeadlineTask(null);
+      setRepositionDeadlineMode(false);
+    } catch (error) {
+      console.error('[DEADLINE PASTE] Error pasting:', error);
+      setErrorMessage('Failed to paste deadline task');
+      setShowErrorDialog(true);
+    }
+  };
+
   // Handle delete planning task
   const handleDeletePlanningTask = async () => {
     if (!selectedBlock) return;
@@ -2623,6 +2769,16 @@ const PlanningScreen = () => {
                               setShowDeleteDeadlineDialog(true);
                             }
                           }}
+                          onTouchStart={(e) => {
+                            if (deadlineTask) {
+                              e.stopPropagation();
+                              handleDeadlineLongPressStart(deadlineTask, day, slotIndex, e);
+                            }
+                          }}
+                          onTouchEnd={(e) => {
+                            handleDeadlineLongPressEnd();
+                            handleDeadlineCellTap(day, slotIndex, e);
+                          }}
                           style={{
                             width: `${DAY_CELL_WIDTH}px`,
                             minWidth: `${DAY_CELL_WIDTH}px`,
@@ -2645,6 +2801,7 @@ const PlanningScreen = () => {
                             color: deadlineTask ? colors?.font : currentColors.textSecondary,
                             fontWeight: deadlineTask ? '600' : 'normal',
                             opacity: draggedDeadlineTask?.id === deadlineTask?.id ? 0.5 : 1, // Dim the dragged task
+                            boxShadow: copiedDeadlineTask && selectedDeadlineCell === cellKey ? `inset 0 0 0 3px ${currentColors.primary}` : 'none',
                           }}
                         >
                           {deadlineTask && (
@@ -3663,6 +3820,135 @@ const PlanningScreen = () => {
                       borderRadius: 8,
                     }}
                     onPress={() => setLongPressAction(null)}
+                  >
+                    <Text style={{
+                      color: currentColors.text,
+                      fontSize: 16,
+                      fontWeight: '600',
+                      textAlign: 'center',
+                    }}>
+                      Cancel
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </TouchableWithoutFeedback>
+            </View>
+          </TouchableWithoutFeedback>
+        </Modal>
+      )}
+
+      {/* Deadline Task Long Press Action Menu */}
+      {longPressDeadlineAction && (
+        <Modal
+          transparent
+          visible={!!longPressDeadlineAction}
+          onRequestClose={() => setLongPressDeadlineAction(null)}
+        >
+          <TouchableWithoutFeedback onPress={() => setLongPressDeadlineAction(null)}>
+            <View style={{
+              flex: 1,
+              backgroundColor: 'rgba(0, 0, 0, 0.5)',
+              justifyContent: 'center',
+              alignItems: 'center',
+            }}>
+              <TouchableWithoutFeedback>
+                <View style={{
+                  backgroundColor: '#FFFFFF',
+                  borderRadius: 12,
+                  padding: 20,
+                  width: 300,
+                  shadowColor: '#000',
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.25,
+                  shadowRadius: 3.84,
+                  elevation: 5,
+                }}>
+                  <Text style={{
+                    fontSize: 18,
+                    fontWeight: 'bold',
+                    marginBottom: 16,
+                    color: currentColors.text,
+                    textAlign: 'center',
+                  }}>
+                    Deadline Task Action
+                  </Text>
+
+                  <TouchableOpacity
+                    style={{
+                      backgroundColor: currentColors.primary,
+                      padding: 16,
+                      borderRadius: 8,
+                      marginBottom: 12,
+                    }}
+                    onPress={() => {
+                      const task = longPressDeadlineAction.task;
+                      const dateString = `${longPressDeadlineAction.date.getFullYear()}-${String(longPressDeadlineAction.date.getMonth() + 1).padStart(2, '0')}-${String(longPressDeadlineAction.date.getDate()).padStart(2, '0')}`;
+                      const slotKey = `${dateString}-${longPressDeadlineAction.slotIndex}`;
+
+                      setCopiedDeadlineTask({
+                        projectId: task.projectId,
+                        clientId: task.clientId,
+                        description: task.description || '',
+                        deadlineType: task.deadlineType,
+                      });
+                      setLongPressDeadlineAction(null);
+                      setSuccessMessage('Deadline task copied! Tap an empty slot to paste.');
+                      setShowSuccessDialog(true);
+                    }}
+                  >
+                    <Text style={{
+                      color: '#FFFFFF',
+                      fontSize: 16,
+                      fontWeight: '600',
+                      textAlign: 'center',
+                    }}>
+                      Copy
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={{
+                      backgroundColor: currentColors.secondary || currentColors.primary,
+                      padding: 16,
+                      borderRadius: 8,
+                      marginBottom: 12,
+                    }}
+                    onPress={() => {
+                      const task = longPressDeadlineAction.task;
+                      const dateString = `${longPressDeadlineAction.date.getFullYear()}-${String(longPressDeadlineAction.date.getMonth() + 1).padStart(2, '0')}-${String(longPressDeadlineAction.date.getDate()).padStart(2, '0')}`;
+                      const slotKey = `${dateString}-${longPressDeadlineAction.slotIndex}`;
+
+                      setCopiedDeadlineTask({
+                        projectId: task.projectId,
+                        clientId: task.clientId,
+                        description: task.description || '',
+                        deadlineType: task.deadlineType,
+                        sourceId: task.id,
+                        sourceSlotKey: slotKey,
+                      });
+                      setRepositionDeadlineMode(true);
+                      setLongPressDeadlineAction(null);
+                      setSuccessMessage('Ready to reposition! Tap an empty slot to move the deadline task.');
+                      setShowSuccessDialog(true);
+                    }}
+                  >
+                    <Text style={{
+                      color: '#FFFFFF',
+                      fontSize: 16,
+                      fontWeight: '600',
+                      textAlign: 'center',
+                    }}>
+                      Reposition
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={{
+                      backgroundColor: currentColors.background.bg300,
+                      padding: 16,
+                      borderRadius: 8,
+                    }}
+                    onPress={() => setLongPressDeadlineAction(null)}
                   >
                     <Text style={{
                       color: currentColors.text,
