@@ -80,6 +80,10 @@ export interface ElementColorMapping {
     upcomingDeadlinesCardBackground: string;
     todaysTasksCardBackground: string;
     thisWeeksTasksCardBackground: string;
+    // Section card text colors
+    upcomingDeadlinesCardText: string;
+    todaysTasksCardText: string;
+    thisWeeksTasksCardText: string;
   };
 
   // Projects Screen
@@ -300,6 +304,10 @@ export const ElementLabels = {
       upcomingDeadlinesCardBackground: 'Upcoming Deadlines Card Background',
       todaysTasksCardBackground: 'Today\'s Tasks Card Background',
       thisWeeksTasksCardBackground: 'This Week\'s Tasks Card Background',
+      // Section card text colors
+      upcomingDeadlinesCardText: 'Upcoming Deadlines Card Text',
+      todaysTasksCardText: 'Today\'s Tasks Card Text',
+      thisWeeksTasksCardText: 'This Week\'s Tasks Card Text',
     },
   },
   projects: {

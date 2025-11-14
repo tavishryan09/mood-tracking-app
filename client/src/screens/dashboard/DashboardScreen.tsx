@@ -38,6 +38,11 @@ const DashboardScreen = ({ navigation }: any) => {
   const todaysTasksCardBg = getColorForElement('dashboard', 'todaysTasksCardBackground');
   const thisWeeksTasksCardBg = getColorForElement('dashboard', 'thisWeeksTasksCardBackground');
 
+  // Section card text colors
+  const upcomingDeadlinesCardTextColor = getColorForElement('dashboard', 'upcomingDeadlinesCardText');
+  const todaysTasksCardTextColor = getColorForElement('dashboard', 'todaysTasksCardText');
+  const thisWeeksTasksCardTextColor = getColorForElement('dashboard', 'thisWeeksTasksCardText');
+
   // Task type backgrounds
   const dashboardProjectTaskBg = getColorForElement('dashboard', 'projectTaskBackground');
   const dashboardAdminTaskBg = getColorForElement('dashboard', 'adminTaskBackground');
@@ -398,13 +403,13 @@ const DashboardScreen = ({ navigation }: any) => {
       {/* Upcoming Deadlines Section */}
       <Card style={[styles.sectionCard, { backgroundColor: upcomingDeadlinesCardBg }]}>
         <Card.Content>
-          <Title style={{ color: currentColors.text }}>Upcoming Deadlines / Milestones</Title>
+          <Title style={{ color: upcomingDeadlinesCardTextColor }}>Upcoming Deadlines / Milestones</Title>
           {deadlinesData && deadlinesData.length > 0 ? (
             <View style={styles.deadlinesList}>
               {deadlinesData.slice(0, 5).map(renderDeadlineItem)}
             </View>
           ) : (
-            <Text style={[styles.emptyText, { color: currentColors.textSecondary }]}>
+            <Text style={[styles.emptyText, { color: upcomingDeadlinesCardTextColor, opacity: 0.7 }]}>
               No upcoming deadlines
             </Text>
           )}
@@ -414,13 +419,13 @@ const DashboardScreen = ({ navigation }: any) => {
       {/* Today's Tasks Section */}
       <Card style={[styles.sectionCard, { backgroundColor: todaysTasksCardBg }]}>
         <Card.Content>
-          <Title style={{ color: currentColors.text }}>Today's Tasks</Title>
+          <Title style={{ color: todaysTasksCardTextColor }}>Today's Tasks</Title>
           {tasksByPeriod.today.length > 0 ? (
             <View style={styles.tasksList}>
               {tasksByPeriod.today.map((task) => renderTaskItem(task, true))}
             </View>
           ) : (
-            <Text style={[styles.emptyText, { color: currentColors.textSecondary }]}>
+            <Text style={[styles.emptyText, { color: todaysTasksCardTextColor, opacity: 0.7 }]}>
               No tasks scheduled for today
             </Text>
           )}
@@ -430,13 +435,13 @@ const DashboardScreen = ({ navigation }: any) => {
       {/* This Week's Tasks Section */}
       <Card style={[styles.sectionCard, { backgroundColor: thisWeeksTasksCardBg }]}>
         <Card.Content>
-          <Title style={{ color: currentColors.text }}>This Week's Tasks</Title>
+          <Title style={{ color: thisWeeksTasksCardTextColor }}>This Week's Tasks</Title>
           {tasksByPeriod.thisWeek.length > 0 ? (
             <View style={styles.tasksList}>
               {tasksByPeriod.thisWeek.map((task) => renderTaskItem(task, true))}
             </View>
           ) : (
-            <Text style={[styles.emptyText, { color: currentColors.textSecondary }]}>
+            <Text style={[styles.emptyText, { color: thisWeeksTasksCardTextColor, opacity: 0.7 }]}>
               No tasks scheduled for this week
             </Text>
           )}

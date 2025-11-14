@@ -213,6 +213,10 @@ const ElementColorMapperScreen = ({ navigation, route }: any) => {
         upcomingDeadlinesCardBackground: bgColor.id,
         todaysTasksCardBackground: bgColor.id,
         thisWeeksTasksCardBackground: bgColor.id,
+        // Section card text colors
+        upcomingDeadlinesCardText: textColor.id,
+        todaysTasksCardText: textColor.id,
+        thisWeeksTasksCardText: textColor.id,
       },
       projects: {
         background: bgColor.id,
