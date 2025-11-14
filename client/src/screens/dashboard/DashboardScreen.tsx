@@ -43,6 +43,12 @@ const DashboardScreen = ({ navigation }: any) => {
   const todaysTasksCardTextColor = getColorForElement('dashboard', 'todaysTasksCardText');
   const thisWeeksTasksCardTextColor = getColorForElement('dashboard', 'thisWeeksTasksCardText');
 
+  console.log('[Dashboard] Section card backgrounds:', {
+    upcomingDeadlinesCardBg,
+    todaysTasksCardBg,
+    thisWeeksTasksCardBg,
+  });
+
   // Task type backgrounds
   const dashboardProjectTaskBg = getColorForElement('dashboard', 'projectTaskBackground');
   const dashboardAdminTaskBg = getColorForElement('dashboard', 'adminTaskBackground');
