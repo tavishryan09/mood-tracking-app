@@ -612,6 +612,36 @@ function getDefaultColorForElement(section: string, element: string, currentColo
     'dashboard.cardText': currentColors.text,
     'dashboard.headerBackground': currentColors.background.bg500,
     'dashboard.headerText': currentColors.text,
+    // Dashboard section card backgrounds
+    'dashboard.upcomingDeadlinesCardBackground': currentColors.white,
+    'dashboard.todaysTasksCardBackground': currentColors.white,
+    'dashboard.thisWeeksTasksCardBackground': currentColors.white,
+    // Dashboard section card text colors
+    'dashboard.upcomingDeadlinesCardText': currentColors.text,
+    'dashboard.todaysTasksCardText': currentColors.text,
+    'dashboard.thisWeeksTasksCardText': currentColors.text,
+    // Dashboard task type backgrounds
+    'dashboard.projectTaskBackground': currentColors.primary,
+    'dashboard.adminTaskBackground': currentColors.secondary,
+    'dashboard.marketingTaskBackground': currentColors.primary,
+    'dashboard.outOfOfficeBackground': currentColors.secondary,
+    'dashboard.unavailableBackground': currentColors.textSecondary,
+    'dashboard.timeOffBackground': currentColors.primary,
+    // Dashboard task type text colors
+    'dashboard.projectTaskText': currentColors.white,
+    'dashboard.adminTaskText': currentColors.white,
+    'dashboard.marketingTaskText': currentColors.white,
+    'dashboard.outOfOfficeText': currentColors.white,
+    'dashboard.unavailableText': currentColors.white,
+    'dashboard.timeOffText': currentColors.white,
+    // Dashboard deadline type backgrounds
+    'dashboard.deadlineBackground': currentColors.secondary,
+    'dashboard.internalDeadlineBackground': currentColors.secondary,
+    'dashboard.milestoneBackground': currentColors.primary,
+    // Dashboard deadline type text colors
+    'dashboard.deadlineText': currentColors.white,
+    'dashboard.internalDeadlineText': currentColors.white,
+    'dashboard.milestoneText': currentColors.white,
   };
 
   const key = `${section}.${element}`;
