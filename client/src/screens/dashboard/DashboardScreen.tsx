@@ -375,12 +375,6 @@ const DashboardScreen = ({ navigation }: any) => {
       style={[styles.container, { backgroundColor: dashboardBg }]}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
-      <View style={[styles.header, { backgroundColor: headerBg }]}>
-        <Title style={[styles.greeting, { color: headerText }]}>
-          Welcome back, {user?.firstName}!
-        </Title>
-      </View>
-
       {/* Upcoming Deadlines Section */}
       <Card style={[styles.sectionCard, { backgroundColor: cardBg }]}>
         <Card.Content>
