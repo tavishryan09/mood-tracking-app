@@ -590,10 +590,10 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   deadlineItem: {
-    padding: 12,
-    borderLeftWidth: 4,
-    marginBottom: 8,
-    borderRadius: 4,
+    padding: 10,
+    borderLeftWidth: 10,
+    marginBottom: 10,
+    borderRadius: 5,
   },
   deadlineHeader: {
     flexDirection: 'row',
@@ -620,10 +620,10 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   taskItemNew: {
-    padding: 12,
-    borderLeftWidth: 4,
-    marginBottom: 8,
-    borderRadius: 4,
+    padding: 10,
+    borderLeftWidth: 10,
+    marginBottom: 10,
+    borderRadius: 5,
   },
   taskRowWithCheckbox: {
     flexDirection: 'row',
