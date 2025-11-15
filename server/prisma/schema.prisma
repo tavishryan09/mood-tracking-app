@@ -120,15 +120,35 @@ model Client {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   // Relations
-  creator       User           @relation("ClientCreatedBy", fields: [createdBy], references: [id])
+  creator       User            @relation("ClientCreatedBy", fields: [createdBy], references: [id])
   projects      Project[]
   events        Event[]
   travelEntries TravelEntry[]
   deadlineTasks DeadlineTask[]
+  contacts      ClientContact[]
 
   @@index([isActive, name])
   @@index([createdBy, isActive])
   @@map("clients")
+}
+
+model ClientContact {
+  id        String   @id @default(uuid())
+  clientId  String   @map("client_id")
+  name      String
+  title     String?
+  email     String?
+  phone     String?
+  isPrimary Boolean  @default(false) @map("is_primary")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([clientId])
+  @@index([clientId, isPrimary])
+  @@map("client_contacts")
 }
 
 model Project {

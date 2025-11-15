@@ -56,6 +56,12 @@ export const getClientById = async (req: AuthRequest, res: Response) => {
             },
           },
         },
+        contacts: {
+          orderBy: [
+            { isPrimary: 'desc' },
+            { createdAt: 'asc' },
+          ],
+        },
       },
     });
 
@@ -117,7 +123,23 @@ export const updateClient = async (req: AuthRequest, res: Response) => {
     }
 
     const { id } = req.params;
-    const { name, email, phone, address, company, notes, isActive } = req.body;
+    const { name, email, phone, address, company, notes, isActive, contacts } = req.body;
+
+    // Delete all existing contacts and create new ones (simple approach)
+    // This ensures we don't have orphaned contacts
+    await prisma.clientContact.deleteMany({
+      where: { clientId: id },
+    });
+
+    // Create contacts data if provided
+    const contactsData = contacts && Array.isArray(contacts) ? contacts.map((contact: any) => ({
+      name: contact.name,
+      title: contact.title || null,
+      email: contact.email || null,
+      phone: contact.phone || null,
+      isPrimary: contact.isPrimary || false,
+      clientId: id,
+    })) : [];
 
     const client = await prisma.client.update({
       where: { id },
@@ -129,6 +151,9 @@ export const updateClient = async (req: AuthRequest, res: Response) => {
         company,
         notes,
         isActive,
+        contacts: {
+          create: contactsData,
+        },
       },
       include: {
         creator: {
@@ -138,6 +163,12 @@ export const updateClient = async (req: AuthRequest, res: Response) => {
             lastName: true,
             email: true,
           },
+        },
+        contacts: {
+          orderBy: [
+            { isPrimary: 'desc' },
+            { createdAt: 'asc' },
+          ],
         },
       },
     });
