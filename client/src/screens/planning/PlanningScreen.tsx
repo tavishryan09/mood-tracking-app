@@ -2661,7 +2661,6 @@ const PlanningScreen = () => {
                             textAlign: 'center',
                             color: deadlineTask ? colors?.font : currentColors.textSecondary,
                             fontWeight: deadlineTask ? '600' : 'normal',
-                            opacity: draggedDeadlineTask?.id === deadlineTask?.id ? 0.5 : 1, // Dim the dragged task
                             boxShadow: copiedDeadlineTask && selectedDeadlineCell === cellKey ? `inset 0 0 0 3px ${currentColors.primary}` : 'none',
                             transition: 'none',
                             WebkitTapHighlightColor: 'transparent',
