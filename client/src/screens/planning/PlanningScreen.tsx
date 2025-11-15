@@ -2479,13 +2479,14 @@ const PlanningScreen = () => {
                       backgroundColor: dateCellBg,
                       color: dateCellText,
                       fontWeight: 'bold',
-                      fontSize: '12px',
+                      fontSize: '13px',
                       textAlign: 'center',
                       position: 'sticky',
                       left: 0,
                       top: 0,
                       zIndex: 20,
                     }}
+                    className="juana-font"
                   >
                     Date
                   </th>
@@ -2575,11 +2576,12 @@ const PlanningScreen = () => {
                         textAlign: 'center',
                         padding: '8px',
                         fontWeight: '700',
-                        fontSize: '11px',
+                        fontSize: '13px',
                         position: 'sticky',
                         left: 0,
                         zIndex: 15,
                       }}
+                      className="juana-font"
                     >
                       DEADLINES & MILESTONES
                     </td>
@@ -2720,11 +2722,12 @@ const PlanningScreen = () => {
                               textAlign: 'center',
                               padding: '12px',
                               fontWeight: '700',
-                              fontSize: '13px',
+                              fontSize: '17px',
                               position: 'sticky',
                               left: 0,
                               zIndex: 15,
                             }}
+                            className="juana-font"
                           >
                             {user.firstName.toUpperCase()}
                           </td>
