@@ -326,9 +326,9 @@ const MainTabs = () => {
           backgroundColor: getColorForElement('navigation', 'tabBarBackground'),
           borderTopColor: iOSColors.separator,
           borderTopWidth: 0.5,
-          height: Platform.OS === 'web' ? 65 : Platform.OS === 'ios' ? 88 : 60,
-          paddingBottom: Platform.OS === 'web' ? 10 : Platform.OS === 'ios' ? 34 : 8,
-          paddingTop: 8,
+          height: Platform.OS === 'web' ? 105 : Platform.OS === 'ios' ? 128 : 100,
+          paddingBottom: Platform.OS === 'web' ? 30 : Platform.OS === 'ios' ? 54 : 28,
+          paddingTop: 28,
         },
         tabBarIconStyle: {
           marginTop: Platform.OS === 'web' ? 4 : 0,
