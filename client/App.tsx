@@ -50,15 +50,6 @@ const ThemedApp = () => {
     }
   }, [statusBarColor, isInitializing]);
 
-  // Show loading screen while custom theme is initializing to prevent color flash
-  if (isInitializing) {
-    return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#141b2b' }}>
-        <ActivityIndicator size="large" color="#FFFFFF" />
-      </View>
-    );
-  }
-
   return (
     <QueryClientProvider client={queryClient}>
       <PaperProvider theme={theme}>
