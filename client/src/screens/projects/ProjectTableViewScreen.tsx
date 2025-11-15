@@ -1504,7 +1504,7 @@ const getStyles = (currentColors: any) => StyleSheet.create({
     color: currentColors.white,
     fontWeight: '700',
     fontSize: 13,
-    textTransform: 'uppercase',
+    textTransform: 'capitalize',
   },
   sortIndicator: {
     color: currentColors.white,
