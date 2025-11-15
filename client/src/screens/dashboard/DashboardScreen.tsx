@@ -188,61 +188,6 @@ const DashboardScreen = ({ navigation }: any) => {
     },
   });
 
-  if (loading) {
-    return (
-      <View style={[styles.centered, { backgroundColor: dashboardBg }]}>
-        <ActivityIndicator size="large" color={currentColors.primary} />
-      </View>
-    );
-  }
-
-  const renderDeadlineItem = (deadline: any) => {
-    // Parse date - handle both formats: 'YYYY-MM-DD' and 'YYYY-MM-DDTHH:mm:ss.sssZ'
-    let deadlineDate: Date;
-    if (deadline.date.includes('T')) {
-      // ISO timestamp - extract date part only and treat as local
-      const datePart = deadline.date.split('T')[0]; // Get 'YYYY-MM-DD'
-      deadlineDate = new Date(datePart + 'T00:00:00');
-    } else {
-      // Date-only string, treat as local midnight
-      deadlineDate = new Date(deadline.date + 'T00:00:00');
-    }
-    const formattedDate = deadlineDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-
-    const getDeadlineTypeLabel = (type: string) => {
-      switch (type) {
-        case 'DEADLINE': return 'Deadline';
-        case 'INTERNAL_DEADLINE': return 'Internal Deadline';
-        case 'MILESTONE': return 'Milestone';
-        default: return type;
-      }
-    };
-
-    const deadlineBgColor = getDeadlineBgColor(deadline.deadlineType);
-    const deadlineBorderColor = getDeadlineBorderColor(deadline.deadlineType);
-    const deadlineTextColor = getDeadlineTextColor(deadline.deadlineType);
-
-    // Build the title: "Task Type - Project Common Name"
-    const projectName = deadline.project ? (deadline.project.description || deadline.project.name) : '';
-    const titleText = projectName
-      ? `${getDeadlineTypeLabel(deadline.deadlineType)} - ${projectName}`
-      : getDeadlineTypeLabel(deadline.deadlineType);
-
-    return (
-      <View key={deadline.id} style={[styles.deadlineItem, { borderLeftColor: deadlineBorderColor, backgroundColor: deadlineBgColor }]}>
-        <View style={styles.deadlineHeader}>
-          <Text style={[styles.deadlineType, { color: deadlineTextColor }]}>
-            {titleText}
-          </Text>
-          <Text style={[styles.deadlineDate, { color: deadlineTextColor, opacity: 0.8 }]}>{formattedDate}</Text>
-        </View>
-        {deadline.description && (
-          <Text style={[styles.deadlineDescription, { color: deadlineTextColor }]}>{deadline.description}</Text>
-        )}
-      </View>
-    );
-  };
-
   // Get planning color for deadline borders (from planning colors context)
   const getDeadlineBorderColor = useCallback((type: string) => {
     switch (type) {
@@ -294,13 +239,7 @@ const DashboardScreen = ({ navigation }: any) => {
     }
 
     const projectName = project.name || '';
-    const projectColor = project.color;
     const projectNameLower = projectName.toLowerCase();
-
-    // If project has a custom color assigned, use it
-    if (projectColor) {
-      return projectColor;
-    }
 
     // Task types based on project name
     if (projectNameLower.includes('admin')) {
@@ -360,7 +299,7 @@ const DashboardScreen = ({ navigation }: any) => {
       return dashboardUnavailableText || currentColors.text;
     }
 
-    // If no project, return default project task text color
+    // If no project, return default project task color
     if (!project) {
       return dashboardProjectTaskText || currentColors.text;
     }
@@ -377,6 +316,61 @@ const DashboardScreen = ({ navigation }: any) => {
 
     return dashboardProjectTaskText || currentColors.text;
   }, [dashboardOutOfOfficeText, dashboardTimeOffText, dashboardUnavailableText, dashboardProjectTaskText, dashboardAdminTaskText, dashboardMarketingTaskText, currentColors]);
+
+  if (loading) {
+    return (
+      <View style={[styles.centered, { backgroundColor: dashboardBg }]}>
+        <ActivityIndicator size="large" color={currentColors.primary} />
+      </View>
+    );
+  }
+
+  const renderDeadlineItem = (deadline: any) => {
+    // Parse date - handle both formats: 'YYYY-MM-DD' and 'YYYY-MM-DDTHH:mm:ss.sssZ'
+    let deadlineDate: Date;
+    if (deadline.date.includes('T')) {
+      // ISO timestamp - extract date part only and treat as local
+      const datePart = deadline.date.split('T')[0]; // Get 'YYYY-MM-DD'
+      deadlineDate = new Date(datePart + 'T00:00:00');
+    } else {
+      // Date-only string, treat as local midnight
+      deadlineDate = new Date(deadline.date + 'T00:00:00');
+    }
+    const formattedDate = deadlineDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+    const getDeadlineTypeLabel = (type: string) => {
+      switch (type) {
+        case 'DEADLINE': return 'Deadline';
+        case 'INTERNAL_DEADLINE': return 'Internal Deadline';
+        case 'MILESTONE': return 'Milestone';
+        default: return type;
+      }
+    };
+
+    const deadlineBgColor = getDeadlineBgColor(deadline.deadlineType);
+    const deadlineBorderColor = getDeadlineBorderColor(deadline.deadlineType);
+    const deadlineTextColor = getDeadlineTextColor(deadline.deadlineType);
+
+    // Build the title: "Task Type - Project Common Name"
+    const projectName = deadline.project ? (deadline.project.description || deadline.project.name) : '';
+    const titleText = projectName
+      ? `${getDeadlineTypeLabel(deadline.deadlineType)} - ${projectName}`
+      : getDeadlineTypeLabel(deadline.deadlineType);
+
+    return (
+      <View key={deadline.id} style={[styles.deadlineItem, { borderLeftColor: deadlineBorderColor, backgroundColor: deadlineBgColor }]}>
+        <View style={styles.deadlineHeader}>
+          <Text style={[styles.deadlineType, { color: deadlineTextColor }]}>
+            {titleText}
+          </Text>
+          <Text style={[styles.deadlineDate, { color: deadlineTextColor, opacity: 0.8 }]}>{formattedDate}</Text>
+        </View>
+        {deadline.description && (
+          <Text style={[styles.deadlineDescription, { color: deadlineTextColor }]}>{deadline.description}</Text>
+        )}
+      </View>
+    );
+  };
 
   const renderTaskItem = (task: any, showCheckbox: boolean = false) => {
     // Parse date - handle both formats: 'YYYY-MM-DD' and 'YYYY-MM-DDTHH:mm:ss.sssZ'
