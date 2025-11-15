@@ -702,7 +702,15 @@ const ProjectTableViewScreen = () => {
             )}
             {columnVisibility.description && (
               <TouchableOpacity
-                style={[styles.headerCell, { width: COMMON_NAME_WIDTH }]}
+                style={[styles.headerCell, {
+                  width: COMMON_NAME_WIDTH,
+                  position: 'sticky',
+                  left: (columnVisibility.projectNumber ? PROJECT_NUM_WIDTH : 0) +
+                        (columnVisibility.name ? PROJECT_NAME_WIDTH : 0) +
+                        (columnVisibility.client ? CLIENT_WIDTH : 0),
+                  zIndex: 10,
+                  backgroundColor: tableHeaderBg,
+                }]}
                 onPress={() => handleHeaderClick('description')}
                 activeOpacity={0.7}
               >
@@ -924,7 +932,15 @@ const ProjectTableViewScreen = () => {
                 )}
                 {columnVisibility.description && (
                   <TouchableOpacity
-                    style={[styles.dataCell, { width: COMMON_NAME_WIDTH }]}
+                    style={[styles.dataCell, {
+                      width: COMMON_NAME_WIDTH,
+                      position: 'sticky',
+                      left: (columnVisibility.projectNumber ? PROJECT_NUM_WIDTH : 0) +
+                            (columnVisibility.name ? PROJECT_NAME_WIDTH : 0) +
+                            (columnVisibility.client ? CLIENT_WIDTH : 0),
+                      zIndex: 5,
+                      backgroundColor: currentColors.white,
+                    }]}
                     onPress={() => handleCellEdit(project.id, 'description', project.description || '')}
                     activeOpacity={0.7}
                   >
@@ -1050,7 +1066,15 @@ const ProjectTableViewScreen = () => {
                   <View style={[styles.dataCell, { width: CLIENT_WIDTH }]} />
                 )}
                 {columnVisibility.description && (
-                  <View style={[styles.dataCell, { width: COMMON_NAME_WIDTH }]} />
+                  <View style={[styles.dataCell, {
+                    width: COMMON_NAME_WIDTH,
+                    position: 'sticky',
+                    left: (columnVisibility.projectNumber ? PROJECT_NUM_WIDTH : 0) +
+                          (columnVisibility.name ? PROJECT_NAME_WIDTH : 0) +
+                          (columnVisibility.client ? CLIENT_WIDTH : 0),
+                    zIndex: 5,
+                    backgroundColor: currentColors.white,
+                  }]} />
                 )}
                 {columnVisibility.hours && (
                   <View style={[styles.dataCell, { width: HOURS_WIDTH }]} />
@@ -1160,7 +1184,15 @@ const ProjectTableViewScreen = () => {
                 </View>
               )}
               {columnVisibility.description && (
-                <View style={[styles.dataCell, { width: COMMON_NAME_WIDTH }]}>
+                <View style={[styles.dataCell, {
+                  width: COMMON_NAME_WIDTH,
+                  position: 'sticky',
+                  left: (columnVisibility.projectNumber ? PROJECT_NUM_WIDTH : 0) +
+                        (columnVisibility.name ? PROJECT_NAME_WIDTH : 0) +
+                        (columnVisibility.client ? CLIENT_WIDTH : 0),
+                  zIndex: 5,
+                  backgroundColor: currentColors.white,
+                }]}>
                   <TextInput
                     style={[styles.cellInput, { borderColor: currentColors.primary, backgroundColor: currentColors.background.bg500, color: currentColors.text }]}
                     value={newProjectData.description}
