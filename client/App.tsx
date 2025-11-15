@@ -22,8 +22,8 @@ const ThemedApp = () => {
   const { getColorForElement } = useCustomColorTheme();
   const theme = createThemedIOSTheme(currentColors);
 
-  // Get the navigation bar background color (this is what should match the status bar)
-  const statusBarColor = getColorForElement('navigation', 'tabBarBackground');
+  // Get the status bar background color from element mapping
+  const statusBarColor = getColorForElement('global', 'statusBarBackground');
 
   // Set status bar color on mount and when theme changes
   useEffect(() => {

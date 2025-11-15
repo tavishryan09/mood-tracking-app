@@ -143,6 +143,20 @@ const ElementColorMapperScreen = ({ navigation, route }: any) => {
             await settingsAPI.user.set(ELEMENT_COLOR_MAPPING_KEY, mappings);
           }
 
+          // Add missing statusBarBackground field to existing global mappings
+          if (loadedMapping.global && palette && !loadedMapping.global.statusBarBackground) {
+            const primaryColor = palette.colors.find(c => c.isPrimary) || palette.colors[0];
+
+            loadedMapping.global = {
+              ...loadedMapping.global,
+              statusBarBackground: primaryColor.id,
+            };
+
+            // Save the updated mapping
+            mappings[paletteId] = loadedMapping;
+            await settingsAPI.user.set(ELEMENT_COLOR_MAPPING_KEY, mappings);
+          }
+
           setElementMapping(loadedMapping);
           return;
         }
@@ -197,6 +211,7 @@ const ElementColorMapperScreen = ({ navigation, route }: any) => {
         errorColor: secondaryColor.id,
         successColor: primaryColor.id,
         warningColor: secondaryColor.id,
+        statusBarBackground: primaryColor.id,
       },
       dashboard: {
         background: bgColor.id,

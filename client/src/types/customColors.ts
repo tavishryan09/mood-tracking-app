@@ -56,6 +56,7 @@ export interface ElementColorMapping {
     errorColor: string;
     successColor: string;
     warningColor: string;
+    statusBarBackground: string;
   };
 
   // Dashboard Screen
@@ -260,6 +261,7 @@ export const ElementLabels = {
       errorColor: 'Error Color',
       successColor: 'Success Color',
       warningColor: 'Warning Color',
+      statusBarBackground: 'Status Bar Background',
     },
   },
   dashboard: {

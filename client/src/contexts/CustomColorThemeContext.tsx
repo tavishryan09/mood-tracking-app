@@ -570,6 +570,7 @@ function getDefaultColorForElement(section: string, element: string, currentColo
     'global.errorColor': currentColors.error,
     'global.successColor': currentColors.success,
     'global.warningColor': currentColors.warning,
+    'global.statusBarBackground': currentColors.primary,
     'planningTasks.projectTaskBackground': currentColors.primary,
     'planningTasks.projectTaskText': currentColors.white,
     'planningTasks.adminTaskBackground': currentColors.secondary,
