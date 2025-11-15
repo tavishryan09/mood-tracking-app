@@ -197,6 +197,7 @@ const PlanningScreen = () => {
   const weekendCellBg = getColorForElement('planningGrid', 'weekendCellBackground');
   const headerBorderColor = getColorForElement('planningGrid', 'headerBorderColor');
   const cellBorderColor = getColorForElement('planningGrid', 'cellBorderColor');
+  const teamMemberBorderColor = getColorForElement('planningGrid', 'teamMemberBorderColor');
 
   // Legacy color mappings (for backward compatibility)
   const calendarHeaderBg = planningColors.calendarHeaderBg || headerBg;
@@ -2466,6 +2467,7 @@ const PlanningScreen = () => {
                       left: 0,
                       top: 0,
                       zIndex: 20,
+                      borderRadius: '10px 0 0 10px',
                     }}
                   >
                     Date
@@ -2560,6 +2562,7 @@ const PlanningScreen = () => {
                         position: 'sticky',
                         left: 0,
                         zIndex: 15,
+                        borderRadius: '10px 0 0 10px',
                       }}
                     >
                       DEADLINES & MILESTONES
@@ -2693,7 +2696,7 @@ const PlanningScreen = () => {
                               minWidth: `${USER_COLUMN_WIDTH}px`,
                               maxWidth: `${USER_COLUMN_WIDTH}px`,
                               height: `${TIME_BLOCK_HEIGHT * 4}px`,
-                              borderBottom: isLastUser ? '0px' : `3px solid ${cellBorderColor}`,
+                              borderBottom: isLastUser ? '0px' : `5px solid ${teamMemberBorderColor}`,
                               borderRight: '0px',
                               backgroundColor: teamMemberColBg,
                               color: teamMemberColText,
@@ -2705,6 +2708,7 @@ const PlanningScreen = () => {
                               position: 'sticky',
                               left: 0,
                               zIndex: 15,
+                              borderRadius: '10px 0 0 10px',
                             }}
                           >
                             {user.firstName.toUpperCase()}

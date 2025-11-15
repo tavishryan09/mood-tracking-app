@@ -112,6 +112,7 @@ const ElementColorMapperScreen = ({ navigation, route }: any) => {
               todayCellBackground: primaryColor.id,
               headerBorderColor: textColor.id,
               cellBorderColor: textColor.id,
+              teamMemberBorderColor: textColor.id,
             };
 
             // Save the updated mapping
@@ -120,7 +121,7 @@ const ElementColorMapperScreen = ({ navigation, route }: any) => {
           }
 
           // Add missing header fields to existing planningGrid mappings
-          if (loadedMapping.planningGrid && palette && (!loadedMapping.planningGrid.headerBackground || !loadedMapping.planningGrid.settingsIconColor || !loadedMapping.planningGrid.todayCellBackground)) {
+          if (loadedMapping.planningGrid && palette && (!loadedMapping.planningGrid.headerBackground || !loadedMapping.planningGrid.settingsIconColor || !loadedMapping.planningGrid.todayCellBackground || !loadedMapping.planningGrid.teamMemberBorderColor)) {
             const primaryColor = palette.colors.find(c => c.isPrimary) || palette.colors[0];
             const textColor = palette.colors.find(c => c.name.toLowerCase().includes('black') || c.name.toLowerCase().includes('dark')) || palette.colors[0];
             const bgColor = palette.colors.find(c => c.name.toLowerCase().includes('white') || c.name.toLowerCase().includes('light')) || palette.colors[0];
@@ -131,6 +132,7 @@ const ElementColorMapperScreen = ({ navigation, route }: any) => {
               headerIcon: loadedMapping.planningGrid.headerIcon || primaryColor.id,
               settingsIconColor: loadedMapping.planningGrid.settingsIconColor || bgColor.id,
               todayCellBackground: loadedMapping.planningGrid.todayCellBackground || primaryColor.id,
+              teamMemberBorderColor: loadedMapping.planningGrid.teamMemberBorderColor || textColor.id,
               ...loadedMapping.planningGrid,
             };
 
@@ -286,6 +288,7 @@ const ElementColorMapperScreen = ({ navigation, route }: any) => {
         todayCellBackground: primaryColor.id,
         headerBorderColor: textColor.id,
         cellBorderColor: textColor.id,
+        teamMemberBorderColor: textColor.id,
       },
       clients: {
         background: bgColor.id,
