@@ -109,6 +109,7 @@ const ElementColorMapperScreen = ({ navigation, route }: any) => {
               weekendHeaderText: bgColor.id,
               weekdayCellBackground: bgColor.id,
               weekendCellBackground: bgColor.id,
+              todayCellBackground: primaryColor.id,
               headerBorderColor: textColor.id,
               cellBorderColor: textColor.id,
             };
@@ -119,7 +120,7 @@ const ElementColorMapperScreen = ({ navigation, route }: any) => {
           }
 
           // Add missing header fields to existing planningGrid mappings
-          if (loadedMapping.planningGrid && palette && (!loadedMapping.planningGrid.headerBackground || !loadedMapping.planningGrid.settingsIconColor)) {
+          if (loadedMapping.planningGrid && palette && (!loadedMapping.planningGrid.headerBackground || !loadedMapping.planningGrid.settingsIconColor || !loadedMapping.planningGrid.todayCellBackground)) {
             const primaryColor = palette.colors.find(c => c.isPrimary) || palette.colors[0];
             const textColor = palette.colors.find(c => c.name.toLowerCase().includes('black') || c.name.toLowerCase().includes('dark')) || palette.colors[0];
             const bgColor = palette.colors.find(c => c.name.toLowerCase().includes('white') || c.name.toLowerCase().includes('light')) || palette.colors[0];
@@ -129,6 +130,7 @@ const ElementColorMapperScreen = ({ navigation, route }: any) => {
               headerText: loadedMapping.planningGrid.headerText || textColor.id,
               headerIcon: loadedMapping.planningGrid.headerIcon || primaryColor.id,
               settingsIconColor: loadedMapping.planningGrid.settingsIconColor || bgColor.id,
+              todayCellBackground: loadedMapping.planningGrid.todayCellBackground || primaryColor.id,
               ...loadedMapping.planningGrid,
             };
 
@@ -243,35 +245,6 @@ const ElementColorMapperScreen = ({ navigation, route }: any) => {
         tableHeaderBackground: primaryColor.id,
         tableHeaderText: bgColor.id,
       },
-      timeTracking: {
-        background: bgColor.id,
-        timerCardBackground: bgColor.id,
-        timerText: textColor.id,
-        startButtonBackground: primaryColor.id,
-        startButtonText: bgColor.id,
-        stopButtonBackground: secondaryColor.id,
-        stopButtonText: bgColor.id,
-        entryCardBackground: bgColor.id,
-        entryText: textColor.id,
-        billableColor: primaryColor.id,
-        nonBillableColor: secondaryColor.id,
-      },
-      calendar: {
-        background: bgColor.id,
-        headerBackground: bgColor.id,
-        headerText: textColor.id,
-        headerIcons: textColor.id,
-        weekdayHeaderBackground: bgColor.id,
-        weekdayHeaderText: textColor.id,
-        weekendHeaderBackground: bgColor.id,
-        weekendHeaderText: textColor.id,
-        weekendCellBackground: bgColor.id,
-        currentDayBackground: primaryColor.id,
-        teamMemberColumnBackground: bgColor.id,
-        teamMemberColumnText: textColor.id,
-        eventBackground: primaryColor.id,
-        eventText: bgColor.id,
-      },
       planningTasks: {
         projectTaskBackground: primaryColor.id,
         projectTaskText: bgColor.id,
@@ -292,6 +265,27 @@ const ElementColorMapperScreen = ({ navigation, route }: any) => {
         internalDeadlineText: bgColor.id,
         milestoneBackground: primaryColor.id,
         milestoneText: bgColor.id,
+      },
+      planningGrid: {
+        headerBackground: bgColor.id,
+        headerText: textColor.id,
+        headerIcon: primaryColor.id,
+        settingsIconColor: bgColor.id,
+        dateCellBackground: bgColor.id,
+        dateCellText: textColor.id,
+        deadlinesRowBackground: bgColor.id,
+        deadlinesRowText: textColor.id,
+        teamMemberCellBackground: bgColor.id,
+        teamMemberCellText: textColor.id,
+        weekdayHeaderBackground: bgColor.id,
+        weekdayHeaderText: textColor.id,
+        weekendHeaderBackground: primaryColor.id,
+        weekendHeaderText: bgColor.id,
+        weekdayCellBackground: bgColor.id,
+        weekendCellBackground: bgColor.id,
+        todayCellBackground: primaryColor.id,
+        headerBorderColor: textColor.id,
+        cellBorderColor: textColor.id,
       },
       clients: {
         background: bgColor.id,

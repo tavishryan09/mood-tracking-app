@@ -113,39 +113,6 @@ export interface ElementColorMapping {
     tableHeaderText: string;
   };
 
-  // Time Tracking Screen
-  timeTracking: {
-    background: string;
-    timerCardBackground: string;
-    timerText: string;
-    startButtonBackground: string;
-    startButtonText: string;
-    stopButtonBackground: string;
-    stopButtonText: string;
-    entryCardBackground: string;
-    entryText: string;
-    billableColor: string;
-    nonBillableColor: string;
-  };
-
-  // Calendar/Planning Screen
-  calendar: {
-    background: string;
-    headerBackground: string;
-    headerText: string;
-    headerIcons: string;
-    weekdayHeaderBackground: string;
-    weekdayHeaderText: string;
-    weekendHeaderBackground: string;
-    weekendHeaderText: string;
-    weekendCellBackground: string;
-    currentDayBackground: string;
-    teamMemberColumnBackground: string;
-    teamMemberColumnText: string;
-    eventBackground: string;
-    eventText: string;
-  };
-
   // Planning Tasks
   planningTasks: {
     projectTaskBackground: string;
@@ -187,6 +154,7 @@ export interface ElementColorMapping {
     weekendHeaderText: string;
     weekdayCellBackground: string;
     weekendCellBackground: string;
+    todayCellBackground: string;
     headerBorderColor: string;
     cellBorderColor: string;
   };
@@ -349,41 +317,6 @@ export const ElementLabels = {
       tableHeaderText: 'Table Header Text',
     },
   },
-  timeTracking: {
-    title: 'Time Tracking',
-    elements: {
-      background: 'Background',
-      timerCardBackground: 'Timer Card Background',
-      timerText: 'Timer Text',
-      startButtonBackground: 'Start Button Background',
-      startButtonText: 'Start Button Text',
-      stopButtonBackground: 'Stop Button Background',
-      stopButtonText: 'Stop Button Text',
-      entryCardBackground: 'Entry Card Background',
-      entryText: 'Entry Text',
-      billableColor: 'Billable Color',
-      nonBillableColor: 'Non-Billable Color',
-    },
-  },
-  calendar: {
-    title: 'Calendar',
-    elements: {
-      background: 'Background',
-      headerBackground: 'Header Background',
-      headerText: 'Header Text',
-      headerIcons: 'Header Icons',
-      weekdayHeaderBackground: 'Weekday Header Background',
-      weekdayHeaderText: 'Weekday Header Text',
-      weekendHeaderBackground: 'Weekend Header Background',
-      weekendHeaderText: 'Weekend Header Text',
-      weekendCellBackground: 'Weekend Cell Background',
-      currentDayBackground: 'Current Day Background',
-      teamMemberColumnBackground: 'Team Member Column Background',
-      teamMemberColumnText: 'Team Member Column Text',
-      eventBackground: 'Event Background',
-      eventText: 'Event Text',
-    },
-  },
   planningTasks: {
     title: 'Planning Tasks',
     elements: {
@@ -427,6 +360,7 @@ export const ElementLabels = {
       weekendHeaderText: 'Weekend Header Text',
       weekdayCellBackground: 'Weekday Cell Background',
       weekendCellBackground: 'Weekend Cell Background',
+      todayCellBackground: 'Today\'s Cell Background',
       headerBorderColor: 'Header Border Color',
       cellBorderColor: 'Cell Border Color',
     },
