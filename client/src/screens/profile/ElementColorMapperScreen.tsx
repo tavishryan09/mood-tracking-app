@@ -277,7 +277,6 @@ const ElementColorMapperScreen = ({ navigation, route }: any) => {
         unavailableText: bgColor.id,
         timeOffBackground: primaryColor.id,
         timeOffText: bgColor.id,
-        deadlineRowBackground: bgColor.id,
         deadlineBackground: secondaryColor.id,
         deadlineText: bgColor.id,
         internalDeadlineBackground: secondaryColor.id,

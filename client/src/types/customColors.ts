@@ -128,7 +128,6 @@ export interface ElementColorMapping {
     unavailableText: string;
     timeOffBackground: string;
     timeOffText: string;
-    deadlineRowBackground: string;
     deadlineBackground: string;
     deadlineText: string;
     internalDeadlineBackground: string;
@@ -336,7 +335,6 @@ export const ElementLabels = {
       unavailableText: 'Unavailable Text',
       timeOffBackground: 'Time Off Background',
       timeOffText: 'Time Off Text',
-      deadlineRowBackground: 'Deadline Row Background',
       deadlineBackground: 'Deadline Background',
       deadlineText: 'Deadline Text',
       internalDeadlineBackground: 'Internal Deadline Background',
