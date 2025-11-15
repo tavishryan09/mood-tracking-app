@@ -36,6 +36,15 @@ const ThemedApp = () => {
       StatusBar.setBackgroundColor(statusBarColor);
       StatusBar.setBarStyle('light-content');
     }
+
+    // Update meta theme-color tag for web/PWA
+    if (Platform.OS === 'web') {
+      const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+      if (metaThemeColor) {
+        metaThemeColor.setAttribute('content', statusBarColor);
+        console.log('[App] Updated meta theme-color to:', statusBarColor);
+      }
+    }
   }, [statusBarColor]);
 
   return (
