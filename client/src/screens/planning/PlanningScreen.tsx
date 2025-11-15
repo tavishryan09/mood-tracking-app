@@ -2469,22 +2469,9 @@ const PlanningScreen = () => {
                       left: 0,
                       top: 0,
                       zIndex: 20,
-                      borderRadius: '10px 0 0 10px',
-                      marginLeft: Platform.OS === 'web' ? '0px' : '10px',
-                      padding: '0',
-                      overflow: 'hidden',
                     }}
                   >
-                    <div style={{
-                      width: '100%',
-                      height: '100%',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      backgroundColor: dateCellBg,
-                    }}>
-                      Date
-                    </div>
+                    Date
                   </th>
 
                 {/* Day headers */}
@@ -2570,28 +2557,15 @@ const PlanningScreen = () => {
                         color: deadlinesRowText,
                         verticalAlign: 'middle',
                         textAlign: 'center',
-                        padding: '0',
+                        padding: '8px',
                         fontWeight: '700',
                         fontSize: '11px',
                         position: 'sticky',
                         left: 0,
                         zIndex: 15,
-                        borderRadius: '10px 0 0 10px',
-                        marginLeft: Platform.OS === 'web' ? '0px' : '10px',
-                        overflow: 'hidden',
                       }}
                     >
-                      <div style={{
-                        width: '100%',
-                        height: '100%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '8px',
-                        backgroundColor: deadlinesRowBg,
-                      }}>
-                        DEADLINES & MILESTONES
-                      </div>
+                      DEADLINES & MILESTONES
                     </td>
                   )}
 
@@ -2722,34 +2696,21 @@ const PlanningScreen = () => {
                               minWidth: `${USER_COLUMN_WIDTH}px`,
                               maxWidth: `${USER_COLUMN_WIDTH}px`,
                               height: `${TIME_BLOCK_HEIGHT * 4}px`,
-                              borderBottom: isLastUser ? '0px' : `10px solid ${teamMemberBorderColor}`,
+                              borderBottom: isLastUser ? '0px' : `3px solid ${cellBorderColor}`,
                               borderRight: '0px',
                               backgroundColor: teamMemberColBg,
                               color: teamMemberColText,
                               verticalAlign: 'middle',
                               textAlign: 'center',
-                              padding: '0',
+                              padding: '12px',
                               fontWeight: '700',
                               fontSize: '13px',
                               position: 'sticky',
                               left: 0,
                               zIndex: 15,
-                              borderRadius: '10px 0 0 10px',
-                              marginLeft: Platform.OS === 'web' ? '0px' : '10px',
-                              overflow: 'hidden',
                             }}
                           >
-                            <div style={{
-                              width: '100%',
-                              height: '100%',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              padding: '12px',
-                              backgroundColor: teamMemberColBg,
-                            }}>
-                              {user.firstName.toUpperCase()}
-                            </div>
+                            {user.firstName.toUpperCase()}
                           </td>
                         )}
 
@@ -2851,7 +2812,7 @@ const PlanningScreen = () => {
                                   minWidth: `${DAY_CELL_WIDTH}px`,
                                   maxWidth: `${DAY_CELL_WIDTH}px`,
                                   height: `${TIME_BLOCK_HEIGHT * span}px`,
-                                  borderBottom: (isLastBlockForUser && isLastUser) ? '0px' : (isLastBlockForUser ? `10px solid ${teamMemberBorderColor}` : `1px solid ${cellBorderColor}`),
+                                  borderBottom: (isLastBlockForUser && isLastUser) ? '0px' : (isLastBlockForUser ? `3px solid ${cellBorderColor}` : `1px solid ${cellBorderColor}`),
                                   borderRight: `1px solid ${cellBorderColor}`,
                                   padding: assignment?.projectName === 'Unavailable' ? '0' : '2px',
                                   position: 'relative',
