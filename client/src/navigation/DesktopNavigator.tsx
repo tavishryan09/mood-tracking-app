@@ -277,11 +277,25 @@ function MainDrawer() {
   const [visibleMenuItems, setVisibleMenuItems] = useState<typeof allMenuItems>([]);
   const [initialRoute, setInitialRoute] = useState<string>('Dashboard');
   const [drawerLoaded, setDrawerLoaded] = useState(false);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    // Load saved collapsed state from localStorage on mount
+    if (Platform.OS === 'web') {
+      const saved = localStorage.getItem('desktopNav_isCollapsed');
+      return saved === 'true';
+    }
+    return false;
+  });
 
   useEffect(() => {
     loadMenuSettings();
   }, [user]);
+
+  // Save collapsed state to localStorage whenever it changes
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      localStorage.setItem('desktopNav_isCollapsed', isCollapsed.toString());
+    }
+  }, [isCollapsed]);
 
   const loadMenuSettings = async () => {
     try {
