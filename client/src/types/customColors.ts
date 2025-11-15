@@ -147,6 +147,7 @@ export interface ElementColorMapping {
     dateCellText: string;
     deadlinesRowBackground: string;
     deadlinesRowText: string;
+    emptyDeadlineCellBackground: string;
     teamMemberCellBackground: string;
     teamMemberCellText: string;
     weekdayHeaderBackground: string;
@@ -355,6 +356,7 @@ export const ElementLabels = {
       dateCellText: 'Date Cell Text',
       deadlinesRowBackground: 'Deadlines Row Background',
       deadlinesRowText: 'Deadlines Row Text',
+      emptyDeadlineCellBackground: 'Empty Deadline Cell Background',
       teamMemberCellBackground: 'Team Member Cell Background',
       teamMemberCellText: 'Team Member Cell Text',
       weekdayHeaderBackground: 'Weekday Header Background',

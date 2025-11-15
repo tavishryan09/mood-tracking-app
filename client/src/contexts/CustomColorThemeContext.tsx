@@ -597,6 +597,7 @@ function getDefaultColorForElement(section: string, element: string, currentColo
     'planningGrid.dateCellText': currentColors.text,
     'planningGrid.deadlinesRowBackground': currentColors.background.bg500,
     'planningGrid.deadlinesRowText': currentColors.text,
+    'planningGrid.emptyDeadlineCellBackground': currentColors.background.bg500,
     'planningGrid.teamMemberCellBackground': currentColors.background.bg300,
     'planningGrid.teamMemberCellText': currentColors.text,
     'planningGrid.weekdayHeaderBackground': currentColors.background.bg500,

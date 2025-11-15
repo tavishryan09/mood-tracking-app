@@ -188,6 +188,7 @@ const PlanningScreen = () => {
   const dateCellText = getColorForElement('planningGrid', 'dateCellText');
   const deadlinesRowBg = getColorForElement('planningGrid', 'deadlinesRowBackground');
   const deadlinesRowText = getColorForElement('planningGrid', 'deadlinesRowText');
+  const emptyDeadlineCellBg = getColorForElement('planningGrid', 'emptyDeadlineCellBackground');
   const teamMemberColBg = getColorForElement('planningGrid', 'teamMemberCellBackground');
   const teamMemberColText = getColorForElement('planningGrid', 'teamMemberCellText');
   const weekdayHeaderBg = getColorForElement('planningGrid', 'weekdayHeaderBackground');
@@ -2639,9 +2640,7 @@ const PlanningScreen = () => {
                               ? currentColors.primary + '40' // Highlight when dragging over
                               : deadlineTask
                               ? colors?.bg
-                              : isWeekend
-                              ? weekendCellBg
-                              : weekdayCellBg,
+                              : emptyDeadlineCellBg,
                             cursor: deadlineTask ? 'move' : 'pointer',
                             padding: '4px',
                             fontSize: '10px',
