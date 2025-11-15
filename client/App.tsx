@@ -24,10 +24,10 @@ const ThemedApp = () => {
   // Set status bar color on mount and when theme changes
   useEffect(() => {
     if (Platform.OS === 'android') {
-      StatusBar.setBackgroundColor(currentColors.primary);
+      StatusBar.setBackgroundColor(currentColors.secondary);
       StatusBar.setBarStyle('light-content');
     }
-  }, [currentColors.primary]);
+  }, [currentColors.secondary]);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -36,7 +36,7 @@ const ThemedApp = () => {
           <OfflineIndicator />
           <PlanningColorsProvider>
             <AppNavigator />
-            {Platform.OS === 'ios' && <ExpoStatusBar style="light" backgroundColor={currentColors.primary} />}
+            {Platform.OS === 'ios' && <ExpoStatusBar style="light" backgroundColor={currentColors.secondary} />}
             {Platform.OS === 'android' && <ExpoStatusBar style="light" />}
           </PlanningColorsProvider>
           <InstallPrompt />
