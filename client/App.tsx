@@ -1,7 +1,7 @@
 import 'react-native-gesture-handler';
 import React, { useEffect } from 'react';
-import { StatusBar } from 'expo-status-bar';
-import { Platform, View, ActivityIndicator } from 'react-native';
+import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
+import { Platform, View, ActivityIndicator, StatusBar } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Provider as PaperProvider } from 'react-native-paper';
 import { QueryClientProvider } from '@tanstack/react-query';
@@ -21,6 +21,14 @@ const ThemedApp = () => {
   const { currentColors } = useTheme();
   const theme = createThemedIOSTheme(currentColors);
 
+  // Set status bar color on mount and when theme changes
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      StatusBar.setBackgroundColor(currentColors.secondary);
+      StatusBar.setBarStyle('light-content');
+    }
+  }, [currentColors.secondary]);
+
   return (
     <QueryClientProvider client={queryClient}>
       <PaperProvider theme={theme}>
@@ -28,7 +36,8 @@ const ThemedApp = () => {
           <OfflineIndicator />
           <PlanningColorsProvider>
             <AppNavigator />
-            <StatusBar style="dark" />
+            {Platform.OS === 'ios' && <ExpoStatusBar style="light" backgroundColor={currentColors.secondary} />}
+            {Platform.OS === 'android' && <ExpoStatusBar style="light" />}
           </PlanningColorsProvider>
           <InstallPrompt />
         </View>
