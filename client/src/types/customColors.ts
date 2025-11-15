@@ -157,6 +157,8 @@ export interface ElementColorMapping {
     weekdayCellBackground: string;
     weekendCellBackground: string;
     todayCellBackground: string;
+    todayHeaderBackground: string;
+    todayHeaderText: string;
     headerBorderColor: string;
     cellBorderColor: string;
     teamMemberBorderColor: string;
@@ -366,6 +368,8 @@ export const ElementLabels = {
       weekdayCellBackground: 'Weekday Cell Background',
       weekendCellBackground: 'Weekend Cell Background',
       todayCellBackground: 'Today\'s Cell Background',
+      todayHeaderBackground: 'Today\'s Header Background',
+      todayHeaderText: 'Today\'s Header Text',
       headerBorderColor: 'Header Border Color',
       cellBorderColor: 'Cell Border Color',
       teamMemberBorderColor: 'Team Member Border Color',

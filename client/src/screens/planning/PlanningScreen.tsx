@@ -197,6 +197,9 @@ const PlanningScreen = () => {
   const weekendHeaderFont = getColorForElement('planningGrid', 'weekendHeaderText');
   const weekdayCellBg = getColorForElement('planningGrid', 'weekdayCellBackground');
   const weekendCellBg = getColorForElement('planningGrid', 'weekendCellBackground');
+  const todayCellBg = getColorForElement('planningGrid', 'todayCellBackground');
+  const todayHeaderBg = getColorForElement('planningGrid', 'todayHeaderBackground');
+  const todayHeaderFont = getColorForElement('planningGrid', 'todayHeaderText');
   const headerBorderColor = getColorForElement('planningGrid', 'headerBorderColor');
   const cellBorderColor = getColorForElement('planningGrid', 'cellBorderColor');
   const teamMemberBorderColor = getColorForElement('planningGrid', 'teamMemberBorderColor');
@@ -2511,9 +2514,9 @@ const PlanningScreen = () => {
                     // Check if this is a weekend day (Saturday or Sunday)
                     const isWeekend = day.getDay() === 0 || day.getDay() === 6;
 
-                    // Determine header colors based on weekend status
-                    const headerBg = isWeekend ? weekendHeaderBg : weekdayHeaderBg;
-                    const headerFont = isWeekend ? weekendHeaderFont : weekdayHeaderFont;
+                    // Determine header colors based on today/weekend status
+                    const headerBg = isToday ? todayHeaderBg : (isWeekend ? weekendHeaderBg : weekdayHeaderBg);
+                    const headerFont = isToday ? todayHeaderFont : (isWeekend ? weekendHeaderFont : weekdayHeaderFont);
 
                     return (
                       <th
@@ -2829,7 +2832,7 @@ const PlanningScreen = () => {
                                   borderRight: `1px solid ${cellBorderColor}`,
                                   padding: assignment?.projectName === 'Unavailable' ? '0' : '2px',
                                   position: 'relative',
-                                  backgroundColor: isWeekend ? weekendCellBg : (isToday ? currentColors.background.bg300 : weekdayCellBg),
+                                  backgroundColor: isToday ? todayCellBg : (isWeekend ? weekendCellBg : weekdayCellBg),
                                   verticalAlign: 'top',
                                   cursor: assignment ? 'pointer' : 'pointer',
                                 }}
