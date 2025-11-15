@@ -2471,9 +2471,20 @@ const PlanningScreen = () => {
                       zIndex: 20,
                       borderRadius: '10px 0 0 10px',
                       marginLeft: Platform.OS === 'web' ? '0px' : '10px',
+                      padding: '0',
+                      overflow: 'hidden',
                     }}
                   >
-                    Date
+                    <div style={{
+                      width: '100%',
+                      height: '100%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: dateCellBg,
+                    }}>
+                      Date
+                    </div>
                   </th>
 
                 {/* Day headers */}
@@ -2559,7 +2570,7 @@ const PlanningScreen = () => {
                         color: deadlinesRowText,
                         verticalAlign: 'middle',
                         textAlign: 'center',
-                        padding: '8px',
+                        padding: '0',
                         fontWeight: '700',
                         fontSize: '11px',
                         position: 'sticky',
@@ -2567,9 +2578,20 @@ const PlanningScreen = () => {
                         zIndex: 15,
                         borderRadius: '10px 0 0 10px',
                         marginLeft: Platform.OS === 'web' ? '0px' : '10px',
+                        overflow: 'hidden',
                       }}
                     >
-                      DEADLINES & MILESTONES
+                      <div style={{
+                        width: '100%',
+                        height: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '8px',
+                        backgroundColor: deadlinesRowBg,
+                      }}>
+                        DEADLINES & MILESTONES
+                      </div>
                     </td>
                   )}
 
@@ -2706,7 +2728,7 @@ const PlanningScreen = () => {
                               color: teamMemberColText,
                               verticalAlign: 'middle',
                               textAlign: 'center',
-                              padding: '12px',
+                              padding: '0',
                               fontWeight: '700',
                               fontSize: '13px',
                               position: 'sticky',
@@ -2714,9 +2736,20 @@ const PlanningScreen = () => {
                               zIndex: 15,
                               borderRadius: '10px 0 0 10px',
                               marginLeft: Platform.OS === 'web' ? '0px' : '10px',
+                              overflow: 'hidden',
                             }}
                           >
-                            {user.firstName.toUpperCase()}
+                            <div style={{
+                              width: '100%',
+                              height: '100%',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              padding: '12px',
+                              backgroundColor: teamMemberColBg,
+                            }}>
+                              {user.firstName.toUpperCase()}
+                            </div>
                           </td>
                         )}
 
