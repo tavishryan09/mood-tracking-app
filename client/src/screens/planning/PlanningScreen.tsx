@@ -2442,6 +2442,18 @@ const PlanningScreen = () => {
                   border-right-width: 3px !important;
                   border-bottom-width: 3px !important;
                 }
+
+                /* Remove any hover effects or overlays on deadline cells */
+                [data-planning-scroll] .deadline-cell {
+                  position: relative !important;
+                }
+                [data-planning-scroll] .deadline-cell:hover {
+                  background-color: inherit !important;
+                }
+                [data-planning-scroll] .deadline-cell::before,
+                [data-planning-scroll] .deadline-cell::after {
+                  display: none !important;
+                }
               `}
             </style>
             <table style={{
@@ -2606,6 +2618,7 @@ const PlanningScreen = () => {
                       return (
                         <td
                           key={`${dateString}-deadline-${slotIndex}`}
+                          className="deadline-cell"
                           draggable={!!deadlineTask}
                           onDragStart={(e) => deadlineTask && handleDeadlineTaskDragStart(e, deadlineTask)}
                           onDragOver={(e) => handleDeadlineCellDragOver(e, day, slotIndex)}
@@ -2650,6 +2663,8 @@ const PlanningScreen = () => {
                             fontWeight: deadlineTask ? '600' : 'normal',
                             opacity: draggedDeadlineTask?.id === deadlineTask?.id ? 0.5 : 1, // Dim the dragged task
                             boxShadow: copiedDeadlineTask && selectedDeadlineCell === cellKey ? `inset 0 0 0 3px ${currentColors.primary}` : 'none',
+                            transition: 'none',
+                            WebkitTapHighlightColor: 'transparent',
                           }}
                         >
                           {deadlineTask && (
