@@ -939,7 +939,7 @@ const ProjectTableViewScreen = () => {
                         left: 0,
                       }),
                       zIndex: 5,
-                      backgroundColor: currentColors.white,
+                      backgroundColor: currentColors.background.bg300,
                     }]}
                     onPress={() => handleCellEdit(project.id, 'description', project.description || '')}
                     activeOpacity={0.7}
@@ -1073,7 +1073,7 @@ const ProjectTableViewScreen = () => {
                       left: 0,
                     }),
                     zIndex: 5,
-                    backgroundColor: currentColors.white,
+                    backgroundColor: currentColors.background.bg300,
                   }]} />
                 )}
                 {columnVisibility.hours && (
@@ -1191,7 +1191,7 @@ const ProjectTableViewScreen = () => {
                     left: 0,
                   }),
                   zIndex: 5,
-                  backgroundColor: currentColors.white,
+                  backgroundColor: currentColors.background.bg300,
                 }]}>
                   <TextInput
                     style={[styles.cellInput, { borderColor: currentColors.primary, backgroundColor: currentColors.background.bg500, color: currentColors.text }]}
@@ -1504,7 +1504,6 @@ const getStyles = (currentColors: any) => StyleSheet.create({
     color: currentColors.white,
     fontWeight: '700',
     fontSize: 13,
-    fontFamily: 'Juana',
     textTransform: 'uppercase',
   },
   sortIndicator: {
