@@ -214,15 +214,15 @@ const PlanningScreen = () => {
   const outOfOfficeFont = planningColors.outOfOfficeFont || currentColors.planning.outOfOfficeFont;
   const unavailableBg = planningColors.unavailableBg || currentColors.planning.unavailable;
   const unavailableFont = planningColors.unavailableFont || currentColors.white;
-  const timeOffBg = planningColors.timeOffBg || currentColors.planning.timeOff;
-  const timeOffFont = planningColors.timeOffFont || currentColors.white;
+  const timeOffBg = getColorForElement('planningTasks', 'timeOffBackground');
+  const timeOffFont = getColorForElement('planningTasks', 'timeOffText');
   const deadlineRowBg = planningColors.deadlineRowBg || currentColors.background.bg500;
-  const deadlineBg = planningColors.deadlineBg || currentColors.planning.deadline;
-  const deadlineFont = planningColors.deadlineFont || currentColors.white;
-  const internalDeadlineBg = planningColors.internalDeadlineBg || currentColors.planning.internalDeadline;
-  const internalDeadlineFont = planningColors.internalDeadlineFont || currentColors.white;
-  const milestoneBg = planningColors.milestoneBg || currentColors.planning.milestone;
-  const milestoneFont = planningColors.milestoneFont || currentColors.white;
+  const deadlineBg = getColorForElement('planningTasks', 'deadlineBackground');
+  const deadlineFont = getColorForElement('planningTasks', 'deadlineText');
+  const internalDeadlineBg = getColorForElement('planningTasks', 'internalDeadlineBackground');
+  const internalDeadlineFont = getColorForElement('planningTasks', 'internalDeadlineText');
+  const milestoneBg = getColorForElement('planningTasks', 'milestoneBackground');
+  const milestoneFont = getColorForElement('planningTasks', 'milestoneText');
 
   // Drag and drop state for moving tasks
   const [draggedTask, setDraggedTask] = useState<{
