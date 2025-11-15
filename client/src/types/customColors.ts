@@ -138,6 +138,7 @@ export interface ElementColorMapping {
 
   // Planning Grid
   planningGrid: {
+    screenBackground: string;
     headerBackground: string;
     headerText: string;
     headerIcon: string;
@@ -345,6 +346,7 @@ export const ElementLabels = {
   planningGrid: {
     title: 'Planning Grid',
     elements: {
+      screenBackground: 'Screen Background',
       headerBackground: 'Header Background',
       headerText: 'Header Text',
       headerIcon: 'Header Icon',

@@ -93,6 +93,7 @@ const ElementColorMapperScreen = ({ navigation, route }: any) => {
             const bgColor = palette.colors.find(c => c.name.toLowerCase().includes('white') || c.name.toLowerCase().includes('light')) || palette.colors[0];
 
             loadedMapping.planningGrid = {
+              screenBackground: primaryColor.id,
               headerBackground: bgColor.id,
               headerText: textColor.id,
               headerIcon: primaryColor.id,
@@ -121,12 +122,13 @@ const ElementColorMapperScreen = ({ navigation, route }: any) => {
           }
 
           // Add missing header fields to existing planningGrid mappings
-          if (loadedMapping.planningGrid && palette && (!loadedMapping.planningGrid.headerBackground || !loadedMapping.planningGrid.settingsIconColor || !loadedMapping.planningGrid.todayCellBackground || !loadedMapping.planningGrid.teamMemberBorderColor)) {
+          if (loadedMapping.planningGrid && palette && (!loadedMapping.planningGrid.headerBackground || !loadedMapping.planningGrid.settingsIconColor || !loadedMapping.planningGrid.todayCellBackground || !loadedMapping.planningGrid.teamMemberBorderColor || !loadedMapping.planningGrid.screenBackground)) {
             const primaryColor = palette.colors.find(c => c.isPrimary) || palette.colors[0];
             const textColor = palette.colors.find(c => c.name.toLowerCase().includes('black') || c.name.toLowerCase().includes('dark')) || palette.colors[0];
             const bgColor = palette.colors.find(c => c.name.toLowerCase().includes('white') || c.name.toLowerCase().includes('light')) || palette.colors[0];
 
             loadedMapping.planningGrid = {
+              screenBackground: loadedMapping.planningGrid.screenBackground || primaryColor.id,
               headerBackground: loadedMapping.planningGrid.headerBackground || bgColor.id,
               headerText: loadedMapping.planningGrid.headerText || textColor.id,
               headerIcon: loadedMapping.planningGrid.headerIcon || primaryColor.id,
@@ -269,6 +271,7 @@ const ElementColorMapperScreen = ({ navigation, route }: any) => {
         milestoneText: bgColor.id,
       },
       planningGrid: {
+        screenBackground: primaryColor.id,
         headerBackground: bgColor.id,
         headerText: textColor.id,
         headerIcon: primaryColor.id,

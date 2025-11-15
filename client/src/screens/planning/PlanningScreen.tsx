@@ -179,6 +179,7 @@ const PlanningScreen = () => {
   const { getColorForElement } = useCustomColorTheme();
 
   // Planning Grid colors from Element Color Mapper
+  const screenBackground = getColorForElement('planningGrid', 'screenBackground');
   const headerBg = getColorForElement('planningGrid', 'headerBackground');
   const headerText = getColorForElement('planningGrid', 'headerText');
   const headerIcon = getColorForElement('planningGrid', 'headerIcon');
@@ -2402,7 +2403,7 @@ const PlanningScreen = () => {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: currentColors.background.bg700 }]}>
+    <View style={[styles.container, { backgroundColor: screenBackground }]}>
       {/* Header */}
       <View style={[styles.header, { backgroundColor: calendarHeaderBg, borderBottomColor: currentColors.text }]}>
         <View style={styles.headerNav}>
@@ -2427,6 +2428,7 @@ const PlanningScreen = () => {
               height: '100%',
               overflow: 'auto',
               position: 'relative',
+              backgroundColor: screenBackground,
             }}>
             <style>
               {`
@@ -2444,7 +2446,7 @@ const PlanningScreen = () => {
             <table style={{
               borderCollapse: 'separate',
               borderSpacing: 0,
-              backgroundColor: currentColors.background.bg300,
+              backgroundColor: screenBackground,
               position: 'relative',
             }}>
               <thead>
