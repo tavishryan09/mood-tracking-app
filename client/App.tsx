@@ -19,7 +19,7 @@ import { queryClient } from './src/config/queryClient';
 // Inner component that uses the theme context
 const ThemedApp = () => {
   const { currentColors } = useTheme();
-  const { getColorForElement } = useCustomColorTheme();
+  const { getColorForElement, isInitializing } = useCustomColorTheme();
   const theme = createThemedIOSTheme(currentColors);
 
   // Get the status bar background color from element mapping
@@ -46,6 +46,15 @@ const ThemedApp = () => {
       }
     }
   }, [statusBarColor]);
+
+  // Show loading screen while custom theme is initializing to prevent color flash
+  if (isInitializing) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: statusBarColor }}>
+        <ActivityIndicator size="large" color="#FFFFFF" />
+      </View>
+    );
+  }
 
   return (
     <QueryClientProvider client={queryClient}>
