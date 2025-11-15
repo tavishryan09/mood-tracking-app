@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Dimensions, Text, TouchableOpacity, TextInput, FlatList, Modal } from 'react-native';
+import { View, StyleSheet, ScrollView, Dimensions, Text, TouchableOpacity, TextInput, FlatList, Modal, Platform } from 'react-native';
 import { ActivityIndicator, FAB, IconButton, Switch, Button } from 'react-native-paper';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import { projectsAPI, clientsAPI, settingsAPI } from '../../services/api';
@@ -704,10 +704,10 @@ const ProjectTableViewScreen = () => {
               <TouchableOpacity
                 style={[styles.headerCell, {
                   width: COMMON_NAME_WIDTH,
-                  position: 'sticky',
-                  left: (columnVisibility.projectNumber ? PROJECT_NUM_WIDTH : 0) +
-                        (columnVisibility.name ? PROJECT_NAME_WIDTH : 0) +
-                        (columnVisibility.client ? CLIENT_WIDTH : 0),
+                  ...(Platform.OS === 'web' && {
+                    position: 'sticky' as any,
+                    left: 0,
+                  }),
                   zIndex: 10,
                   backgroundColor: tableHeaderBg,
                 }]}
@@ -934,10 +934,10 @@ const ProjectTableViewScreen = () => {
                   <TouchableOpacity
                     style={[styles.dataCell, {
                       width: COMMON_NAME_WIDTH,
-                      position: 'sticky',
-                      left: (columnVisibility.projectNumber ? PROJECT_NUM_WIDTH : 0) +
-                            (columnVisibility.name ? PROJECT_NAME_WIDTH : 0) +
-                            (columnVisibility.client ? CLIENT_WIDTH : 0),
+                      ...(Platform.OS === 'web' && {
+                        position: 'sticky' as any,
+                        left: 0,
+                      }),
                       zIndex: 5,
                       backgroundColor: currentColors.white,
                     }]}
@@ -1068,10 +1068,10 @@ const ProjectTableViewScreen = () => {
                 {columnVisibility.description && (
                   <View style={[styles.dataCell, {
                     width: COMMON_NAME_WIDTH,
-                    position: 'sticky',
-                    left: (columnVisibility.projectNumber ? PROJECT_NUM_WIDTH : 0) +
-                          (columnVisibility.name ? PROJECT_NAME_WIDTH : 0) +
-                          (columnVisibility.client ? CLIENT_WIDTH : 0),
+                    ...(Platform.OS === 'web' && {
+                      position: 'sticky' as any,
+                      left: 0,
+                    }),
                     zIndex: 5,
                     backgroundColor: currentColors.white,
                   }]} />
@@ -1186,10 +1186,10 @@ const ProjectTableViewScreen = () => {
               {columnVisibility.description && (
                 <View style={[styles.dataCell, {
                   width: COMMON_NAME_WIDTH,
-                  position: 'sticky',
-                  left: (columnVisibility.projectNumber ? PROJECT_NUM_WIDTH : 0) +
-                        (columnVisibility.name ? PROJECT_NAME_WIDTH : 0) +
-                        (columnVisibility.client ? CLIENT_WIDTH : 0),
+                  ...(Platform.OS === 'web' && {
+                    position: 'sticky' as any,
+                    left: 0,
+                  }),
                   zIndex: 5,
                   backgroundColor: currentColors.white,
                 }]}>
