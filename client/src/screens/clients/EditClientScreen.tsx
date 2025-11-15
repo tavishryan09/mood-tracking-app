@@ -157,8 +157,6 @@ const EditClientScreen = ({ route, navigation }: any) => {
         email: primaryContactEmail || undefined,
         phone: primaryContactPhone || undefined,
         contacts: contacts,
-        primaryContactName: primaryContactName,
-        primaryContactTitle: primaryContactTitle || undefined,
       };
 
       const timeout = new Promise((_, reject) =>
