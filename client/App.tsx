@@ -32,8 +32,11 @@ const ThemedApp = () => {
 
   // Set status bar color on mount and when theme changes
   useEffect(() => {
+    // Use hardcoded dark blue during initialization to prevent color flash
+    const colorToUse = isInitializing ? '#141b2b' : statusBarColor;
+
     if (Platform.OS === 'android') {
-      StatusBar.setBackgroundColor(statusBarColor);
+      StatusBar.setBackgroundColor(colorToUse);
       StatusBar.setBarStyle('light-content');
     }
 
@@ -41,16 +44,16 @@ const ThemedApp = () => {
     if (Platform.OS === 'web') {
       const metaThemeColor = document.querySelector('meta[name="theme-color"]');
       if (metaThemeColor) {
-        metaThemeColor.setAttribute('content', statusBarColor);
-        console.log('[App] Updated meta theme-color to:', statusBarColor);
+        metaThemeColor.setAttribute('content', colorToUse);
+        console.log('[App] Updated meta theme-color to:', colorToUse, 'isInitializing:', isInitializing);
       }
     }
-  }, [statusBarColor]);
+  }, [statusBarColor, isInitializing]);
 
   // Show loading screen while custom theme is initializing to prevent color flash
   if (isInitializing) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: statusBarColor }}>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#141b2b' }}>
         <ActivityIndicator size="large" color="#FFFFFF" />
       </View>
     );
