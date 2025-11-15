@@ -2468,6 +2468,7 @@ const PlanningScreen = () => {
                       top: 0,
                       zIndex: 20,
                       borderRadius: '10px 0 0 10px',
+                      marginLeft: Platform.OS === 'web' ? '0px' : '10px',
                     }}
                   >
                     Date
@@ -2563,6 +2564,7 @@ const PlanningScreen = () => {
                         left: 0,
                         zIndex: 15,
                         borderRadius: '10px 0 0 10px',
+                        marginLeft: Platform.OS === 'web' ? '0px' : '10px',
                       }}
                     >
                       DEADLINES & MILESTONES
@@ -2696,7 +2698,7 @@ const PlanningScreen = () => {
                               minWidth: `${USER_COLUMN_WIDTH}px`,
                               maxWidth: `${USER_COLUMN_WIDTH}px`,
                               height: `${TIME_BLOCK_HEIGHT * 4}px`,
-                              borderBottom: isLastUser ? '0px' : `5px solid ${teamMemberBorderColor}`,
+                              borderBottom: isLastUser ? '0px' : `10px solid ${teamMemberBorderColor}`,
                               borderRight: '0px',
                               backgroundColor: teamMemberColBg,
                               color: teamMemberColText,
@@ -2709,6 +2711,7 @@ const PlanningScreen = () => {
                               left: 0,
                               zIndex: 15,
                               borderRadius: '10px 0 0 10px',
+                              marginLeft: Platform.OS === 'web' ? '0px' : '10px',
                             }}
                           >
                             {user.firstName.toUpperCase()}
@@ -2813,7 +2816,7 @@ const PlanningScreen = () => {
                                   minWidth: `${DAY_CELL_WIDTH}px`,
                                   maxWidth: `${DAY_CELL_WIDTH}px`,
                                   height: `${TIME_BLOCK_HEIGHT * span}px`,
-                                  borderBottom: (isLastBlockForUser && isLastUser) ? '0px' : (isLastBlockForUser ? `3px solid ${cellBorderColor}` : `1px solid ${cellBorderColor}`),
+                                  borderBottom: (isLastBlockForUser && isLastUser) ? '0px' : (isLastBlockForUser ? `10px solid ${teamMemberBorderColor}` : `1px solid ${cellBorderColor}`),
                                   borderRight: `1px solid ${cellBorderColor}`,
                                   padding: assignment?.projectName === 'Unavailable' ? '0' : '2px',
                                   position: 'relative',
