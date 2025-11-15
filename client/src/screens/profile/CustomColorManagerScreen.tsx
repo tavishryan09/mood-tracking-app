@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { Button, Title, IconButton, Checkbox } from 'react-native-paper';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-import { CheckmarkCircle01Icon, Cancel01Icon } from '@hugeicons/core-free-icons';
+import { CheckmarkCircle01Icon, Cancel01Icon, ArrowUp01Icon, ArrowDown01Icon } from '@hugeicons/core-free-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import { CustomColor, CustomColorPalette } from '../../types/customColors';
 import { CustomDialog } from '../../components/CustomDialog';
@@ -114,6 +114,20 @@ const CustomColorManagerScreen = ({ navigation, route }: any) => {
     setColorToDelete(null);
   };
 
+  const moveColorUp = (index: number) => {
+    if (index === 0) return;
+    const newColors = [...colors];
+    [newColors[index - 1], newColors[index]] = [newColors[index], newColors[index - 1]];
+    setColors(newColors);
+  };
+
+  const moveColorDown = (index: number) => {
+    if (index === colors.length - 1) return;
+    const newColors = [...colors];
+    [newColors[index], newColors[index + 1]] = [newColors[index + 1], newColors[index]];
+    setColors(newColors);
+  };
+
   const validatePalette = (): boolean => {
     if (!paletteName.trim()) {
       setErrorMessage('Please enter a palette name');
@@ -198,6 +212,30 @@ const CustomColorManagerScreen = ({ navigation, route }: any) => {
     return (
       <View key={color.id} style={[styles.colorCard, { backgroundColor: '#FFFFFF', borderColor: currentColors.borderLight }]}>
         <View style={styles.colorCardHeader}>
+          <View style={styles.reorderButtons}>
+            <TouchableOpacity
+              onPress={() => moveColorUp(index)}
+              disabled={index === 0}
+              style={[styles.reorderButton, index === 0 && styles.reorderButtonDisabled]}
+            >
+              <HugeiconsIcon
+                icon={ArrowUp01Icon}
+                size={20}
+                color={index === 0 ? currentColors.textTertiary : currentColors.icon}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => moveColorDown(index)}
+              disabled={index === colors.length - 1}
+              style={[styles.reorderButton, index === colors.length - 1 && styles.reorderButtonDisabled]}
+            >
+              <HugeiconsIcon
+                icon={ArrowDown01Icon}
+                size={20}
+                color={index === colors.length - 1 ? currentColors.textTertiary : currentColors.icon}
+              />
+            </TouchableOpacity>
+          </View>
           <Text style={[styles.colorCardTitle, { color: currentColors.text }]}>Color {index + 1}</Text>
           <TouchableOpacity
             onPress={() => confirmDeleteColor(color.id)}
@@ -443,6 +481,18 @@ const styles = StyleSheet.create({
   colorCardTitle: {
     fontSize: 16,
     fontWeight: '600',
+    flex: 1,
+  },
+  reorderButtons: {
+    flexDirection: 'column',
+    gap: 4,
+    marginRight: 12,
+  },
+  reorderButton: {
+    padding: 4,
+  },
+  reorderButtonDisabled: {
+    opacity: 0.3,
   },
   inputGroup: {
     marginBottom: 15,
