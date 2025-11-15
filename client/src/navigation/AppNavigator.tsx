@@ -372,7 +372,7 @@ const MainTabs = () => {
       {visibleTabs.includes('Projects') && (
         <Tab.Screen
           name="Projects"
-          options={{ title: 'Projects' }}
+          options={{ title: 'Projects', headerShown: false }}
         >
           {(props) => <SmartProjectsScreen {...props} />}
         </Tab.Screen>
@@ -380,7 +380,7 @@ const MainTabs = () => {
       {visibleTabs.includes('Clients') && (
         <Tab.Screen
           name="Clients"
-          options={{ title: 'Clients' }}
+          options={{ title: 'Clients', headerShown: false }}
         >
           {(props) => <SuspenseWrapper component={ClientsListScreen} {...props} />}
         </Tab.Screen>
