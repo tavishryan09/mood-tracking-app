@@ -7,7 +7,7 @@ import { Provider as PaperProvider } from 'react-native-paper';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './src/contexts/AuthContext';
 import { ThemeProvider, useTheme } from './src/contexts/ThemeContext';
-import { CustomColorThemeProvider } from './src/contexts/CustomColorThemeContext';
+import { CustomColorThemeProvider, useCustomColorTheme } from './src/contexts/CustomColorThemeContext';
 import { PlanningColorsProvider } from './src/contexts/PlanningColorsContext';
 import AppNavigator from './src/navigation/AppNavigator';
 import { createThemedIOSTheme } from './src/theme/iosTheme';
@@ -19,15 +19,19 @@ import { queryClient } from './src/config/queryClient';
 // Inner component that uses the theme context
 const ThemedApp = () => {
   const { currentColors } = useTheme();
+  const { getColorForElement } = useCustomColorTheme();
   const theme = createThemedIOSTheme(currentColors);
+
+  // Get the navigation background color for the status bar
+  const statusBarColor = getColorForElement('navigation', 'tabBarBackground');
 
   // Set status bar color on mount and when theme changes
   useEffect(() => {
     if (Platform.OS === 'android') {
-      StatusBar.setBackgroundColor(currentColors.secondary);
+      StatusBar.setBackgroundColor(statusBarColor);
       StatusBar.setBarStyle('light-content');
     }
-  }, [currentColors.secondary]);
+  }, [statusBarColor]);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -36,7 +40,7 @@ const ThemedApp = () => {
           <OfflineIndicator />
           <PlanningColorsProvider>
             <AppNavigator />
-            {Platform.OS === 'ios' && <ExpoStatusBar style="light" backgroundColor={currentColors.secondary} />}
+            {Platform.OS === 'ios' && <ExpoStatusBar style="light" backgroundColor={statusBarColor} />}
             {Platform.OS === 'android' && <ExpoStatusBar style="light" />}
           </PlanningColorsProvider>
           <InstallPrompt />
