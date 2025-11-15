@@ -190,6 +190,10 @@ function CustomDrawerContent(props: any) {
   const drawerInactiveItemIcon = getColorForElement('desktopNavigation', 'drawerInactiveItemIcon');
   const drawerDivider = getColorForElement('desktopNavigation', 'drawerDividerColor');
 
+  // Mobile navigation colors for collapsed state
+  const mobileActiveIcon = getColorForElement('navigation', 'tabBarActiveIcon');
+  const mobileInactiveIcon = getColorForElement('navigation', 'tabBarInactiveIcon');
+
   return (
     <DrawerContentScrollView {...props} contentContainerStyle={[styles.drawerContent, { backgroundColor: drawerBg }]}>
       <TouchableOpacity
@@ -219,23 +223,33 @@ function CustomDrawerContent(props: any) {
         const isActive = currentRoute === item.name ||
           (item.name === 'Projects' && currentRoute === 'ProjectTableView') ||
           (item.name === 'Planning' && currentRoute === 'PlanningColors');
+
+        // When collapsed, use mobile navigation colors and no background
+        const iconColor = isCollapsed
+          ? (isActive ? mobileActiveIcon : mobileInactiveIcon)
+          : (isActive ? drawerActiveItemIcon : drawerInactiveItemIcon);
+
+        const backgroundColor = isCollapsed
+          ? 'transparent'
+          : (isActive ? drawerActiveItemBg : drawerInactiveItemBg);
+
         return (
           <TouchableOpacity
             key={item.name}
             style={[
               isCollapsed ? styles.menuItemCollapsed : styles.menuItem,
               {
-                backgroundColor: isActive ? drawerActiveItemBg : drawerInactiveItemBg,
+                backgroundColor: backgroundColor,
               }
             ]}
             onPress={() => navigation.navigate(item.name)}
-            activeOpacity={0.7}
+            activeOpacity={isCollapsed ? 1 : 0.7}
           >
             <View style={isCollapsed ? styles.menuIconCollapsed : styles.menuIcon}>
               <HugeiconsIcon
                 icon={item.icon}
                 size={24}
-                color={isActive ? drawerActiveItemIcon : drawerInactiveItemIcon}
+                color={iconColor}
                 strokeWidth={isActive ? 2 : 1.5}
               />
             </View>
