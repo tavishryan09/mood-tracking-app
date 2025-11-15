@@ -2583,7 +2583,7 @@ const PlanningScreen = () => {
                       }}
                       className="juana-font"
                     >
-                      DEADLINES & MILESTONES
+                      Deadlines & Milestones
                     </td>
                   )}
 
@@ -2729,7 +2729,7 @@ const PlanningScreen = () => {
                             }}
                             className="juana-font"
                           >
-                            {user.firstName.toUpperCase()}
+                            {user.firstName.charAt(0).toUpperCase() + user.firstName.slice(1).toLowerCase()}
                           </td>
                         )}
 

@@ -1444,7 +1444,7 @@ const getStyles = (currentColors: any) => StyleSheet.create({
     flex: 1,
   },
   verticalScrollContent: {
-    paddingBottom: 20,
+    paddingBottom: 0,
   },
   scrollableTable: {
     flex: 1,
@@ -1471,7 +1471,8 @@ const getStyles = (currentColors: any) => StyleSheet.create({
   headerText: {
     color: currentColors.white,
     fontWeight: '700',
-    fontSize: 14,
+    fontSize: 13,
+    fontFamily: 'Juana',
     textTransform: 'uppercase',
   },
   sortIndicator: {
