@@ -4,7 +4,6 @@ const prisma = new PrismaClient();
 
 async function cleanUserThemeSettings(userId: number) {
   try {
-    console.log(`Cleaning theme settings for user ${userId}...`);
 
     // Delete the active_custom_theme setting
     const deleted = await prisma.userSetting.deleteMany({
@@ -14,9 +13,6 @@ async function cleanUserThemeSettings(userId: number) {
       },
     });
 
-    console.log(`Deleted ${deleted.count} active_custom_theme settings`);
-
-    console.log('Done!');
   } catch (error) {
     console.error('Error cleaning theme settings:', error);
   } finally {

@@ -174,7 +174,6 @@ const CustomColorManagerScreen = ({ navigation, route }: any) => {
 
       palettes[paletteId] = palette;
       await settingsAPI.user.set(CUSTOM_COLOR_PALETTES_KEY, palettes);
-      console.log('[CustomColorManager] Saved palette to database:', paletteId);
 
       setSavedPaletteId(paletteId);
       setShowSuccessDialog(true);

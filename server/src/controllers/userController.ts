@@ -87,7 +87,7 @@ export const inviteUser = async (req: AuthRequest, res: Response) => {
     // Send invite email
     try {
       await sendInviteEmail(email, firstName, lastName, password, role || 'USER');
-      console.log(`Invite email sent to ${email}`);
+
     } catch (emailError) {
       console.error('Failed to send invite email:', emailError);
       // Don't fail the request if email fails - user was already created
@@ -205,7 +205,7 @@ export const resetUserPassword = async (req: AuthRequest, res: Response) => {
     // Send password reset email
     try {
       await sendPasswordResetEmail(user.email, user.firstName, newPassword);
-      console.log(`Password reset email sent to ${user.email}`);
+
     } catch (emailError) {
       console.error('Failed to send password reset email:', emailError);
       // Don't fail the request if email fails - password was already reset

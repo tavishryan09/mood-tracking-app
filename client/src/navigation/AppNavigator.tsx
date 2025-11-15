@@ -256,7 +256,6 @@ const MainTabs = () => {
         const pageAccess = response.data?.value;
 
         if (pageAccess) {
-          console.log('[AppNavigator] Loaded page access for', user.role, ':', pageAccess);
 
           // Filter tabs based on page access
           const tabs = [];
@@ -266,17 +265,16 @@ const MainTabs = () => {
           if (pageAccess.Clients) tabs.push('Clients');
           if (pageAccess.Profile) tabs.push('Profile');
 
-          console.log('[AppNavigator] Filtered tabs:', tabs);
           setVisibleTabs(tabs);
         } else {
           // If no settings saved, show all tabs
-          console.log('[AppNavigator] No saved settings, showing all tabs');
+
           setVisibleTabs(['Dashboard', 'Planning', 'Projects', 'Clients', 'Profile']);
         }
       } catch (error: any) {
         // If 404, no settings exist yet - show all tabs
         if (error.response?.status === 404) {
-          console.log('[AppNavigator] No saved settings (404), showing all tabs');
+
           setVisibleTabs(['Dashboard', 'Planning', 'Projects', 'Clients', 'Profile']);
         } else {
           throw error;

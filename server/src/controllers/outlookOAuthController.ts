@@ -14,11 +14,6 @@ export const initiateOutlookAuth = async (req: AuthRequest, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    console.log('[Outlook Auth] API_URL from env:', process.env.API_URL);
-    console.log('[Outlook Auth] NODE_ENV:', process.env.NODE_ENV);
-    console.log('[Outlook Auth] VERCEL_URL:', process.env.VERCEL_URL);
-    console.log('[Outlook Auth] VERCEL_ENV:', process.env.VERCEL_ENV);
-
     // Determine the base URL with the following priority:
     // 1. API_URL (if set)
     // 2. Stable production URL if in production environment
@@ -36,7 +31,6 @@ export const initiateOutlookAuth = async (req: AuthRequest, res: Response) => {
     }
 
     const redirectUri = `${baseUrl}/api/outlook/callback`;
-    console.log('[Outlook Auth] Generated redirectUri:', redirectUri);
 
     // Validate redirect URI
     if (!redirectUri || !redirectUri.startsWith('http')) {
@@ -54,7 +48,6 @@ export const initiateOutlookAuth = async (req: AuthRequest, res: Response) => {
     }
 
     const authUrl = outlookCalendarService.getAuthorizationUrl(redirectUri);
-    console.log('[Outlook Auth] Final authUrl:', authUrl);
 
     // Store userId in session or temp storage for callback
     // For now, we'll pass it as state parameter (in production, use proper session management)
@@ -201,19 +194,13 @@ export const getOutlookStatus = async (req: AuthRequest, res: Response) => {
  * Returns immediately with job ID for polling
  */
 export const syncAllTasks = async (req: AuthRequest, res: Response) => {
-  console.log('==============================================');
-  console.log('[Outlook] SYNC ENDPOINT HIT - START');
-  console.log('[Outlook] User ID:', req.user?.id);
-  console.log('==============================================');
 
   try {
     const userId = req.user?.id;
     if (!userId) {
-      console.log('[Outlook] ERROR: No user ID found');
+
       return res.status(401).json({ error: 'Unauthorized' });
     }
-
-    console.log('[Outlook] Creating sync job for user:', userId);
 
     // Create a new sync job
     const jobId = await syncJobTracker.createJob(userId);
@@ -225,7 +212,7 @@ export const syncAllTasks = async (req: AuthRequest, res: Response) => {
     });
 
     // Return immediately with job ID
-    console.log('[Outlook] Sync job created:', jobId);
+
     res.json({
       message: 'Sync started in background',
       jobId,

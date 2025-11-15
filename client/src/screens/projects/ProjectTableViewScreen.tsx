@@ -142,7 +142,7 @@ const ProjectTableViewScreen = () => {
       try {
         const userResponse = await settingsAPI.user.get('project_table_columns');
         if (userResponse.data?.value) {
-          console.log('[ProjectTableView] Loaded user column visibility from database');
+
           setColumnVisibility(userResponse.data.value);
           return;
         }
@@ -157,7 +157,7 @@ const ProjectTableViewScreen = () => {
       try {
         const defaultResponse = await settingsAPI.app.get('project_table_columns_default');
         if (defaultResponse.data?.value) {
-          console.log('[ProjectTableView] Loaded default column visibility from database');
+
           setColumnVisibility(defaultResponse.data.value);
         }
       } catch (error: any) {
@@ -165,7 +165,7 @@ const ProjectTableViewScreen = () => {
         if (error.response?.status !== 404) {
           throw error;
         }
-        console.log('[ProjectTableView] Using hardcoded default column visibility');
+
       }
     } catch (error) {
       console.error('[ProjectTableView] Error loading column visibility:', error);
@@ -175,7 +175,7 @@ const ProjectTableViewScreen = () => {
   const saveToProfile = async () => {
     try {
       await settingsAPI.user.set('project_table_columns', columnVisibility);
-      console.log('[ProjectTableView] Saved user column visibility to database');
+
       setSuccessTitle('Success');
       setSuccessMessage('Column visibility saved to your profile');
       setShowSuccessDialog(true);
@@ -197,7 +197,7 @@ const ProjectTableViewScreen = () => {
       }
 
       await settingsAPI.app.set('project_table_columns_default', columnVisibility);
-      console.log('[ProjectTableView] Saved default column visibility to database');
+
       setSuccessTitle('Success');
       setSuccessMessage('Column visibility saved as default for all users');
       setShowSuccessDialog(true);
@@ -214,7 +214,7 @@ const ProjectTableViewScreen = () => {
     try {
       setLoading(true);
       const response = await projectsAPI.getAll();
-      console.log('[ProjectTableView] Projects loaded:', response.data.length);
+
       setProjects(response.data);
     } catch (error) {
       console.error('[ProjectTableView] Error loading projects:', error);
@@ -227,7 +227,7 @@ const ProjectTableViewScreen = () => {
   const loadClients = async () => {
     try {
       const response = await clientsAPI.getAll();
-      console.log('[ProjectTableView] Clients loaded:', response.data.length);
+
       setClients(response.data);
     } catch (error) {
       console.error('[ProjectTableView] Error loading clients:', error);

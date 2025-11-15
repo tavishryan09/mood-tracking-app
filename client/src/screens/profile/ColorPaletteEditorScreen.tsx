@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, Text, TextInput, TouchableOpacity, Modal } from 'react-native';
+import { View, StyleSheet, ScrollView, Text, TextInput, TouchableOpacity, Modal, Platform } from 'react-native';
 import { Button, Title, Menu, IconButton } from 'react-native-paper';
 import { ColorPicker } from 'react-native-color-picker';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -7,6 +7,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { colorPalettes, ColorPaletteName, ColorPalette } from '../../theme/colorPalettes';
 import { CustomDialog } from '../../components/CustomDialog';
 import { settingsAPI } from '../../services/api';
+import { HugeiconsIcon } from '@hugeicons/react-native';
+import { DragDropList02Icon, ArrowUp01Icon, ArrowDown01Icon } from '@hugeicons/core-free-icons';
 
 const CUSTOM_PALETTES_KEY = 'custom_palettes';
 
@@ -132,7 +134,7 @@ const ColorPaletteEditorScreen = ({ navigation, route }: any) => {
       setCustomPalettes(palettes);
       // Reload custom palettes in ThemeContext
       await reloadThemeCustomPalettes();
-      console.log('[ColorPaletteEditor] Saved custom palettes to database:', Object.keys(palettes));
+
     } catch (error) {
       console.error('[ColorPaletteEditor] Error saving custom palettes:', error);
       throw error;
@@ -436,47 +438,89 @@ const ColorPaletteEditorScreen = ({ navigation, route }: any) => {
         <Text style={[styles.sectionTitle, { color: currentColors.text, marginTop: 20 }]}>Additional Color Options</Text>
         {editedColors.ios && (
           <>
-            {Object.entries(editedColors.ios).map(([key, value]) => (
-              <View key={key} style={styles.iosColorRow}>
-                <View style={styles.iosColorInputs}>
-                  <TextInput
-                    style={[styles.iosColorName, { color: currentColors.text, borderColor: currentColors.border }]}
-                    value={key.replace(/([A-Z])/g, ' $1').trim().replace(/^./, str => str.toUpperCase())}
-                    onChangeText={(newName) => {
-                      const camelCaseName = newName.replace(/\s+(.)/g, (_, c) => c.toUpperCase()).replace(/^\w/, c => c.toLowerCase());
+            {Object.entries(editedColors.ios).map(([key, value], index, array) => {
+              const moveColorUp = () => {
+                if (index === 0) return;
+                const entries = Object.entries(editedColors.ios!);
+                [entries[index - 1], entries[index]] = [entries[index], entries[index - 1]];
+                const reorderedIos = Object.fromEntries(entries);
+                setEditedColors({ ...editedColors, ios: reorderedIos });
+              };
+
+              const moveColorDown = () => {
+                if (index === array.length - 1) return;
+                const entries = Object.entries(editedColors.ios!);
+                [entries[index], entries[index + 1]] = [entries[index + 1], entries[index]];
+                const reorderedIos = Object.fromEntries(entries);
+                setEditedColors({ ...editedColors, ios: reorderedIos });
+              };
+
+              return (
+                <View key={key} style={styles.iosColorRow}>
+                  <View style={styles.reorderButtons}>
+                    <TouchableOpacity
+                      onPress={moveColorUp}
+                      disabled={index === 0}
+                      style={[styles.reorderButton, index === 0 && styles.reorderButtonDisabled]}
+                    >
+                      <HugeiconsIcon
+                        icon={ArrowUp01Icon}
+                        size={20}
+                        color={index === 0 ? currentColors.iconInactive : currentColors.icon}
+                      />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={moveColorDown}
+                      disabled={index === array.length - 1}
+                      style={[styles.reorderButton, index === array.length - 1 && styles.reorderButtonDisabled]}
+                    >
+                      <HugeiconsIcon
+                        icon={ArrowDown01Icon}
+                        size={20}
+                        color={index === array.length - 1 ? currentColors.iconInactive : currentColors.icon}
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  <View style={styles.iosColorInputs}>
+                    <TextInput
+                      style={[styles.iosColorName, { color: currentColors.text, borderColor: currentColors.border }]}
+                      value={key.replace(/([A-Z])/g, ' $1').trim().replace(/^./, str => str.toUpperCase())}
+                      onChangeText={(newName) => {
+                        const camelCaseName = newName.replace(/\s+(.)/g, (_, c) => c.toUpperCase()).replace(/^\w/, c => c.toLowerCase());
+                        const entries = Object.entries(editedColors.ios!);
+                        entries[index] = [camelCaseName, value];
+                        const updatedIos = Object.fromEntries(entries);
+                        setEditedColors({ ...editedColors, ios: updatedIos });
+                      }}
+                      placeholder="Color name"
+                      placeholderTextColor={currentColors.textTertiary}
+                    />
+                    <View style={[styles.colorPreview, { backgroundColor: value, borderColor: currentColors.border }]} />
+                    <TextInput
+                      style={[styles.colorInput, { color: currentColors.text, borderColor: currentColors.border }]}
+                      value={value}
+                      onChangeText={(color) => {
+                        const updatedIos = { ...editedColors.ios!, [key]: color };
+                        setEditedColors({ ...editedColors, ios: updatedIos });
+                      }}
+                      placeholder="#000000"
+                      placeholderTextColor={currentColors.textTertiary}
+                      maxLength={7}
+                    />
+                  </View>
+                  <IconButton
+                    icon="delete"
+                    size={20}
+                    onPress={() => {
                       const updatedIos = { ...editedColors.ios! };
                       delete updatedIos[key as keyof typeof updatedIos];
-                      updatedIos[camelCaseName as keyof typeof updatedIos] = value;
                       setEditedColors({ ...editedColors, ios: updatedIos });
                     }}
-                    placeholder="Color name"
-                    placeholderTextColor={currentColors.textTertiary}
-                  />
-                  <View style={[styles.colorPreview, { backgroundColor: value, borderColor: currentColors.border }]} />
-                  <TextInput
-                    style={[styles.colorInput, { color: currentColors.text, borderColor: currentColors.border }]}
-                    value={value}
-                    onChangeText={(color) => {
-                      const updatedIos = { ...editedColors.ios!, [key]: color };
-                      setEditedColors({ ...editedColors, ios: updatedIos });
-                    }}
-                    placeholder="#000000"
-                    placeholderTextColor={currentColors.textTertiary}
-                    maxLength={7}
+                    iconColor={currentColors.error}
                   />
                 </View>
-                <IconButton
-                  icon="delete"
-                  size={20}
-                  onPress={() => {
-                    const updatedIos = { ...editedColors.ios! };
-                    delete updatedIos[key as keyof typeof updatedIos];
-                    setEditedColors({ ...editedColors, ios: updatedIos });
-                  }}
-                  iconColor={currentColors.error}
-                />
-              </View>
-            ))}
+              );
+            })}
             <Button
               mode="outlined"
               onPress={() => {
@@ -806,6 +850,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 12,
     gap: 8,
+  },
+  reorderButtons: {
+    flexDirection: 'column',
+    gap: 4,
+  },
+  reorderButton: {
+    padding: 4,
+    borderRadius: 4,
+  },
+  reorderButtonDisabled: {
+    opacity: 0.3,
   },
   iosColorInputs: {
     flexDirection: 'row',

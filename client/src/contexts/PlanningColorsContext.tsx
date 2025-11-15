@@ -153,7 +153,7 @@ export const PlanningColorsProvider = ({ children }: { children: ReactNode }) =>
 
   const loadPlanningColors = useCallback(async () => {
     if (!user) {
-      console.log('[PlanningColors] No user logged in, using defaults');
+
       setPlanningColors(defaultColors);
       return;
     }
@@ -171,7 +171,7 @@ export const PlanningColorsProvider = ({ children }: { children: ReactNode }) =>
     } catch (error: any) {
       // If setting doesn't exist (404), use defaults
       if (error.response?.status === 404) {
-        console.log('[PlanningColors] No saved colors found, using defaults');
+
         setPlanningColors(defaultColors);
       } else {
         console.error('[PlanningColors] Error loading planning colors:', error);
@@ -191,7 +191,7 @@ export const PlanningColorsProvider = ({ children }: { children: ReactNode }) =>
       const settingKey = asDefault ? 'planning_colors_default' : 'planning_colors';
       await settingsAPI.user.set(settingKey, colors);
       setPlanningColors(colors);
-      console.log(`[PlanningColors] Saved ${asDefault ? 'default' : 'user'} colors to database`);
+
     } catch (error) {
       console.error('[PlanningColors] Error saving planning colors:', error);
       throw error;

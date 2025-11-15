@@ -182,7 +182,7 @@ const ProfileScreen = ({ navigation }: any) => {
 
   const handleSyncOutlook = async () => {
     try {
-      console.log('[ProfileScreen] Starting chunked Outlook sync...');
+
       setOutlookSyncing(true);
       setSyncProgress({
         totalTasks: 0,
@@ -194,12 +194,10 @@ const ProfileScreen = ({ navigation }: any) => {
       // Create a job to track progress
       const jobResponse = await outlookAPI.sync();
       const { jobId } = jobResponse.data;
-      console.log('[ProfileScreen] Job created:', jobId);
 
       // Phase 1: Sync planning tasks
-      console.log('[ProfileScreen] Phase 1: Syncing planning tasks...');
+
       const planningResult = await outlookAPI.syncPlanning(jobId);
-      console.log('[ProfileScreen] Planning result:', planningResult.data);
 
       // Update progress
       const statusAfterPlanning = await outlookAPI.getSyncStatus(jobId);
@@ -208,9 +206,8 @@ const ProfileScreen = ({ navigation }: any) => {
       }
 
       // Phase 2: Sync deadline tasks
-      console.log('[ProfileScreen] Phase 2: Syncing deadline tasks...');
+
       const deadlineResult = await outlookAPI.syncDeadline(jobId);
-      console.log('[ProfileScreen] Deadline result:', deadlineResult.data);
 
       // Update progress
       const statusAfterDeadline = await outlookAPI.getSyncStatus(jobId);
@@ -219,9 +216,8 @@ const ProfileScreen = ({ navigation }: any) => {
       }
 
       // Phase 3: Cleanup orphaned events
-      console.log('[ProfileScreen] Phase 3: Cleaning up orphaned events...');
+
       const cleanupResult = await outlookAPI.syncCleanup(jobId);
-      console.log('[ProfileScreen] Cleanup result:', cleanupResult.data);
 
       // Get final status
       const finalStatus = await outlookAPI.getSyncStatus(jobId);
@@ -390,12 +386,12 @@ const ProfileScreen = ({ navigation }: any) => {
   };
 
   const handleLogout = () => {
-    console.log('[ProfileScreen] Logout button pressed');
+
     setShowLogoutDialog(true);
   };
 
   const handleConfirmLogout = async () => {
-    console.log('[ProfileScreen] Logout confirmed');
+
     setShowLogoutDialog(false);
     await logout();
   };

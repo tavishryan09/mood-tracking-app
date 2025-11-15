@@ -2,7 +2,6 @@ import prisma from '../config/database';
 import { avatarStorageService } from '../services/avatarStorageService';
 
 async function migrateAvatars() {
-  console.log('[Migration] Starting avatar migration from base64 to files...');
 
   const users = await prisma.user.findMany({
     where: {
@@ -14,16 +13,12 @@ async function migrateAvatars() {
     select: { id: true, avatarUrl: true, firstName: true, lastName: true }
   });
 
-  console.log(`[Migration] Found ${users.length} users with base64 avatars`);
-
   let migrated = 0;
   let failed = 0;
 
   for (const user of users) {
     try {
       if (!user.avatarUrl) continue;
-
-      console.log(`[Migration] Migrating avatar for ${user.firstName} ${user.lastName}...`);
 
       // Convert base64 to file
       const newAvatarUrl = await avatarStorageService.convertBase64ToFile(user.avatarUrl);
@@ -35,14 +30,13 @@ async function migrateAvatars() {
       });
 
       migrated++;
-      console.log(`[Migration] ✅ Migrated ${user.firstName} ${user.lastName}`);
+
     } catch (error) {
       failed++;
       console.error(`[Migration] ❌ Failed to migrate ${user.firstName} ${user.lastName}:`, error);
     }
   }
 
-  console.log(`[Migration] Complete! Migrated: ${migrated}, Failed: ${failed}`);
   process.exit(0);
 }
 

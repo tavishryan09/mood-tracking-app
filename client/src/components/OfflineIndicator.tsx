@@ -25,7 +25,7 @@ const OfflineIndicator: React.FC = () => {
 
     const handleConnectionChange = (event: any) => {
       const online = event.detail.online;
-      console.log(`[PWA] Connection changed: ${online ? 'online' : 'offline'}`);
+
       setIsOnline(online);
       setShowBanner(true);
 
@@ -40,12 +40,12 @@ const OfflineIndicator: React.FC = () => {
     };
 
     const handleSyncSuccess = () => {
-      console.log('[PWA] Sync successful');
+
       loadQueuedCount();
     };
 
     const handleOnline = () => {
-      console.log('[PWA] Connection restored');
+
       setIsOnline(true);
       setIsSyncing(true);
       // Show "back online" message briefly
@@ -57,7 +57,7 @@ const OfflineIndicator: React.FC = () => {
     };
 
     const handleOffline = () => {
-      console.log('[PWA] Connection lost');
+
       setIsOnline(false);
       setShowBanner(true);
       loadQueuedCount();

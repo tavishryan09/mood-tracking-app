@@ -33,7 +33,6 @@ export const sendEmail = async ({ to, subject, html }: SendEmailParams) => {
       html,
     });
 
-    console.log(`Email sent successfully to ${to}:`, data);
     return data;
   } catch (error) {
     console.error('Error sending email:', error);

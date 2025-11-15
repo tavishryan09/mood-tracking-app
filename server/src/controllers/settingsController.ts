@@ -17,18 +17,14 @@ export const getSetting = async (req: Request, res: Response, next: NextFunction
   try {
     const { key } = req.params;
 
-    console.log('[getSetting] Fetching setting:', key);
-
     const setting = await prisma.appSetting.findUnique({
       where: { key },
     });
 
     if (!setting) {
-      console.log('[getSetting] Setting not found:', key);
+
       return res.status(404).json({ error: 'Setting not found' });
     }
-
-    console.log('[getSetting] Found setting:', key, 'Value type:', typeof setting.value);
 
     res.json(setting);
   } catch (error) {
@@ -178,19 +174,16 @@ export const setUserSetting = async (req: AuthRequest, res: Response, next: Next
     const { value } = req.body;
     const userId = req.user?.userId;
 
-    console.log('[setUserSetting] Received request:', { userId, key, valueType: typeof value, hasValue: value !== undefined });
-
     if (!userId) {
-      console.log('[setUserSetting] ERROR: No userId');
+
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
     if (value === undefined) {
-      console.log('[setUserSetting] ERROR: Value is undefined');
+
       return res.status(400).json({ error: 'Value is required' });
     }
 
-    console.log('[setUserSetting] Attempting upsert...');
     const setting = await prisma.userSetting.upsert({
       where: {
         userId_key: {
@@ -206,7 +199,6 @@ export const setUserSetting = async (req: AuthRequest, res: Response, next: Next
       },
     });
 
-    console.log('[setUserSetting] SUCCESS: Saved setting');
     res.json(setting);
   } catch (error) {
     console.error('[setUserSetting] ERROR:', error);

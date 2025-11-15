@@ -210,17 +210,17 @@ const DeadlineTaskModal: React.FC<DeadlineTaskModalProps> = ({
   };
 
   const handleDeleteClick = () => {
-    console.log('[DeadlineTaskModal] Delete button pressed', { existingTask, deadlineType, onDelete: !!onDelete });
+
     setShowDeleteConfirm(true);
   };
 
   const handleDeleteConfirm = async () => {
-    console.log('[DeadlineTaskModal] Delete confirmed, calling onDelete');
+
     if (onDelete) {
       try {
         setLoading(true);
         await onDelete();
-        console.log('[DeadlineTaskModal] Delete completed successfully');
+
         setShowDeleteConfirm(false);
         onDismiss();
       } catch (error) {

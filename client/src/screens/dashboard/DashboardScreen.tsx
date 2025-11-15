@@ -17,70 +17,68 @@ const DashboardScreen = ({ navigation }: any) => {
   const { getColorForElement } = useCustomColorTheme();
   const queryClient = useQueryClient();
 
-  console.log('=== DASHBOARD SCREEN RENDER ===');
-  console.log('Planning Colors Available:', {
-    projectTaskBg: planningColors.projectTaskBg,
-    marketingTaskBg: planningColors.marketingTaskBg,
-    adminTaskBg: planningColors.adminTaskBg,
-    outOfOfficeBg: planningColors.outOfOfficeBg,
-    timeOffBg: planningColors.timeOffBg,
-    unavailableBg: planningColors.unavailableBg,
-  });
+  // Memoize all dashboard color lookups to prevent unnecessary re-renders
+  const dashboardColors = useMemo(() => ({
+    // Basic dashboard colors
+    dashboardBg: getColorForElement('dashboard', 'background'),
+    cardBg: getColorForElement('dashboard', 'cardBackground'),
+    headerBg: getColorForElement('dashboard', 'headerBackground'),
+    headerText: getColorForElement('dashboard', 'headerText'),
 
-  // Get dashboard colors from Element Color Mapper
-  const dashboardBg = getColorForElement('dashboard', 'background');
-  const cardBg = getColorForElement('dashboard', 'cardBackground');
-  const headerBg = getColorForElement('dashboard', 'headerBackground');
-  const headerText = getColorForElement('dashboard', 'headerText');
+    // Section card backgrounds
+    upcomingDeadlinesCardBg: getColorForElement('dashboard', 'upcomingDeadlinesCardBackground'),
+    todaysTasksCardBg: getColorForElement('dashboard', 'todaysTasksCardBackground'),
+    thisWeeksTasksCardBg: getColorForElement('dashboard', 'thisWeeksTasksCardBackground'),
 
-  // Section card backgrounds
-  const upcomingDeadlinesCardBg = getColorForElement('dashboard', 'upcomingDeadlinesCardBackground');
-  const todaysTasksCardBg = getColorForElement('dashboard', 'todaysTasksCardBackground');
-  const thisWeeksTasksCardBg = getColorForElement('dashboard', 'thisWeeksTasksCardBackground');
+    // Section card text colors
+    upcomingDeadlinesCardTextColor: getColorForElement('dashboard', 'upcomingDeadlinesCardText'),
+    todaysTasksCardTextColor: getColorForElement('dashboard', 'todaysTasksCardText'),
+    thisWeeksTasksCardTextColor: getColorForElement('dashboard', 'thisWeeksTasksCardText'),
 
-  // Section card text colors
-  const upcomingDeadlinesCardTextColor = getColorForElement('dashboard', 'upcomingDeadlinesCardText');
-  const todaysTasksCardTextColor = getColorForElement('dashboard', 'todaysTasksCardText');
-  const thisWeeksTasksCardTextColor = getColorForElement('dashboard', 'thisWeeksTasksCardText');
+    // Task type backgrounds
+    dashboardProjectTaskBg: getColorForElement('dashboard', 'projectTaskBackground'),
+    dashboardAdminTaskBg: getColorForElement('dashboard', 'adminTaskBackground'),
+    dashboardMarketingTaskBg: getColorForElement('dashboard', 'marketingTaskBackground'),
+    dashboardOutOfOfficeBg: getColorForElement('dashboard', 'outOfOfficeBackground'),
+    dashboardUnavailableBg: getColorForElement('dashboard', 'unavailableBackground'),
+    dashboardTimeOffBg: getColorForElement('dashboard', 'timeOffBackground'),
 
-  console.log('[Dashboard] Section card backgrounds:', {
-    upcomingDeadlinesCardBg,
-    todaysTasksCardBg,
-    thisWeeksTasksCardBg,
-  });
+    // Task type text colors
+    dashboardProjectTaskText: getColorForElement('dashboard', 'projectTaskText'),
+    dashboardAdminTaskText: getColorForElement('dashboard', 'adminTaskText'),
+    dashboardMarketingTaskText: getColorForElement('dashboard', 'marketingTaskText'),
+    dashboardOutOfOfficeText: getColorForElement('dashboard', 'outOfOfficeText'),
+    dashboardUnavailableText: getColorForElement('dashboard', 'unavailableText'),
+    dashboardTimeOffText: getColorForElement('dashboard', 'timeOffText'),
 
-  // Task type backgrounds
-  const dashboardProjectTaskBg = getColorForElement('dashboard', 'projectTaskBackground');
-  const dashboardAdminTaskBg = getColorForElement('dashboard', 'adminTaskBackground');
-  const dashboardMarketingTaskBg = getColorForElement('dashboard', 'marketingTaskBackground');
-  const dashboardOutOfOfficeBg = getColorForElement('dashboard', 'outOfOfficeBackground');
-  const dashboardUnavailableBg = getColorForElement('dashboard', 'unavailableBackground');
-  const dashboardTimeOffBg = getColorForElement('dashboard', 'timeOffBackground');
+    // Deadline type backgrounds
+    dashboardDeadlineBg: getColorForElement('dashboard', 'deadlineBackground'),
+    dashboardInternalDeadlineBg: getColorForElement('dashboard', 'internalDeadlineBackground'),
+    dashboardMilestoneBg: getColorForElement('dashboard', 'milestoneBackground'),
 
-  // Task type text colors
-  const dashboardProjectTaskText = getColorForElement('dashboard', 'projectTaskText');
-  const dashboardAdminTaskText = getColorForElement('dashboard', 'adminTaskText');
-  const dashboardMarketingTaskText = getColorForElement('dashboard', 'marketingTaskText');
-  const dashboardOutOfOfficeText = getColorForElement('dashboard', 'outOfOfficeText');
-  const dashboardUnavailableText = getColorForElement('dashboard', 'unavailableText');
-  const dashboardTimeOffText = getColorForElement('dashboard', 'timeOffText');
+    // Deadline type text colors
+    dashboardDeadlineText: getColorForElement('dashboard', 'deadlineText'),
+    dashboardInternalDeadlineText: getColorForElement('dashboard', 'internalDeadlineText'),
+    dashboardMilestoneText: getColorForElement('dashboard', 'milestoneText'),
+  }), [getColorForElement]);
 
-  // Deadline type backgrounds
-  const dashboardDeadlineBg = getColorForElement('dashboard', 'deadlineBackground');
-  const dashboardInternalDeadlineBg = getColorForElement('dashboard', 'internalDeadlineBackground');
-  const dashboardMilestoneBg = getColorForElement('dashboard', 'milestoneBackground');
-
-  // Deadline type text colors
-  const dashboardDeadlineText = getColorForElement('dashboard', 'deadlineText');
-  const dashboardInternalDeadlineText = getColorForElement('dashboard', 'internalDeadlineText');
-  const dashboardMilestoneText = getColorForElement('dashboard', 'milestoneText');
+  // Destructure memoized colors
+  const {
+    dashboardBg, cardBg, headerBg, headerText,
+    upcomingDeadlinesCardBg, todaysTasksCardBg, thisWeeksTasksCardBg,
+    upcomingDeadlinesCardTextColor, todaysTasksCardTextColor, thisWeeksTasksCardTextColor,
+    dashboardProjectTaskBg, dashboardAdminTaskBg, dashboardMarketingTaskBg,
+    dashboardOutOfOfficeBg, dashboardUnavailableBg, dashboardTimeOffBg,
+    dashboardProjectTaskText, dashboardAdminTaskText, dashboardMarketingTaskText,
+    dashboardOutOfOfficeText, dashboardUnavailableText, dashboardTimeOffText,
+    dashboardDeadlineBg, dashboardInternalDeadlineBg, dashboardMilestoneBg,
+    dashboardDeadlineText, dashboardInternalDeadlineText, dashboardMilestoneText,
+  } = dashboardColors;
 
   // Calculate date ranges using local timezone
   const today = new Date();
   // Get local date string (YYYY-MM-DD) without timezone conversion
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-
-  console.log('[Dashboard] Today\'s date:', todayStr, 'Full date object:', today);
 
   const startOfWeek = new Date(today);
   // Calculate Monday as start of week (getDay() returns 0 for Sunday, 1 for Monday, etc.)
@@ -100,12 +98,10 @@ const DashboardScreen = ({ navigation }: any) => {
       endDate.setDate(today.getDate() + 30);
       // Use local date string without timezone conversion
       const endDateStr = `${endDate.getFullYear()}-${String(endDate.getMonth() + 1).padStart(2, '0')}-${String(endDate.getDate()).padStart(2, '0')}`;
-      console.log('[Dashboard] Fetching deadlines from', todayStr, 'to', endDateStr);
       const response = await deadlineTasksAPI.getAll({
         startDate: todayStr,
         endDate: endDateStr,
       });
-      console.log('[Dashboard] Deadlines response:', response.data);
       return response.data;
     },
     staleTime: 2 * 60 * 1000, // 2 minutes
@@ -117,13 +113,11 @@ const DashboardScreen = ({ navigation }: any) => {
     queryFn: async () => {
       // Use local date string without timezone conversion
       const endOfMonthStr = `${endOfMonth.getFullYear()}-${String(endOfMonth.getMonth() + 1).padStart(2, '0')}-${String(endOfMonth.getDate()).padStart(2, '0')}`;
-      console.log('[Dashboard] Fetching planning tasks from', todayStr, 'to', endOfMonthStr, 'for user', user?.id);
       const response = await planningTasksAPI.getAll({
         userId: user?.id,
         startDate: todayStr,
         endDate: endOfMonthStr,
       });
-      console.log('[Dashboard] Planning tasks response:', response.data);
       return response.data;
     },
     enabled: !!user?.id,
@@ -139,16 +133,8 @@ const DashboardScreen = ({ navigation }: any) => {
     const thisMonth: any[] = [];
 
     planningTasksData.forEach((task: any) => {
-      console.log('[Dashboard] Processing task:', {
-        id: task.id,
-        rawDate: task.date,
-        project: task.project?.name,
-        task: task.task
-      });
-
       // Skip tasks with no date or invalid date
       if (!task.date) {
-        console.log('[Dashboard] Skipping task with no date:', task.id);
         return;
       }
 
@@ -165,22 +151,11 @@ const DashboardScreen = ({ navigation }: any) => {
 
       // Check if date is valid
       if (isNaN(taskDate.getTime())) {
-        console.log('[Dashboard] Skipping task with invalid date:', task.id, task.date);
         return;
       }
 
       // Get local date string without timezone conversion
       const taskDateStr = `${taskDate.getFullYear()}-${String(taskDate.getMonth() + 1).padStart(2, '0')}-${String(taskDate.getDate()).padStart(2, '0')}`;
-
-      console.log('[Dashboard] Task date comparison:', {
-        taskDateStr,
-        todayStr,
-        isToday: taskDateStr === todayStr,
-        taskDate: taskDate.toISOString(),
-        startOfWeek: startOfWeek.toISOString(),
-        endOfWeek: endOfWeek.toISOString(),
-        isThisWeek: taskDate >= startOfWeek && taskDate <= endOfWeek
-      });
 
       if (taskDateStr === todayStr) {
         today.push(task);
@@ -192,12 +167,6 @@ const DashboardScreen = ({ navigation }: any) => {
         thisMonth.push(task);
       }
     });
-
-    console.log('=== DASHBOARD TASKS DEBUG ===');
-    console.log('Today tasks:', today.map(t => ({ id: t.id, date: t.date, project: t.project?.name, task: t.task })));
-    console.log('This week tasks:', thisWeek.map(t => ({ id: t.id, date: t.date, project: t.project?.name, task: t.task })));
-    console.log('Today string for comparison:', todayStr);
-    console.log('Week range:', { start: startOfWeek.toISOString(), end: endOfWeek.toISOString() });
 
     return { today, thisWeek, thisMonth };
   }, [planningTasksData, todayStr, startOfWeek, endOfWeek]);
@@ -253,58 +222,59 @@ const DashboardScreen = ({ navigation }: any) => {
     const deadlineBorderColor = getDeadlineBorderColor(deadline.deadlineType);
     const deadlineTextColor = getDeadlineTextColor(deadline.deadlineType);
 
+    // Build the title: "Task Type - Project Common Name"
+    const projectName = deadline.project ? (deadline.project.description || deadline.project.name) : '';
+    const titleText = projectName
+      ? `${getDeadlineTypeLabel(deadline.deadlineType)} - ${projectName}`
+      : getDeadlineTypeLabel(deadline.deadlineType);
+
     return (
       <View key={deadline.id} style={[styles.deadlineItem, { borderLeftColor: deadlineBorderColor, backgroundColor: deadlineBgColor }]}>
         <View style={styles.deadlineHeader}>
           <Text style={[styles.deadlineType, { color: deadlineTextColor }]}>
-            {getDeadlineTypeLabel(deadline.deadlineType)}
+            {titleText}
           </Text>
           <Text style={[styles.deadlineDate, { color: deadlineTextColor, opacity: 0.8 }]}>{formattedDate}</Text>
         </View>
         {deadline.description && (
           <Text style={[styles.deadlineDescription, { color: deadlineTextColor }]}>{deadline.description}</Text>
         )}
-        {deadline.project && (
-          <Text style={[styles.deadlineClient, { color: deadlineTextColor, opacity: 0.7 }]}>
-            {deadline.project.description || deadline.project.name}
-          </Text>
-        )}
       </View>
     );
   };
 
   // Get planning color for deadline borders (from planning colors context)
-  const getDeadlineBorderColor = (type: string) => {
+  const getDeadlineBorderColor = useCallback((type: string) => {
     switch (type) {
       case 'DEADLINE': return planningColors.deadlineBg || currentColors.primary;
       case 'INTERNAL_DEADLINE': return planningColors.internalDeadlineBg || currentColors.primary;
       case 'MILESTONE': return planningColors.milestoneBg || currentColors.primary;
       default: return currentColors.primary;
     }
-  };
+  }, [planningColors, currentColors]);
 
   // Get dashboard background color for deadline items
-  const getDeadlineBgColor = (type: string) => {
+  const getDeadlineBgColor = useCallback((type: string) => {
     switch (type) {
       case 'DEADLINE': return dashboardDeadlineBg || currentColors.primary;
       case 'INTERNAL_DEADLINE': return dashboardInternalDeadlineBg || currentColors.primary;
       case 'MILESTONE': return dashboardMilestoneBg || currentColors.primary;
       default: return currentColors.primary;
     }
-  };
+  }, [dashboardDeadlineBg, dashboardInternalDeadlineBg, dashboardMilestoneBg, currentColors]);
 
   // Get dashboard text color for deadline items
-  const getDeadlineTextColor = (type: string) => {
+  const getDeadlineTextColor = useCallback((type: string) => {
     switch (type) {
       case 'DEADLINE': return dashboardDeadlineText || currentColors.text;
       case 'INTERNAL_DEADLINE': return dashboardInternalDeadlineText || currentColors.text;
       case 'MILESTONE': return dashboardMilestoneText || currentColors.text;
       default: return currentColors.text;
     }
-  };
+  }, [dashboardDeadlineText, dashboardInternalDeadlineText, dashboardMilestoneText, currentColors]);
 
   // Get planning color for borders and checkboxes (from planning colors context)
-  const getPlanningColor = (project: any, taskDescription: string = '') => {
+  const getPlanningColor = useCallback((project: any, taskDescription: string = '') => {
     const taskDescLower = taskDescription.toLowerCase();
 
     // Check task description for category markers FIRST
@@ -340,31 +310,25 @@ const DashboardScreen = ({ navigation }: any) => {
     }
 
     return planningColors.projectTaskBg || currentColors.primary;
-  };
+  }, [planningColors, currentColors]);
 
   // Get dashboard background color for task items
-  const getTaskBgColor = (project: any, taskDescription: string = '') => {
+  const getTaskBgColor = useCallback((project: any, taskDescription: string = '') => {
     const taskDescLower = taskDescription.toLowerCase();
-
-    console.log('[Dashboard] getTaskBgColor called:', { project, taskDescription });
 
     // Check task description for category markers FIRST (works for tasks with OR without projects)
     if (taskDescription.includes('[OUT_OF_OFFICE]') || taskDescription.includes('[OUT OF OFFICE]') || taskDescription === 'Out of Office') {
-      console.log('[Dashboard] Task is OUT_OF_OFFICE, returning:', dashboardOutOfOfficeBg);
       return dashboardOutOfOfficeBg || currentColors.primary;
     }
     if (taskDescription.includes('[TIME_OFF]') || taskDescription.includes('[TIME OFF]') || taskDescLower.includes('[time off]') || taskDescription === 'Time Off') {
-      console.log('[Dashboard] Task is TIME_OFF, returning:', dashboardTimeOffBg);
       return dashboardTimeOffBg || currentColors.primary;
     }
     if (taskDescription.includes('[UNAVAILABLE]') || taskDescLower.includes('[unavailable]') || taskDescription === 'Unavailable') {
-      console.log('[Dashboard] Task is UNAVAILABLE, returning:', dashboardUnavailableBg);
       return dashboardUnavailableBg || currentColors.primary;
     }
 
     // If no project, return default project task color
     if (!project) {
-      console.log('[Dashboard] No project, returning default projectTaskBg:', dashboardProjectTaskBg);
       return dashboardProjectTaskBg || currentColors.primary;
     }
 
@@ -373,19 +337,16 @@ const DashboardScreen = ({ navigation }: any) => {
 
     // Task types based on project name
     if (projectNameLower.includes('admin')) {
-      console.log('[Dashboard] Matched Admin, returning:', dashboardAdminTaskBg);
       return dashboardAdminTaskBg || currentColors.primary;
     } else if (projectNameLower.includes('marketing')) {
-      console.log('[Dashboard] Matched Marketing, returning:', dashboardMarketingTaskBg);
       return dashboardMarketingTaskBg || currentColors.primary;
     }
 
-    console.log('[Dashboard] No match, returning default projectTaskBg:', dashboardProjectTaskBg);
     return dashboardProjectTaskBg || currentColors.primary; // Default color for regular projects
-  };
+  }, [dashboardOutOfOfficeBg, dashboardTimeOffBg, dashboardUnavailableBg, dashboardProjectTaskBg, dashboardAdminTaskBg, dashboardMarketingTaskBg, currentColors]);
 
   // Get dashboard text color for task items
-  const getTaskTextColor = (project: any, taskDescription: string = '') => {
+  const getTaskTextColor = useCallback((project: any, taskDescription: string = '') => {
     const taskDescLower = taskDescription.toLowerCase();
 
     // Check task description for category markers FIRST
@@ -415,10 +376,9 @@ const DashboardScreen = ({ navigation }: any) => {
     }
 
     return dashboardProjectTaskText || currentColors.text;
-  };
+  }, [dashboardOutOfOfficeText, dashboardTimeOffText, dashboardUnavailableText, dashboardProjectTaskText, dashboardAdminTaskText, dashboardMarketingTaskText, currentColors]);
 
   const renderTaskItem = (task: any, showCheckbox: boolean = false) => {
-    console.log('=== RENDER TASK ITEM ===', task.project);
     // Parse date - handle both formats: 'YYYY-MM-DD' and 'YYYY-MM-DDTHH:mm:ss.sssZ'
     let taskDate: Date;
     if (task.date.includes('T')) {
@@ -436,7 +396,6 @@ const DashboardScreen = ({ navigation }: any) => {
     const taskBgColor = getTaskBgColor(task.project, task.task || '');
     const taskBorderColor = getPlanningColor(task.project, task.task || '');
     const taskTextColor = getTaskTextColor(task.project, task.task || '');
-    console.log('=== TASK COLOR RESULT ===', task.project?.name, 'task:', task.task, 'bg:', taskBgColor, 'border:', taskBorderColor, 'text:', taskTextColor);
 
     // Determine task type label (for project name display only)
     const taskDescription = task.task || '';

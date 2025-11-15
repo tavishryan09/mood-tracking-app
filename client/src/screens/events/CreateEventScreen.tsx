@@ -73,8 +73,7 @@ const CreateEventScreen = ({ navigation, route }: any) => {
   // Get selected date from route params if available
   useEffect(() => {
     if (route.params?.selectedDate) {
-      console.log('CreateEvent - received selectedDate:', route.params.selectedDate);
-      console.log('CreateEvent - received endTime:', route.params?.endTime);
+
       // Parse ISO string as local time (not UTC)
       const dateStr = route.params.selectedDate;
       let date: Date;
@@ -99,7 +98,6 @@ const CreateEventScreen = ({ navigation, route }: any) => {
         date = new Date(dateStr);
       }
 
-      console.log('CreateEvent - parsed start date:', date, date.toLocaleString());
       setStartDate(date);
 
       // If endTime is provided (from drag selection), use it
@@ -126,13 +124,12 @@ const CreateEventScreen = ({ navigation, route }: any) => {
           end = new Date(endStr);
         }
 
-        console.log('CreateEvent - parsed end date:', end, end.toLocaleString());
         setEndDate(end);
       } else {
         // Otherwise default to 1 hour later
         const end = new Date(date);
         end.setHours(end.getHours() + 1);
-        console.log('CreateEvent - default end date (1hr later):', end, end.toLocaleString());
+
         setEndDate(end);
       }
     }

@@ -42,7 +42,7 @@ export const verifyToken = (token: string): JWTPayload => {
   } catch (error: any) {
     // If verification fails due to missing issuer/audience, try without (old tokens)
     if (error.message?.includes('jwt issuer') || error.message?.includes('jwt audience')) {
-      console.log('[JWT] Verifying legacy token without issuer/audience claims');
+
       return jwt.verify(token, JWT_SECRET, {
         algorithms: ['HS256'],
       }) as JWTPayload;

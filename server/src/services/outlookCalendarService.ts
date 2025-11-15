@@ -40,17 +40,16 @@ class OutlookCalendarService {
       );
 
       if (moodTrackerCalendar) {
-        console.log(`[Outlook] Found existing Mood Tracker calendar: ${moodTrackerCalendar.id}`);
+
         return moodTrackerCalendar.id;
       }
 
       // Create the Mood Tracker calendar if it doesn't exist
-      console.log('[Outlook] Creating Mood Tracker calendar...');
+
       const newCalendar = await client.api('/me/calendars').post({
         name: this.MOOD_TRACKER_CALENDAR_NAME
       });
 
-      console.log(`[Outlook] Created Mood Tracker calendar: ${newCalendar.id}`);
       return newCalendar.id;
     } catch (error) {
       console.error('[Outlook] Error getting/creating Mood Tracker calendar:', error);
@@ -62,22 +61,19 @@ class OutlookCalendarService {
    * Get Microsoft Graph client for a user
    */
   private async getGraphClient(userId: string): Promise<Client | null> {
-    console.log(`[Outlook] Getting Graph client for user: ${userId}`);
 
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { outlookRefreshToken: true, outlookCalendarEnabled: true }
     });
 
-    console.log(`[Outlook] User outlook settings - enabled: ${user?.outlookCalendarEnabled}, hasToken: ${!!user?.outlookRefreshToken}`);
-
     if (!user?.outlookRefreshToken || !user.outlookCalendarEnabled) {
-      console.log('[Outlook] No refresh token or Outlook not enabled - skipping sync');
+
       return null;
     }
 
     try {
-      console.log('[Outlook] Attempting to exchange refresh token for access token...');
+
       // Get credentials at runtime
       const creds = getMicrosoftCredentials();
 
@@ -97,8 +93,6 @@ class OutlookCalendarService {
         }
       );
 
-      console.log('[Outlook] Token refresh response status:', tokenResponse.status);
-
       if (!tokenResponse.ok) {
         const errorText = await tokenResponse.text();
         console.error('[Outlook] Failed to refresh token. Status:', tokenResponse.status);
@@ -107,17 +101,17 @@ class OutlookCalendarService {
       }
 
       const tokenData = await tokenResponse.json() as { access_token: string };
-      console.log('[Outlook] Successfully got access token');
+
       const accessToken = tokenData.access_token;
 
       // Create Graph client
-      console.log('[Outlook] Creating Microsoft Graph client...');
+
       const client = Client.init({
         authProvider: (done) => {
           done(null, accessToken);
         }
       });
-      console.log('[Outlook] Graph client created successfully');
+
       return client;
     } catch (error) {
       console.error('[Outlook] Error getting Graph client:', error);
@@ -129,11 +123,11 @@ class OutlookCalendarService {
    * Create master categories in Outlook calendar
    */
   async ensureMasterCategories(userId: string): Promise<boolean> {
-    console.log(`[Outlook] Ensuring master categories for user: ${userId}`);
+
     try {
       const client = await this.getGraphClient(userId);
       if (!client) {
-        console.log('[Outlook] No Graph client available - cannot create categories');
+
         return false;
       }
 
@@ -152,19 +146,16 @@ class OutlookCalendarService {
       const existingCategories = await client.api('/me/outlook/masterCategories').get();
       const existingNames = existingCategories.value.map((cat: any) => cat.displayName);
 
-      console.log('[Outlook] Existing categories:', existingNames);
-
       // Create missing categories
       for (const category of categories) {
         if (!existingNames.includes(category.displayName)) {
-          console.log(`[Outlook] Creating category: ${category.displayName}`);
+
           await client.api('/me/outlook/masterCategories').post(category);
         } else {
-          console.log(`[Outlook] Category already exists: ${category.displayName}`);
+
         }
       }
 
-      console.log('[Outlook] Master categories ensured successfully');
       return true;
     } catch (error) {
       console.error('[Outlook] Error ensuring master categories:', error);
@@ -177,7 +168,7 @@ class OutlookCalendarService {
    * Optimized for serverless - uses efficient helper methods
    */
   async syncPlanningTask(taskId: string, userId: string): Promise<boolean> {
-    console.log(`[Outlook] syncPlanningTask - taskId: ${taskId}, userId: ${userId}`);
+
     try {
       // Get Graph client
       const client = await this.getGraphClient(userId);
@@ -203,13 +194,13 @@ class OutlookCalendarService {
       });
 
       if (!task) {
-        console.log('[Outlook] Task not found');
+
         return false;
       }
 
       // Use the same optimized sync method as batch sync
       const success = await this.syncPlanningTaskFast(task, client, calendarId);
-      console.log(`[Outlook] syncPlanningTask ${success ? 'succeeded' : 'failed'}`);
+
       return success;
     } catch (error) {
       console.error('[Outlook] Error syncing planning task:', error);
@@ -222,7 +213,7 @@ class OutlookCalendarService {
    * Optimized for serverless - uses efficient helper methods
    */
   async syncDeadlineTask(taskId: string, userId: string): Promise<boolean> {
-    console.log(`[Outlook] syncDeadlineTask - taskId: ${taskId}, userId: ${userId}`);
+
     try {
       // Get Graph client
       const client = await this.getGraphClient(userId);
@@ -248,13 +239,13 @@ class OutlookCalendarService {
       });
 
       if (!task) {
-        console.log('[Outlook] Task not found');
+
         return false;
       }
 
       // Use the same optimized sync method as batch sync
       const success = await this.syncDeadlineTaskFast(task, client, calendarId, userId);
-      console.log(`[Outlook] syncDeadlineTask ${success ? 'succeeded' : 'failed'}`);
+
       return success;
     } catch (error) {
       console.error('[Outlook] Error syncing deadline task:', error);
@@ -279,7 +270,7 @@ class OutlookCalendarService {
 
       try {
         await client.api(`/me/events/${task.outlookEventId}`).delete();
-        console.log(`[Outlook] Deleted planning task event: ${task.outlookEventId}`);
+
         return true;
       } catch (error: any) {
         // If event doesn't exist (404), that's fine
@@ -307,12 +298,12 @@ class OutlookCalendarService {
 
       try {
         await client.api(`/me/events/${outlookEventId}`).delete();
-        console.log(`[Outlook] Deleted planning task event: ${outlookEventId} for user: ${userId}`);
+
         return true;
       } catch (error: any) {
         // If event doesn't exist (404), that's fine
         if (error.statusCode === 404) {
-          console.log(`[Outlook] Event ${outlookEventId} not found (already deleted)`);
+
           return true;
         }
         throw error;
@@ -328,7 +319,6 @@ class OutlookCalendarService {
    */
   async deletePlanningTaskFromAllUsers(taskId: string): Promise<void> {
     try {
-      console.log(`[Outlook] Deleting planning task ${taskId} from all users' calendars`);
 
       // Get all users with Outlook enabled
       const users = await prisma.user.findMany({
@@ -336,14 +326,11 @@ class OutlookCalendarService {
         select: { id: true }
       });
 
-      console.log(`[Outlook] Found ${users.length} users with Outlook enabled`);
-
       // Delete from each user's calendar
       for (const user of users) {
         await this.deletePlanningTask(taskId, user.id);
       }
 
-      console.log(`[Outlook] Finished deleting planning task from all users`);
     } catch (error) {
       console.error('[Outlook] Error deleting planning task from all users:', error);
     }
@@ -354,7 +341,6 @@ class OutlookCalendarService {
    */
   async syncPlanningTaskToAllUsers(taskId: string): Promise<void> {
     try {
-      console.log(`[Outlook] Syncing planning task ${taskId} to all users' calendars`);
 
       // Get all users with Outlook enabled
       const users = await prisma.user.findMany({
@@ -362,14 +348,11 @@ class OutlookCalendarService {
         select: { id: true }
       });
 
-      console.log(`[Outlook] Found ${users.length} users with Outlook enabled`);
-
       // Sync to each user's calendar
       for (const user of users) {
         await this.syncPlanningTask(taskId, user.id);
       }
 
-      console.log(`[Outlook] Finished syncing planning task to all users`);
     } catch (error) {
       console.error('[Outlook] Error syncing planning task to all users:', error);
     }
@@ -392,7 +375,7 @@ class OutlookCalendarService {
 
       try {
         await client.api(`/me/events/${task.outlookEventId}`).delete();
-        console.log(`[Outlook] Deleted deadline task event: ${task.outlookEventId}`);
+
         return true;
       } catch (error: any) {
         // If event doesn't exist (404), that's fine
@@ -464,7 +447,6 @@ class OutlookCalendarService {
    */
   async syncDeadlineTaskToAllUsers(taskId: string): Promise<void> {
     try {
-      console.log(`[Outlook] Syncing deadline task ${taskId} to all users' calendars`);
 
       // Get all users with Outlook enabled
       const users = await prisma.user.findMany({
@@ -472,14 +454,11 @@ class OutlookCalendarService {
         select: { id: true }
       });
 
-      console.log(`[Outlook] Found ${users.length} users with Outlook enabled`);
-
       // Sync to each user's calendar
       for (const user of users) {
         await this.syncDeadlineTask(taskId, user.id);
       }
 
-      console.log(`[Outlook] Finished syncing deadline task to all users`);
     } catch (error) {
       console.error('[Outlook] Error syncing deadline task to all users:', error);
     }
@@ -490,7 +469,6 @@ class OutlookCalendarService {
    */
   async deleteDeadlineTaskFromAllUsers(taskId: string): Promise<void> {
     try {
-      console.log(`[Outlook] Deleting deadline task ${taskId} from all users' calendars`);
 
       // Get all users with Outlook enabled
       const users = await prisma.user.findMany({
@@ -498,14 +476,11 @@ class OutlookCalendarService {
         select: { id: true }
       });
 
-      console.log(`[Outlook] Found ${users.length} users with Outlook enabled`);
-
       // Delete from each user's calendar
       for (const user of users) {
         await this.deleteDeadlineTask(taskId, user.id);
       }
 
-      console.log(`[Outlook] Finished deleting deadline task from all users`);
     } catch (error) {
       console.error('[Outlook] Error deleting deadline task from all users:', error);
     }
@@ -749,7 +724,6 @@ class OutlookCalendarService {
     };
 
     try {
-      console.log(`[Outlook] Starting planning tasks sync for user ${userId}`);
 
       const client = await this.getGraphClient(userId);
       if (!client) {
@@ -770,7 +744,7 @@ class OutlookCalendarService {
         where: { userId },
         include: { project: true }
       });
-      console.log(`[Outlook] Found ${planningTasks.length} planning tasks`);
+
       result.totalTasks = planningTasks.length;
 
       // Update job progress
@@ -837,7 +811,7 @@ class OutlookCalendarService {
               }
             } else if (response.status === 404 && task.outlookEventId) {
               // Event not found, need to create it - handle in next iteration
-              console.log(`[Outlook] Event ${task.outlookEventId} not found, will recreate`);
+
               // Clear the invalid eventId
               await prisma.planningTask.update({
                 where: { id: task.id },
@@ -863,11 +837,9 @@ class OutlookCalendarService {
           });
         }
 
-        console.log(`[Outlook] Planning tasks progress: ${result.syncedTasks}/${planningTasks.length}`);
       }
 
       result.success = result.syncedTasks === result.totalTasks;
-      console.log(`[Outlook] Planning tasks sync completed: ${result.syncedTasks}/${result.totalTasks}`);
 
       return result;
     } catch (error) {
@@ -943,7 +915,6 @@ class OutlookCalendarService {
     };
 
     try {
-      console.log(`[Outlook] Starting deadline tasks sync for user ${userId}`);
 
       const client = await this.getGraphClient(userId);
       if (!client) {
@@ -961,7 +932,7 @@ class OutlookCalendarService {
       const deadlineTasks = await prisma.deadlineTask.findMany({
         include: { project: true, client: true }
       });
-      console.log(`[Outlook] Found ${deadlineTasks.length} deadline tasks`);
+
       result.totalTasks = deadlineTasks.length;
 
       // Update job progress
@@ -1027,7 +998,7 @@ class OutlookCalendarService {
               }
             } else if (response.status === 404 && task.outlookEventId) {
               // Event not found, need to create it - handle in next iteration
-              console.log(`[Outlook] Event ${task.outlookEventId} not found, will recreate`);
+
               // Clear the invalid eventId
               await prisma.deadlineTask.update({
                 where: { id: task.id },
@@ -1053,11 +1024,9 @@ class OutlookCalendarService {
           });
         }
 
-        console.log(`[Outlook] Deadline tasks progress: ${result.syncedTasks}/${deadlineTasks.length}`);
       }
 
       result.success = result.syncedTasks === result.totalTasks;
-      console.log(`[Outlook] Deadline tasks sync completed: ${result.syncedTasks}/${result.totalTasks}`);
 
       return result;
     } catch (error) {
@@ -1082,7 +1051,6 @@ class OutlookCalendarService {
     };
 
     try {
-      console.log(`[Outlook] Starting orphaned events cleanup for user ${userId}`);
 
       const client = await this.getGraphClient(userId);
       if (!client) {
@@ -1104,7 +1072,6 @@ class OutlookCalendarService {
         .get();
 
       const existingEvents = events.value || [];
-      console.log(`[Outlook] Found ${existingEvents.length} existing Outlook events`);
 
       // Get valid event IDs from database
       const [planningTasks, deadlineTasks] = await Promise.all([
@@ -1124,11 +1091,8 @@ class OutlookCalendarService {
         }
       });
 
-      console.log(`[Outlook] Valid event IDs: ${validEventIds.size}`);
-
       // Find and delete orphans
       const orphanedEvents = existingEvents.filter((e: any) => !validEventIds.has(e.id));
-      console.log(`[Outlook] Found ${orphanedEvents.length} orphaned events to delete`);
 
       if (orphanedEvents.length > 0) {
         await Promise.all(
@@ -1156,7 +1120,6 @@ class OutlookCalendarService {
       }
 
       result.success = true;
-      console.log(`[Outlook] Cleanup completed: deleted ${result.deletedEvents} orphaned events`);
 
       return result;
     } catch (error) {

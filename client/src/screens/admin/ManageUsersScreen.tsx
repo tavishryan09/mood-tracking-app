@@ -41,7 +41,6 @@ const ManageUsersScreen = ({ navigation }: any) => {
   const [dialogButtons, setDialogButtons] = useState<any[]>([]);
 
   // DEBUG: Log to verify new code is loading
-  console.log('[ManageUsersScreen] NEW CODE LOADED WITH SVG ICONS - v2.0');
 
   useEffect(() => {
     loadUsers();

@@ -36,7 +36,6 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       const defaultPaletteResponse = await settingsAPI.app.get('default_color_palette');
       if (defaultPaletteResponse?.data?.value) {
         const defaultPalette = defaultPaletteResponse.data.value;
-        console.log('[ThemeContext] Loaded default color palette with actual color values');
 
         // Store admin default in state instead of mutating imported object
         setAdminDefaultPalette(defaultPalette);
@@ -44,13 +43,13 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         // Set it as selected
         setSelectedPaletteState('default');
       } else {
-        console.log('[ThemeContext] No default_color_palette found, using hardcoded default');
+
       }
     } catch (error: any) {
       if (error?.response?.status !== 404) {
         console.error('[ThemeContext] Error loading app default theme:', error);
       } else {
-        console.log('[ThemeContext] No default_color_palette found (404), using hardcoded default');
+
       }
     }
   }, []);
@@ -109,7 +108,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         // No user preference, admin set a default theme
         // The admin default theme colors are already loaded in colorPalettes.default via loadAppDefaultTheme()
         // So we just use 'default' as the theme name
-        console.log('[ThemeContext] Using admin default theme (already loaded in colorPalettes.default)');
+
         selectedTheme = 'default';
       }
 
@@ -144,16 +143,16 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     }
     // If selectedPalette is 'default' and we have admin default, use it
     if (selectedPalette === 'default' && adminDefaultPalette) {
-      console.log('[ThemeContext] Using admin default palette for base colors');
+
       return adminDefaultPalette;
     }
     // Then check predefined palettes
     if (colorPalettes[selectedPalette as ColorPaletteName]) {
-      console.log('[ThemeContext] Using predefined palette:', selectedPalette);
+
       return colorPalettes[selectedPalette as ColorPaletteName];
     }
     // Fallback to hardcoded default (only if no admin default)
-    console.log('[ThemeContext] Using fallback:', adminDefaultPalette ? 'admin default' : 'hardcoded default');
+
     return adminDefaultPalette || colorPalettes.default;
   }, [selectedPalette, customPalettes, adminDefaultPalette]);
 
@@ -161,12 +160,10 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const currentColors = useMemo((): ColorPalette => {
     // If not using custom theme, return base colors
     if (!isUsingCustomTheme || !customColorResolver) {
-      console.log('[ThemeContext] currentColors using baseColors (not custom theme). isUsingCustomTheme:', isUsingCustomTheme, 'hasResolver:', !!customColorResolver);
-      console.log('[ThemeContext] baseColors primary:', baseColors.primary, 'background.bg700:', baseColors.background?.bg700);
+
       return baseColors;
     }
 
-    console.log('[ThemeContext] currentColors using custom theme resolver');
     // Build ColorPalette from custom theme
     const customColors: ColorPalette = {
       ...baseColors, // Start with defaults as fallback
@@ -210,7 +207,6 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       },
     };
 
-    console.log('[ThemeContext] customColors primary:', customColors.primary, 'background.bg700:', customColors.background.bg700);
     return customColors;
   }, [baseColors, isUsingCustomTheme, customColorResolver]);
 

@@ -7,7 +7,6 @@ import { settingsAPI } from '../services/api';
  */
 export const migrateLocalStorageToDatabase = async (): Promise<void> => {
   try {
-    console.log('[Migration] Starting localStorage to database migration...');
 
     // Check all possible localStorage keys
     const keysToMigrate = [
@@ -22,18 +21,16 @@ export const migrateLocalStorageToDatabase = async (): Promise<void> => {
         const data = await AsyncStorage.getItem(local);
         if (data) {
           const parsed = JSON.parse(data);
-          console.log(`[Migration] Found ${local}, migrating to database as ${db}...`, parsed);
 
           // Save to database
           await settingsAPI.user.set(db, parsed);
-          console.log(`[Migration] Successfully migrated ${local} → ${db}`);
+
         }
       } catch (error) {
         console.error(`[Migration] Error migrating ${local}:`, error);
       }
     }
 
-    console.log('[Migration] Migration complete!');
   } catch (error) {
     console.error('[Migration] Fatal error during migration:', error);
     throw error;

@@ -34,11 +34,6 @@ const getApiUrl = () => {
 
 const API_URL = getApiUrl();
 
-console.log('[API] Platform:', Platform.OS);
-console.log('[API] Hostname:', typeof window !== 'undefined' ? window.location?.hostname : 'N/A');
-console.log('[API] Using API URL:', API_URL);
-console.log('[API] Full config loaded - timestamp:', new Date().toISOString());
-
 const api = axios.create({
   baseURL: API_URL,
   timeout: 30000, // 30 second timeout - increased for better reliability
@@ -58,12 +53,7 @@ const isOnline = () => {
 // Request interceptor to add auth token
 api.interceptors.request.use(
   async (config) => {
-    console.log('[API] Request:', {
-      method: config.method,
-      url: config.url,
-      baseURL: config.baseURL,
-      fullURL: `${config.baseURL}${config.url}`
-    });
+
     const token = await AsyncStorage.getItem('authToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
@@ -79,10 +69,7 @@ api.interceptors.request.use(
 // Response interceptor to handle errors and offline mode
 api.interceptors.response.use(
   (response) => {
-    console.log('[API] Response:', {
-      status: response.status,
-      url: response.config.url
-    });
+
     return response;
   },
   async (error) => {
@@ -102,7 +89,6 @@ api.interceptors.response.use(
 
     // Handle network errors - queue request if offline
     if (Platform.OS === 'web' && !error.response && !isOnline()) {
-      console.log('[API] Offline - queueing request:', error.config.url);
 
       // Only queue write operations (POST, PUT, DELETE)
       if (['post', 'put', 'delete', 'patch'].includes(error.config.method?.toLowerCase() || '')) {

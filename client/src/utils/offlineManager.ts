@@ -62,7 +62,7 @@ export class OfflineManager {
       const addRequest = store.add(request);
 
       addRequest.onsuccess = () => {
-        console.log('[OfflineManager] Request queued:', url);
+
         resolve(addRequest.result as number);
       };
 
@@ -94,7 +94,7 @@ export class OfflineManager {
       const deleteRequest = store.delete(id);
 
       deleteRequest.onsuccess = () => {
-        console.log('[OfflineManager] Request removed from queue:', id);
+
         resolve();
       };
 
@@ -112,7 +112,7 @@ export class OfflineManager {
       const clearRequest = store.clear();
 
       clearRequest.onsuccess = () => {
-        console.log('[OfflineManager] Queue cleared');
+
         resolve();
       };
 
@@ -138,7 +138,7 @@ export class OfflineManager {
       const putRequest = store.put(item);
 
       putRequest.onsuccess = () => {
-        console.log('[OfflineManager] Data stored:', key);
+
         resolve();
       };
 
@@ -189,7 +189,7 @@ export class OfflineManager {
       const deleteRequest = store.delete(key);
 
       deleteRequest.onsuccess = () => {
-        console.log('[OfflineManager] Data removed:', key);
+
         resolve();
       };
 
@@ -203,7 +203,7 @@ export class OfflineManager {
       try {
         const registration = await navigator.serviceWorker.ready;
         await registration.sync.register('sync-mood-entries');
-        console.log('[OfflineManager] Background sync registered');
+
       } catch (error) {
         console.error('[OfflineManager] Background sync registration failed:', error);
         // Fallback: manually trigger sync via message
@@ -218,7 +218,6 @@ export class OfflineManager {
   // Manually sync queued requests
   private async manualSync(): Promise<void> {
     const requests = await this.getQueuedRequests();
-    console.log(`[OfflineManager] Manually syncing ${requests.length} requests`);
 
     for (const request of requests) {
       try {
@@ -230,7 +229,7 @@ export class OfflineManager {
 
         if (response.ok) {
           await this.removeQueuedRequest(request.id);
-          console.log('[OfflineManager] Request synced successfully:', request.id);
+
         }
       } catch (error) {
         console.error('[OfflineManager] Failed to sync request:', request.id, error);

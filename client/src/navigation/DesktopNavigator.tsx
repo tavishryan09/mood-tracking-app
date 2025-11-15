@@ -147,21 +147,20 @@ function CustomDrawerContent(props: any) {
         const pageAccess = response.data.value;
 
         if (pageAccess) {
-          console.log('[DesktopNavigator] Loaded page access for', user.role, ':', pageAccess);
 
           // Filter menu items based on page access
           const filtered = allMenuItems.filter((item) => pageAccess[item.name] === true);
-          console.log('[DesktopNavigator] Filtered menu items:', filtered.map(i => i.name));
+
           setVisibleMenuItems(filtered);
         } else {
           // If no settings saved, show all pages
-          console.log('[DesktopNavigator] No saved settings, showing all pages');
+
           setVisibleMenuItems(allMenuItems);
         }
       } catch (error: any) {
         // If setting doesn't exist (404), show all pages
         if (error.response?.status === 404) {
-          console.log('[DesktopNavigator] No saved settings, showing all pages');
+
           setVisibleMenuItems(allMenuItems);
         } else {
           throw error;
@@ -274,7 +273,7 @@ function MainDrawer() {
     try {
       // If user is null/undefined, don't load settings - user is logging out or not authenticated
       if (!user) {
-        console.log('[MainDrawer] No user found, skipping settings load');
+
         setDrawerLoaded(true);
         return;
       }
@@ -303,10 +302,9 @@ function MainDrawer() {
         const pageAccess = pageAccessResponse.data.value;
 
         if (pageAccess) {
-          console.log('[MainDrawer] Loaded page access for', user.role, ':', pageAccess);
 
           const filtered = allMenuItems.filter((item) => pageAccess[item.name] === true);
-          console.log('[MainDrawer] Filtered menu items:', filtered.map(i => i.name));
+
           setVisibleMenuItems(filtered);
         } else {
           setVisibleMenuItems(allMenuItems);
@@ -314,7 +312,7 @@ function MainDrawer() {
       } catch (error: any) {
         // If setting doesn't exist (404), show all pages
         if (error.response?.status === 404) {
-          console.log('[MainDrawer] No page access settings, showing all pages');
+
           setVisibleMenuItems(allMenuItems);
         } else {
           throw error;
@@ -327,7 +325,7 @@ function MainDrawer() {
         const defaultPage = defaultPageResponse.data.value;
 
         if (defaultPage) {
-          console.log('[MainDrawer] Setting initial route to:', defaultPage);
+
           setInitialRoute(defaultPage);
         }
       } catch (error: any) {
@@ -340,7 +338,7 @@ function MainDrawer() {
       console.error('[MainDrawer] Error loading menu settings:', error);
       // Don't set default menu items on error - if there's an auth error, we should not show the drawer
       if (error && error.response && (error.response.status === 401 || error.response.status === 403)) {
-        console.log('[MainDrawer] Auth error, skipping menu setup');
+
       } else {
         setVisibleMenuItems(allMenuItems);
       }

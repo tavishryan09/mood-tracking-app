@@ -240,7 +240,7 @@ export const createProject = async (req: AuthRequest, res: Response) => {
           });
         } else {
           // Both slots taken - log warning but continue
-          console.warn(`Both deadline slots occupied on ${dueDateNormalized.toISOString().split('T')[0]} for project ${name}`);
+
         }
       } else {
         // Slot 0 is available
@@ -444,7 +444,7 @@ export const updateProject = async (req: AuthRequest, res: Response) => {
                 await prisma.deadlineTask.delete({
                   where: { id: existingDeadlineTask.id },
                 });
-                console.warn(`Both deadline slots occupied on ${dueDateNormalized.toISOString().split('T')[0]} for project ${name}`);
+
                 return res.json(project);
               }
             }
@@ -483,7 +483,7 @@ export const updateProject = async (req: AuthRequest, res: Response) => {
             availableSlot = 1;
             if (usedSlots.has(1)) {
               // Both slots taken - skip creating deadline task
-              console.warn(`Both deadline slots occupied on ${dueDateNormalized.toISOString().split('T')[0]} for project ${name}`);
+
               return res.json(project);
             }
           }

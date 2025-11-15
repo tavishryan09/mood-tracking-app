@@ -172,9 +172,8 @@ const PlanningColorsScreen = ({ navigation }: any) => {
         milestoneFont,
       };
 
-      console.log('[PlanningColorsScreen] Saving colors:', colors);
       await savePlanningColors(colors, false);
-      console.log('[PlanningColorsScreen] Colors saved successfully');
+
       setSuccessMessage('Your planning page colors have been saved and will appear on the planning page.');
       setShowSuccessDialog(true);
     } catch (error) {

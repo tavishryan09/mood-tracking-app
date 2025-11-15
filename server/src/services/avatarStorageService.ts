@@ -80,10 +80,10 @@ class AvatarStorageService {
       try {
         await fs.access(filepath);
         await fs.unlink(filepath);
-        console.log(`[AvatarStorage] Deleted avatar: ${filename}`);
+
       } catch (error) {
         // File doesn't exist, that's fine
-        console.log(`[AvatarStorage] Avatar not found: ${filename}`);
+
       }
     } catch (error) {
       console.error('[AvatarStorage] Error deleting avatar:', error);

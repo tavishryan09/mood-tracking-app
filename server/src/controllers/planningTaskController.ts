@@ -165,7 +165,7 @@ export const createPlanningTask = async (req: AuthRequest, res: Response) => {
               assignedBy: userId, // Self-assigned for auto-add
             },
           });
-          console.log(`[PlanningTask] Automatically added user ${userId} to project ${projectId}`);
+
         }
       } catch (error) {
         // Log but don't fail the planning task creation if team member addition fails
@@ -181,7 +181,7 @@ export const createPlanningTask = async (req: AuthRequest, res: Response) => {
       );
 
       await Promise.race([syncPromise, timeoutPromise]);
-      console.log('[Outlook] Planning task synced successfully');
+
     } catch (error) {
       console.error('[Outlook] Failed to sync planning task (non-fatal):', error);
       // Don't fail the request - task was saved successfully
@@ -282,7 +282,7 @@ export const updatePlanningTask = async (req: AuthRequest, res: Response) => {
                   assignedBy: newUserId, // Self-assigned for auto-add
                 },
               });
-              console.log(`[PlanningTask] Auto-added user ${newUserId} to project ${newProjectId}`);
+
             }
           } catch (error) {
             console.error('[PlanningTask] Failed to auto-add team member:', error);
@@ -292,7 +292,6 @@ export const updatePlanningTask = async (req: AuthRequest, res: Response) => {
         // Sync to Outlook with timeout (for blockIndex changes)
         try {
           if (userId && userId !== oldUserId) {
-            console.log(`[Outlook] Planning task moved from user ${oldUserId} to ${userId}`);
 
             // Delete from old user's calendar using the preserved event ID
             if (preservedOutlookEventId) {
@@ -312,17 +311,17 @@ export const updatePlanningTask = async (req: AuthRequest, res: Response) => {
             );
 
             await Promise.race([syncPromise, timeoutPromise2]);
-            console.log('[Outlook] Planning task moved and synced successfully');
+
           } else {
             // Same user, sync the updated task (will update existing event)
-            console.log(`[Outlook] Syncing updated planning task ${planningTask.id} (blockIndex changed) to user ${planningTask.userId}`);
+
             const syncPromise = outlookCalendarService.syncPlanningTask(planningTask.id, planningTask.userId);
             const timeoutPromise = new Promise((_, reject) =>
               setTimeout(() => reject(new Error('Outlook sync timeout')), 8000)
             );
 
             await Promise.race([syncPromise, timeoutPromise]);
-            console.log('[Outlook] Planning task synced successfully');
+
           }
         } catch (error) {
           console.error('[Outlook] Failed to sync planning task (non-fatal):', error);
@@ -412,7 +411,7 @@ export const updatePlanningTask = async (req: AuthRequest, res: Response) => {
               assignedBy: finalUserId, // Self-assigned for auto-add
             },
           });
-          console.log(`[PlanningTask] Auto-added user ${finalUserId} to project ${finalProjectId}`);
+
         }
       } catch (error) {
         console.error('[PlanningTask] Failed to auto-add team member:', error);
@@ -427,12 +426,9 @@ export const updatePlanningTask = async (req: AuthRequest, res: Response) => {
     if (span !== undefined) changes.push('span');
     if (date !== undefined) changes.push('date');
 
-    console.log(`[PlanningTask] Update detected - changes: ${changes.join(', ')}`);
-
     // Sync to Outlook with timeout
     try {
       if (userId && userId !== oldUserId) {
-        console.log(`[Outlook] Planning task moved from user ${oldUserId} to ${userId}`);
 
         // Delete from old user's calendar and sync to new user (with timeout)
         const deletePromise = outlookCalendarService.deletePlanningTask(id, oldUserId);
@@ -442,17 +438,17 @@ export const updatePlanningTask = async (req: AuthRequest, res: Response) => {
         );
 
         await Promise.race([Promise.all([deletePromise, syncPromise]), timeoutPromise]);
-        console.log('[Outlook] Planning task moved and synced successfully');
+
       } else {
         // Same user, sync the updated task to Outlook (with timeout)
-        console.log(`[Outlook] Syncing updated planning task ${planningTask.id} to user ${planningTask.userId}`);
+
         const syncPromise = outlookCalendarService.syncPlanningTask(planningTask.id, planningTask.userId);
         const timeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Outlook sync timeout')), 8000)
         );
 
         await Promise.race([syncPromise, timeoutPromise]);
-        console.log('[Outlook] Planning task synced successfully');
+
       }
     } catch (error) {
       console.error('[Outlook] Failed to sync planning task (non-fatal):', error);
@@ -490,7 +486,7 @@ export const deletePlanningTask = async (req: AuthRequest, res: Response) => {
         );
 
         await Promise.race([deletePromise, timeoutPromise]);
-        console.log('[Outlook] Planning task deleted from calendar successfully');
+
       } catch (error) {
         console.error('[Outlook] Failed to delete planning task from calendar (non-fatal):', error);
         // Don't fail the request - task was already deleted from database

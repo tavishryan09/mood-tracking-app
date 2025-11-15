@@ -14,7 +14,7 @@ export const createDefaultCustomTheme = async (): Promise<void> => {
       if (response?.data?.value) {
         palettes = response.data.value;
         if (palettes[DEFAULT_THEME_ID]) {
-          console.log('[DefaultTheme] Default theme already exists');
+
           return;
         }
       }
@@ -220,7 +220,6 @@ export const createDefaultCustomTheme = async (): Promise<void> => {
     await settingsAPI.app.set('custom_color_palettes', { [DEFAULT_THEME_ID]: defaultPalette });
     await settingsAPI.app.set('element_color_mapping', { [DEFAULT_THEME_ID]: defaultMapping });
 
-    console.log('[DefaultTheme] Default custom theme created successfully in database');
   } catch (error) {
     console.error('[DefaultTheme] Error creating default theme:', error);
   }

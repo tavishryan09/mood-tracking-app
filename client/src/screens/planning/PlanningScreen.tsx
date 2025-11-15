@@ -368,25 +368,12 @@ const PlanningScreen = () => {
 
   // Debug: Log planning colors when they change
   useEffect(() => {
-    console.log('[PlanningScreen] Planning colors loaded:', {
-      projectTaskBg,
-      projectTaskFont,
-      adminTaskBg,
-      adminTaskFont,
-      marketingTaskBg,
-      marketingTaskFont,
-      outOfOfficeBg,
-      outOfOfficeFont,
-      timeOffBg,
-      timeOffFont,
-      unavailableBg,
-      unavailableFont,
-    });
+
   }, [planningColors]);
 
   useFocusEffect(
     React.useCallback(() => {
-      console.log('[PlanningScreen] useFocusEffect triggered - resetting scroll state');
+
       setHasScrolled(false);
       loadData();
     }, [currentQuarter])
@@ -395,7 +382,6 @@ const PlanningScreen = () => {
   const loadData = async () => {
     try {
       setLoading(true);
-      console.log('[PlanningScreen] Starting to load data...');
 
       // Calculate quarter range for loading planning tasks
       const { year, quarter } = currentQuarter;
@@ -405,13 +391,6 @@ const PlanningScreen = () => {
 
       const quarterEnd = new Date(year, startMonth + 3, 0);
       quarterEnd.setHours(23, 59, 59, 999);
-
-      console.log('[PlanningScreen] Loading planning tasks for quarter:', {
-        quarter,
-        year,
-        startDate: quarterStart.toISOString(),
-        endDate: quarterEnd.toISOString(),
-      });
 
       // Load users, projects, planning tasks, and deadline tasks for the entire quarter
       const [usersResponse, projectsResponse, planningTasksResponse, deadlineTasksResponse] = await Promise.all([
@@ -426,12 +405,6 @@ const PlanningScreen = () => {
           endDate: quarterEnd.toISOString(),
         }),
       ]);
-
-      console.log('[PlanningScreen] Users loaded:', usersResponse.data.length);
-      console.log('[PlanningScreen] Users:', usersResponse.data);
-      console.log('[PlanningScreen] Projects loaded:', projectsResponse.data.length);
-      console.log('[PlanningScreen] Planning tasks loaded:', planningTasksResponse.data.length);
-      console.log('[PlanningScreen] Deadline tasks loaded:', deadlineTasksResponse.data.length);
 
       // Set deadline tasks
       setDeadlineTasks(deadlineTasksResponse.data);
@@ -484,14 +457,6 @@ const PlanningScreen = () => {
           span: span,
         };
 
-        console.log('[PlanningScreen] Loaded task with span:', {
-          taskId: task.id,
-          blockIndex: task.blockIndex,
-          span,
-          projectName,
-          isStatusEvent,
-          taskField: task.task,
-        });
       });
 
       setBlockAssignments(assignments);
@@ -506,7 +471,7 @@ const PlanningScreen = () => {
           const userOrderResponse = await settingsAPI.user.get(`planning_user_order`);
           if (userOrderResponse.data?.value) {
             userIds = userOrderResponse.data.value;
-            console.log('[PlanningScreen] Loaded user order from database:', userIds);
+
           }
         } catch (error: any) {
           if (error.response?.status !== 404) {
@@ -518,7 +483,7 @@ const PlanningScreen = () => {
           const visibleUsersResponse = await settingsAPI.user.get(`planning_visible_users`);
           if (visibleUsersResponse.data?.value) {
             visibleIds = visibleUsersResponse.data.value;
-            console.log('[PlanningScreen] Loaded visible users from database:', visibleIds);
+
           }
         } catch (error: any) {
           if (error.response?.status !== 404) {
@@ -530,7 +495,7 @@ const PlanningScreen = () => {
         if (!userIds || !visibleIds) {
           const globalDefaults = await loadGlobalDefaults();
           if (globalDefaults) {
-            console.log('[PlanningScreen] Loaded global defaults:', globalDefaults);
+
             if (!userIds && globalDefaults.userOrder) {
               userIds = globalDefaults.userOrder;
             }
@@ -628,18 +593,12 @@ const PlanningScreen = () => {
     if (Platform.OS === 'web') {
       const scrollContainer = scrollContainerRef.current || (document.querySelector('[data-planning-scroll]') as HTMLDivElement);
       if (!scrollContainer) {
-        console.log('[SCROLL DEBUG] Scroll container not found for next week');
+
         return;
       }
 
       const nextWeekIndex = visibleWeekIndex + 1;
       const scrollLeft = nextWeekIndex * 7 * DAY_CELL_WIDTH;
-
-      console.log('[SCROLL DEBUG] Next week button clicked:', {
-        currentWeekIndex: visibleWeekIndex,
-        nextWeekIndex,
-        scrollLeft,
-      });
 
       scrollContainer.scrollLeft = scrollLeft;
       setVisibleWeekIndex(nextWeekIndex);
@@ -651,18 +610,12 @@ const PlanningScreen = () => {
     if (Platform.OS === 'web') {
       const scrollContainer = scrollContainerRef.current || (document.querySelector('[data-planning-scroll]') as HTMLDivElement);
       if (!scrollContainer) {
-        console.log('[SCROLL DEBUG] Scroll container not found for previous week');
+
         return;
       }
 
       const prevWeekIndex = Math.max(0, visibleWeekIndex - 1);
       const scrollLeft = prevWeekIndex * 7 * DAY_CELL_WIDTH;
-
-      console.log('[SCROLL DEBUG] Previous week button clicked:', {
-        currentWeekIndex: visibleWeekIndex,
-        prevWeekIndex,
-        scrollLeft,
-      });
 
       scrollContainer.scrollLeft = scrollLeft;
       setVisibleWeekIndex(prevWeekIndex);
@@ -754,7 +707,6 @@ const PlanningScreen = () => {
       span: assignment.span,
     });
 
-    console.log('[DRAG TASK] Started dragging task:', { blockKey, assignment });
   };
 
   // Handle task drag over cell
@@ -762,7 +714,7 @@ const PlanningScreen = () => {
     e.preventDefault();
 
     if (!draggedTask) {
-      console.log('[DRAG OVER] No dragged task');
+
       return;
     }
 
@@ -770,11 +722,9 @@ const PlanningScreen = () => {
     const span = draggedTask.span;
     let canDrop = true;
 
-    console.log('[DRAG OVER] Checking drop at', { userId, date, blockIndex, span });
-
     // Check if span would exceed block limit
     if (blockIndex + span > 4) {
-      console.log('[DRAG OVER] Would exceed block limit');
+
       canDrop = false;
     }
 
@@ -788,7 +738,7 @@ const PlanningScreen = () => {
         if (checkBlockKey !== sourceBlockKey) {
           const existingAssignment = blockAssignments[checkBlockKey];
           if (existingAssignment) {
-            console.log('[DRAG OVER] Cell occupied:', checkBlockKey);
+
             canDrop = false;
             break;
           }
@@ -799,10 +749,10 @@ const PlanningScreen = () => {
     // Set drag over highlight for all cells in the span (or null if can't drop)
     if (canDrop) {
       const blockKey = `${userId}-${date}-${blockIndex}`;
-      console.log('[DRAG OVER] Can drop, setting dragOverCell to:', blockKey);
+
       setDragOverCell(blockKey);
     } else {
-      console.log('[DRAG OVER] Cannot drop');
+
       setDragOverCell(null);
     }
   };
@@ -828,7 +778,7 @@ const PlanningScreen = () => {
     // Check if span would exceed block limit
     const span = draggedTask.span;
     if (targetBlockIndex + span > 4) {
-      console.log('[DRAG TASK] Target would exceed block limit');
+
       setErrorMessage('Cannot move task here - would exceed available blocks');
       setShowErrorDialog(true);
       setDraggedTask(null);
@@ -847,7 +797,7 @@ const PlanningScreen = () => {
 
       const existingAssignment = blockAssignments[checkBlockKey];
       if (existingAssignment) {
-        console.log('[DRAG TASK] Target cells are not all empty', { blockKey: checkBlockKey });
+
         setErrorMessage('Cannot move task here - target cells are not empty');
         setShowErrorDialog(true);
         setDraggedTask(null);
@@ -855,8 +805,6 @@ const PlanningScreen = () => {
         return;
       }
     }
-
-    console.log('[DRAG TASK] Dropping task:', { sourceBlockKey, targetBlockKey, span });
 
     try {
       // Update the task to move it to the new location
@@ -907,7 +855,6 @@ const PlanningScreen = () => {
         return newAssignments;
       });
 
-      console.log('[DRAG TASK] Task moved successfully');
     } catch (error) {
       console.error('[DRAG TASK] Error moving task:', error);
       setErrorMessage('Failed to move task');
@@ -984,27 +931,19 @@ const PlanningScreen = () => {
       // This ensures the date is correct for both Pacific and Eastern timezones
       const targetDateISO = `${targetDateString}T08:01:00.000Z`;
 
-      console.log('[DRAG DEADLINE] Updating task', draggedDeadlineTask.id, 'from', draggedDeadlineTask.date, 'slot', draggedDeadlineTask.slotIndex, 'to', targetDateISO, 'slot', targetSlotIndex);
-
       // Update the deadline task
       const response = await deadlineTasksAPI.update(draggedDeadlineTask.id, {
         date: targetDateISO,
         slotIndex: targetSlotIndex,
       });
 
-      console.log('[DRAG DEADLINE] API response:', response.data);
-
       // Update state with new array to trigger re-render
       const updatedTasks = deadlineTasks.map((task) =>
         task.id === draggedDeadlineTask.id ? response.data : task
       );
 
-      console.log('[DRAG DEADLINE] Old tasks count:', deadlineTasks.length, 'New tasks count:', updatedTasks.length);
-      console.log('[DRAG DEADLINE] Updated task in state:', updatedTasks.find(t => t.id === draggedDeadlineTask.id));
-
       setDeadlineTasks(updatedTasks);
 
-      console.log('[DRAG DEADLINE] Deadline task moved successfully to', targetDateISO, 'slot', targetSlotIndex);
     } catch (error) {
       console.error('[DRAG DEADLINE] Error moving deadline task:', error);
       setErrorMessage('Failed to move deadline task');
@@ -1026,23 +965,13 @@ const PlanningScreen = () => {
     const blockKey = `${userId}-${date}-${blockIndex}`;
     const existing = blockAssignments[blockKey];
 
-    console.log('[CLICK DEBUG] handleBlockClick called', {
-      blockKey,
-      existing: !!existing,
-      existingData: existing,
-      allAssignments: Object.keys(blockAssignments),
-      clickTimer: !!clickTimer,
-      clickedBlock,
-      copiedCell: !!copiedCell,
-    });
-
     // Set this cell as selected
     setSelectedCell(blockKey);
 
     // Use double-click detection for both existing and empty cells
     if (clickTimer && clickedBlock === blockKey) {
       // This is a double-click
-      console.log('[CLICK DEBUG] Double-click detected - opening modal');
+
       clearTimeout(clickTimer);
       setClickTimer(null);
       setClickedBlock(null);
@@ -1100,7 +1029,7 @@ const PlanningScreen = () => {
       }
     } else {
       // This is a first click - start timer
-      console.log('[CLICK DEBUG] First click - starting timer');
+
       const timer = setTimeout(() => {
         setClickTimer(null);
         setClickedBlock(null);
@@ -1118,13 +1047,12 @@ const PlanningScreen = () => {
 
     // For web, get clientY from the event
     const startY = e.clientY || e.nativeEvent?.clientY || e.pageY || e.nativeEvent?.pageY || 0;
-    console.log('[DRAG DEBUG] handleEdgeDragStart called', { userId, date, blockIndex, edge, startY, eventType: e.type, currentSpan });
 
     // Store the initial span
     dragStartSpanRef.current = currentSpan;
 
     const blockKey = `${userId}-${date}-${blockIndex}`;
-    console.log('[DRAG DEBUG] Setting draggingEdge state', { blockKey, edge, startY });
+
     setDraggingEdge({
       blockKey,
       edge,
@@ -1139,11 +1067,9 @@ const PlanningScreen = () => {
   // Handle edge drag (global mouse move)
   useEffect(() => {
     if (!draggingEdge || Platform.OS !== 'web') {
-      console.log('[DRAG DEBUG] useEffect skip', { draggingEdge, platform: Platform.OS });
+
       return;
     }
-
-    console.log('[DRAG DEBUG] useEffect running, setting up listeners', draggingEdge);
 
     let lastBlocksMoved = 0;
 
@@ -1156,18 +1082,9 @@ const PlanningScreen = () => {
       const deltaY = clientY - draggingEdge.startY;
       const blocksMoved = Math.round(deltaY / TIME_BLOCK_HEIGHT);
 
-      console.log('[DRAG DEBUG] handleMouseMove', {
-        clientY,
-        startY: draggingEdge.startY,
-        deltaY,
-        TIME_BLOCK_HEIGHT,
-        blocksMoved,
-        edge: draggingEdge.edge
-      });
-
       // Only process if blocksMoved has changed
       if (blocksMoved === lastBlocksMoved) {
-        console.log('[DRAG DEBUG] blocksMoved unchanged, skipping');
+
         return;
       }
 
@@ -1176,21 +1093,13 @@ const PlanningScreen = () => {
       const { userId, date, blockIndex, edge, initialSpan } = draggingEdge;
       const blockKey = `${userId}-${date}-${blockIndex}`;
 
-      console.log('[DRAG DEBUG] Processing span change', {
-        blockKey,
-        blocksMoved,
-        edge,
-        blockIndex,
-        initialSpan
-      });
-
       // Get the base assignment from the current block
       const baseAssignment = blockAssignmentsRef.current[blockKey];
       const baseProjectId = baseAssignment?.projectId;
       const baseProjectName = baseAssignment?.projectName;
 
       if (!baseAssignment) {
-        console.log('[DRAG DEBUG] No base assignment found, skipping');
+
         return;
       }
 
@@ -1212,8 +1121,6 @@ const PlanningScreen = () => {
         newSpan = endBlock - newBlockIndex + 1;
       }
 
-      console.log('[DRAG DEBUG] Calculated new span', { newSpan, newBlockIndex, initialSpan, blocksMoved });
-
       // Check if all blocks in the range are either empty or same project/status
       let canExpand = true;
       for (let i = newBlockIndex; i < newBlockIndex + newSpan; i++) {
@@ -1229,7 +1136,7 @@ const PlanningScreen = () => {
 
           if (!isSameTask) {
             canExpand = false;
-            console.log('[DRAG DEBUG] Cannot expand - different project/status at block', i);
+
             break;
           }
         }
@@ -1253,13 +1160,12 @@ const PlanningScreen = () => {
           span: newSpan,
         };
 
-        console.log('[DRAG DEBUG] Updated assignments', { oldKey: blockKey, newKey, newSpan });
         return newAssignments;
       });
     };
 
     const handleMouseUp = async (e: MouseEvent | TouchEvent) => {
-      console.log('[DRAG DEBUG] Mouse/touch up - ending drag');
+
       e.preventDefault();
       e.stopPropagation();
 
@@ -1290,7 +1196,7 @@ const PlanningScreen = () => {
               if (match) {
                 currentBlockIndex = parseInt(match[2], 10);
                 currentAssignment = assignment;
-                console.log('[DRAG DEBUG] Found assignment at new location', { key, currentBlockIndex });
+
                 break;
               }
             }
@@ -1300,12 +1206,6 @@ const PlanningScreen = () => {
         if (currentAssignment?.id) {
           try {
             const newSpan = currentAssignment.span;
-
-            console.log('[DRAG DEBUG] Saving span to database', {
-              id: currentAssignment.id,
-              blockIndex: currentBlockIndex,
-              span: newSpan,
-            });
 
             // For status events (no projectId), the status name is in projectName, not task
             // For Out of Office events, we need to preserve the [OUT_OF_OFFICE] marker
@@ -1334,7 +1234,6 @@ const PlanningScreen = () => {
               blockIndex: currentBlockIndex,
             });
 
-            console.log('[DRAG DEBUG] Successfully saved span to database');
           } catch (error) {
             console.error('[DRAG DEBUG] Failed to save span:', error);
             // Reload data to restore correct state
@@ -1391,7 +1290,7 @@ const PlanningScreen = () => {
     // Check for double-tap (300ms window)
     if (lastTapBlock === blockKey && now - lastTapTime < 300) {
       // Double-tap detected - open modal for edit/delete or create
-      console.log('[MOBILE TAP] Double-tap detected - opening modal');
+
       setLastTapTime(0);
       setLastTapBlock(null);
 
@@ -1461,11 +1360,9 @@ const PlanningScreen = () => {
 
     if (!existing) return; // Only allow long press on filled cells
 
-    console.log('[MOBILE LONG PRESS] Starting long press timer');
-
     // Start 800ms timer to show action menu
     const timer = setTimeout(() => {
-      console.log('[MOBILE LONG PRESS] Timer completed - showing action menu');
+
       setLongPressAction({
         userId,
         date,
@@ -1483,7 +1380,7 @@ const PlanningScreen = () => {
 
     // Cancel timer if released early
     if (longPressTimer) {
-      console.log('[MOBILE LONG PRESS] Cancelled - released early');
+
       clearTimeout(longPressTimer);
       setLongPressTimer(null);
     }
@@ -1496,7 +1393,7 @@ const PlanningScreen = () => {
     const existing = blockAssignments[blockKey];
 
     if (existing) {
-      console.log('[MOBILE PASTE] Cannot paste - cell is not empty');
+
       // Clear success state before showing error
       setShowSuccessDialog(false);
       setSuccessMessage('');
@@ -1504,8 +1401,6 @@ const PlanningScreen = () => {
       setShowErrorDialog(true);
       return;
     }
-
-    console.log('[MOBILE PASTE] Pasting to cell:', blockKey, 'Reposition mode:', repositionMode);
 
     try {
       // Detect what type of event this is
@@ -1547,7 +1442,7 @@ const PlanningScreen = () => {
 
       // If in reposition mode, delete the original task
       if (repositionMode && copiedCell.sourceId && copiedCell.sourceBlockKey) {
-        console.log('[MOBILE PASTE] Deleting source task:', copiedCell.sourceId);
+
         try {
           await planningTasksAPI.delete(copiedCell.sourceId);
 
@@ -1558,7 +1453,6 @@ const PlanningScreen = () => {
             return updated;
           });
 
-          console.log('[MOBILE PASTE] Reposition successful');
           // Use setTimeout to ensure success dialog shows after any potential error dialogs are cleared
           setTimeout(() => {
             setShowErrorDialog(false);
@@ -1572,7 +1466,7 @@ const PlanningScreen = () => {
           setShowWarningDialog(true);
         }
       } else {
-        console.log('[MOBILE PASTE] Copy successful');
+
         // Use setTimeout to ensure success dialog shows after any potential error dialogs are cleared
         setTimeout(() => {
           setShowErrorDialog(false);
@@ -1605,8 +1499,6 @@ const PlanningScreen = () => {
     const touch = e.nativeEvent?.touches?.[0] || e.touches?.[0];
     if (!touch) return;
 
-    console.log('[MOBILE PAN] Starting drag', { blockKey, x: touch.pageX, y: touch.pageY });
-
     setMobileDragging({
       blockKey,
       userId,
@@ -1624,11 +1516,10 @@ const PlanningScreen = () => {
 
   // Deadline task mobile long-press handlers
   const handleDeadlineLongPressStart = (task: DeadlineTask, date: Date, slotIndex: number, e: any) => {
-    console.log('[DEADLINE LONG PRESS] Starting long press timer');
 
     // Start 800ms timer to show action menu
     const timer = setTimeout(() => {
-      console.log('[DEADLINE LONG PRESS] Timer completed - showing action menu');
+
       setLongPressDeadlineAction({
         task,
         date,
@@ -1641,7 +1532,7 @@ const PlanningScreen = () => {
 
   const handleDeadlineLongPressEnd = () => {
     if (longPressDeadlineTimer) {
-      console.log('[DEADLINE LONG PRESS] Cancelled - released early');
+
       clearTimeout(longPressDeadlineTimer);
       setLongPressDeadlineTimer(null);
     }
@@ -1685,15 +1576,13 @@ const PlanningScreen = () => {
     );
 
     if (existingTask) {
-      console.log('[DEADLINE PASTE] Cannot paste - slot is not empty');
+
       setShowSuccessDialog(false);
       setSuccessMessage('');
       setErrorMessage('Cannot paste to an occupied slot');
       setShowErrorDialog(true);
       return;
     }
-
-    console.log('[DEADLINE PASTE] Pasting to slot:', slotKey, 'Reposition mode:', repositionDeadlineMode);
 
     try {
       // Create the new deadline task
@@ -1711,14 +1600,13 @@ const PlanningScreen = () => {
 
       // If in reposition mode, delete the original task
       if (repositionDeadlineMode && copiedDeadlineTask.sourceId) {
-        console.log('[DEADLINE PASTE] Deleting source task:', copiedDeadlineTask.sourceId);
+
         try {
           await deadlineTasksAPI.delete(copiedDeadlineTask.sourceId);
 
           // Remove from deadline tasks list
           setDeadlineTasks(prev => prev.filter(task => task.id !== copiedDeadlineTask.sourceId));
 
-          console.log('[DEADLINE PASTE] Reposition successful');
           setTimeout(() => {
             setShowErrorDialog(false);
             setErrorMessage('');
@@ -1731,7 +1619,7 @@ const PlanningScreen = () => {
           setShowWarningDialog(true);
         }
       } else {
-        console.log('[DEADLINE PASTE] Copy successful');
+
         setTimeout(() => {
           setShowErrorDialog(false);
           setErrorMessage('');
@@ -1826,12 +1714,6 @@ const PlanningScreen = () => {
 
   // Save project assignment
   const handleSaveProjectAssignment = async () => {
-    console.log('=== SAVE BUTTON CLICKED ===');
-    console.log('isOutOfOffice:', isOutOfOffice);
-    console.log('isTimeOff:', isTimeOff);
-    console.log('isUnavailable:', isUnavailable);
-    console.log('projectSearch:', projectSearch);
-    console.log('selectedBlock:', selectedBlock);
 
     // Clear any existing error/success dialogs before starting
     setShowErrorDialog(false);
@@ -1840,7 +1722,7 @@ const PlanningScreen = () => {
     setSuccessMessage('');
 
     if (!selectedBlock) {
-      console.log('ERROR: No block selected');
+
       setErrorMessage('No block selected');
       setShowErrorDialog(true);
       return;
@@ -1848,7 +1730,6 @@ const PlanningScreen = () => {
 
     // Check if this is a status event (Out of Office, Time Off, or Unavailable)
     const isStatusEvent = isOutOfOffice || isTimeOff || isUnavailable;
-    console.log('isStatusEvent:', isStatusEvent);
 
     // Handle project validation
     let selectedProject = null;
@@ -1859,27 +1740,24 @@ const PlanningScreen = () => {
 
     if (projectSearch?.trim() && allowsProject) {
       // If there's a project search, try to find the project
-      console.log('Project search provided - looking up project');
+
       selectedProject = filteredProjects.find(
         (p) => p.description?.toLowerCase() === projectSearch.toLowerCase()
       );
-      console.log('selectedProject:', selectedProject);
 
       if (!selectedProject) {
-        console.log('ERROR: Project not found');
+
         setErrorMessage('Project not found');
         setShowErrorDialog(true);
         return;
       }
     } else if (requiresProject) {
       // No project provided, but one is required (not a status event)
-      console.log('ERROR: No project search and not a status event');
+
       setErrorMessage('Please select a project or check a status option');
       setShowErrorDialog(true);
       return;
     }
-
-    console.log('Validation passed! Proceeding to save...');
 
     try {
       // Get the current assignment to preserve the span
@@ -2149,13 +2027,13 @@ const PlanningScreen = () => {
   };
 
   const handleDeleteDeadlineTask = async (taskId: string) => {
-    console.log('[PlanningScreen] handleDeleteDeadlineTask called', { taskId });
+
     try {
-      console.log('[PlanningScreen] Calling API to delete task', { taskId });
+
       await deadlineTasksAPI.delete(taskId);
-      console.log('[PlanningScreen] API delete successful, updating state');
+
       setDeadlineTasks(deadlineTasks.filter((task) => task.id !== taskId));
-      console.log('[PlanningScreen] State updated successfully');
+
     } catch (error: any) {
       console.error('[PlanningScreen] Error deleting deadline task:', error);
       setErrorMessage(error.response?.data?.error || 'Failed to delete deadline task');
@@ -2191,11 +2069,9 @@ const PlanningScreen = () => {
 
       // Save user order to database using user settings API
       await settingsAPI.user.set(`planning_user_order`, userIds);
-      console.log('[PlanningScreen] Saved user order to database:', userIds);
 
       // Save visible users to database using user settings API
       await settingsAPI.user.set(`planning_visible_users`, visibleUserIds);
-      console.log('[PlanningScreen] Saved visible users to database:', visibleUserIds);
 
       // Show success message
       setSuccessMessage('Team view settings have been saved successfully.');
@@ -2220,12 +2096,10 @@ const PlanningScreen = () => {
 
       // Save as app-wide default using app settings API
       await settingsAPI.app.set('planning_default_view', defaultSettings);
-      console.log('[PlanningScreen] Saved default view for all users:', defaultSettings);
 
       // Also save to current user's settings so they see the change immediately
       await settingsAPI.user.set(`planning_user_order`, userIds);
       await settingsAPI.user.set(`planning_visible_users`, visibleUserIds);
-      console.log('[PlanningScreen] Also saved to current user settings');
 
       setSuccessMessage('Default view saved for all users. New users will see this configuration by default.');
       setShowSuccessDialog(true);
@@ -2245,7 +2119,7 @@ const PlanningScreen = () => {
       }
     } catch (error) {
       // Setting doesn't exist yet, that's okay
-      console.log('[PlanningScreen] No global defaults found');
+
     }
     return null;
   };
@@ -2255,12 +2129,7 @@ const PlanningScreen = () => {
 
   // Debug: log the first few weeks to verify they start on Monday
   if (quarterWeeks.length > 0 && Platform.OS === 'web') {
-    console.log('[WEEK DEBUG] First 6 weeks of quarter:', quarterWeeks.slice(0, 6).map((week, idx) => ({
-      index: idx,
-      date: week.toDateString(),
-      dayOfWeek: week.getDay(),
-      isMonday: week.getDay() === 1
-    })));
+
   }
 
   // Calculate visible week based on scroll position or initial state
@@ -2275,18 +2144,13 @@ const PlanningScreen = () => {
   // Auto-scroll to the current week when component mounts or week changes
   useEffect(() => {
     if (!hasScrolled && quarterWeeks.length > 0 && Platform.OS === 'web') {
-      console.log('[SCROLL DEBUG] Auto-scroll effect triggered', {
-        hasScrolled,
-        quarterWeeksLength: quarterWeeks.length,
-        hasCurrentWeekRef: !!currentWeekRef.current,
-      });
 
       // Try multiple approaches to ensure scroll works
       const attemptScroll = () => {
         // Find the scroll container first
         const scrollContainer = document.querySelector('[data-planning-scroll]') as HTMLDivElement;
         if (!scrollContainer) {
-          console.log('[SCROLL DEBUG] Scroll container not found');
+
           return false;
         }
 
@@ -2296,11 +2160,7 @@ const PlanningScreen = () => {
         // Approach 1: Try using the ref
         if (currentWeekRef.current) {
           targetWeekIndex = parseInt(currentWeekRef.current.id.replace('week-', ''), 10);
-          console.log('[SCROLL DEBUG] Found current week via ref:', {
-            elementId: currentWeekRef.current.id,
-            weekIndex: targetWeekIndex,
-            weekStart: quarterWeeks[targetWeekIndex]?.toDateString(),
-          });
+
         }
 
         // Approach 2: Try finding by data attribute
@@ -2308,10 +2168,7 @@ const PlanningScreen = () => {
           const currentWeekElement = document.querySelector('[data-current-week="true"]') as HTMLElement;
           if (currentWeekElement) {
             targetWeekIndex = parseInt(currentWeekElement.id.replace('week-', ''), 10);
-            console.log('[SCROLL DEBUG] Found current week via querySelector:', {
-              elementId: currentWeekElement.id,
-              weekIndex: targetWeekIndex,
-            });
+
           }
         }
 
@@ -2324,7 +2181,7 @@ const PlanningScreen = () => {
             weekEnd.setDate(weekStart.getDate() + 6);
             return today >= weekStart && today <= weekEnd;
           });
-          console.log('[SCROLL DEBUG] Found current week via manual calculation:', targetWeekIndex);
+
         }
 
         // If we found a valid week index, scroll to it
@@ -2366,13 +2223,6 @@ const PlanningScreen = () => {
           // Calculate scroll position - scroll to the week's Monday position
           const mondayPosition = targetWeekIndex * 7 * DAY_CELL_WIDTH;
 
-          console.log('[SCROLL DEBUG] Scrolling to position:', {
-            targetWeekIndex,
-            mondayPosition,
-            weekStart: quarterWeeks[targetWeekIndex]?.toDateString(),
-            calculation: `${targetWeekIndex} weeks * 7 days * ${DAY_CELL_WIDTH}px = ${mondayPosition}px`,
-          });
-
           // Set scroll position and let CSS scroll-snap handle the alignment
           scrollContainer.scrollLeft = mondayPosition;
           scrollContainerRef.current = scrollContainer;
@@ -2381,7 +2231,6 @@ const PlanningScreen = () => {
           return true;
         }
 
-        console.log('[SCROLL DEBUG] Could not determine target week index');
         return false;
       };
 
@@ -2389,7 +2238,7 @@ const PlanningScreen = () => {
       if (!attemptScroll()) {
         // Try after a delay if immediate attempt fails
         setTimeout(() => {
-          console.log('[SCROLL DEBUG] Retry scroll after delay');
+
           attemptScroll();
         }, 500);
       }
@@ -2440,7 +2289,7 @@ const PlanningScreen = () => {
             task: assignment.task,
             span: assignment.span,
           });
-          console.log('[COPY] Copied cell:', selectedCell, assignment);
+
         }
       }
 
@@ -2452,7 +2301,7 @@ const PlanningScreen = () => {
           // Check if selected cell is empty
           const existing = blockAssignments[selectedCell];
           if (existing) {
-            console.log('[PASTE] Cannot paste - cell is not empty');
+
             // Clear success state before showing error
             setShowSuccessDialog(false);
             setSuccessMessage('');
@@ -2475,8 +2324,6 @@ const PlanningScreen = () => {
           const date = match[1];
           const blockIndex = parseInt(match[2], 10);
           const userId = selectedCell.substring(0, selectedCell.length - match[0].length - 1);
-
-          console.log('[PASTE] Pasting to cell:', selectedCell, { userId, date, blockIndex });
 
           try {
             // Detect what type of event this is
@@ -2517,13 +2364,12 @@ const PlanningScreen = () => {
               },
             }));
 
-            console.log('[PASTE] Paste successful - copied cell remains for reuse');
             // Clear error state and set success
             setShowErrorDialog(false);
             setErrorMessage('');
             setSuccessMessage('Task pasted successfully');
             setShowSuccessDialog(true);
-            console.log('[PASTE] Success dialog state set');
+
             // Note: We don't clear copiedCell, allowing multiple pastes
           } catch (error) {
             console.error('[PASTE] Error pasting:', error);
@@ -2533,7 +2379,7 @@ const PlanningScreen = () => {
             setSuccessMessage('');
             setErrorMessage('Failed to paste task');
             setShowErrorDialog(true);
-            console.log('[PASTE] Error dialog state set');
+
           }
         }
       }
@@ -2739,7 +2585,7 @@ const PlanningScreen = () => {
                         const taskDateString = `${taskDate.getUTCFullYear()}-${String(taskDate.getUTCMonth() + 1).padStart(2, '0')}-${String(taskDate.getUTCDate()).padStart(2, '0')}`;
                         const matches = taskDateString === dateString && task.slotIndex === slotIndex;
                         if (matches) {
-                          console.log('[RENDER DEADLINE] Found task:', task.id, 'for date:', dateString, 'slot:', slotIndex, 'task date:', task.date, 'taskDateString:', taskDateString);
+
                         }
                         return matches;
                       });
@@ -2937,25 +2783,11 @@ const PlanningScreen = () => {
                                 const dragOverBlockIndex = parseInt(match[2], 10);
                                 const dragOverUserId = dragOverCell.substring(0, dragOverCell.length - match[0].length - 1);
 
-                                console.log('[DRAG OVER VISUAL] Checking cell:', {
-                                  blockKey,
-                                  blockIndex,
-                                  dragOverBlockIndex,
-                                  draggedTaskSpan: draggedTask.span,
-                                  userId: user.id,
-                                  dragOverUserId,
-                                  dateString,
-                                  dragOverDate,
-                                  isUserMatch: user.id === dragOverUserId,
-                                  isDateMatch: dateString === dragOverDate,
-                                  isInRange: blockIndex >= dragOverBlockIndex && blockIndex < dragOverBlockIndex + draggedTask.span,
-                                });
-
                                 // Check if this cell is the same user, date, and within the span range
                                 if (user.id === dragOverUserId && dateString === dragOverDate) {
                                   if (blockIndex >= dragOverBlockIndex && blockIndex < dragOverBlockIndex + draggedTask.span) {
                                     isDragOver = true;
-                                    console.log('[DRAG OVER VISUAL] Cell should be highlighted!', blockKey);
+
                                   }
                                 }
                               }
@@ -3062,13 +2894,13 @@ const PlanningScreen = () => {
                                       }}
                                       onMouseDown={(e) => {
                                         e.stopPropagation();
-                                        console.log('[DRAG DEBUG] Top edge pressed', { blockIndex, span });
+
                                         handleEdgeDragStart(user.id, dateString, blockIndex, 'top', e, span);
                                       }}
                                       onTouchStart={(e) => {
                                         e.stopPropagation();
                                         e.preventDefault(); // Prevent window scroll during edge drag
-                                        console.log('[DRAG DEBUG] Top edge touched', { blockIndex, span });
+
                                         handleEdgeDragStart(user.id, dateString, blockIndex, 'top', e.touches[0], span);
                                       }}
                                     />
@@ -3206,13 +3038,13 @@ const PlanningScreen = () => {
                                       }}
                                       onMouseDown={(e) => {
                                         e.stopPropagation();
-                                        console.log('[DRAG DEBUG] Bottom edge pressed', { blockIndex, span });
+
                                         handleEdgeDragStart(user.id, dateString, blockIndex, 'bottom', e, span);
                                       }}
                                       onTouchStart={(e) => {
                                         e.stopPropagation();
                                         e.preventDefault(); // Prevent window scroll during edge drag
-                                        console.log('[DRAG DEBUG] Bottom edge touched', { blockIndex, span });
+
                                         handleEdgeDragStart(user.id, dateString, blockIndex, 'bottom', e.touches[0], span);
                                       }}
                                     />

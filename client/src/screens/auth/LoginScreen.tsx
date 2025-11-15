@@ -94,7 +94,6 @@ const LoginScreen = ({ navigation }: any) => {
     setDialogVisible(true);
   };
 
-
   const dynamicStyles = createStyles(currentColors);
 
   return (

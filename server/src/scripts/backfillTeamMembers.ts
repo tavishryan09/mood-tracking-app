@@ -7,7 +7,6 @@ import prisma from '../config/database';
  */
 
 async function backfillTeamMembers() {
-  console.log('[Backfill] Starting team member backfill...');
 
   try {
     // Get all planning tasks that have a project
@@ -34,8 +33,6 @@ async function backfillTeamMembers() {
       }
     });
 
-    console.log(`[Backfill] Found ${planningTasks.length} planning tasks with projects`);
-
     // Group by project and user to avoid duplicates
     const userProjectPairs = new Map<string, { userId: string, projectId: string, projectName: string, userName: string }>();
 
@@ -50,8 +47,6 @@ async function backfillTeamMembers() {
         });
       }
     }
-
-    console.log(`[Backfill] Found ${userProjectPairs.size} unique user-project pairs to process`);
 
     let addedCount = 0;
     let skippedCount = 0;
@@ -70,7 +65,7 @@ async function backfillTeamMembers() {
         });
 
         if (existingMember) {
-          console.log(`[Backfill] SKIP: ${pair.userName} already member of ${pair.projectName}`);
+
           skippedCount++;
         } else {
           // Add user as team member
@@ -81,19 +76,13 @@ async function backfillTeamMembers() {
               assignedBy: pair.userId // Self-assigned during backfill
             }
           });
-          console.log(`[Backfill] ADDED: ${pair.userName} to ${pair.projectName}`);
+
           addedCount++;
         }
       } catch (error) {
         console.error(`[Backfill] ERROR processing ${pair.userName} -> ${pair.projectName}:`, error);
       }
     }
-
-    console.log('\n[Backfill] Summary:');
-    console.log(`  - Total user-project pairs: ${userProjectPairs.size}`);
-    console.log(`  - Added: ${addedCount}`);
-    console.log(`  - Skipped (already members): ${skippedCount}`);
-    console.log('\n[Backfill] Completed successfully!');
 
   } catch (error) {
     console.error('[Backfill] Fatal error:', error);

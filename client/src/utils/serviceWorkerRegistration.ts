@@ -38,9 +38,7 @@ export function register(config?: Config) {
 
         // Add some additional logging to localhost
         navigator.serviceWorker.ready.then(() => {
-          console.log(
-            '[PWA] This web app is being served cache-first by a service worker.'
-          );
+
         });
       } else {
         // Is not localhost. Just register service worker
@@ -54,7 +52,6 @@ function registerValidSW(swUrl: string, config?: Config) {
   navigator.serviceWorker
     .register(swUrl)
     .then((registration) => {
-      console.log('[PWA] Service Worker registered successfully:', registration);
 
       registration.onupdatefound = () => {
         const installingWorker = registration.installing;
@@ -67,9 +64,6 @@ function registerValidSW(swUrl: string, config?: Config) {
               // At this point, the updated precached content has been fetched,
               // but the previous service worker will still serve the older
               // content until all client tabs are closed.
-              console.log(
-                '[PWA] New content is available and will be used when all tabs are closed.'
-              );
 
               // Execute callback
               if (config && config.onUpdate) {
@@ -77,7 +71,6 @@ function registerValidSW(swUrl: string, config?: Config) {
               }
             } else {
               // At this point, everything has been precached.
-              console.log('[PWA] Content is cached for offline use.');
 
               // Execute callback
               if (config && config.onSuccess) {
@@ -117,7 +110,7 @@ function checkValidServiceWorker(swUrl: string, config?: Config) {
       }
     })
     .catch(() => {
-      console.log('[PWA] No internet connection found. App is running in offline mode.');
+
     });
 }
 
@@ -126,7 +119,7 @@ export function unregister() {
     navigator.serviceWorker.ready
       .then((registration) => {
         registration.unregister();
-        console.log('[PWA] Service Worker unregistered');
+
       })
       .catch((error) => {
         console.error('[PWA] Error unregistering service worker:', error);
@@ -137,7 +130,7 @@ export function unregister() {
 // Request permission for notifications
 export async function requestNotificationPermission(): Promise<NotificationPermission> {
   if (!('Notification' in window)) {
-    console.log('[PWA] This browser does not support notifications');
+
     return 'denied';
   }
 
@@ -192,13 +185,13 @@ export function initInstallPrompt() {
     e.preventDefault();
     // Stash the event so it can be triggered later
     deferredPrompt = e;
-    console.log('[PWA] Install prompt ready');
+
   });
 }
 
 export async function promptInstall(): Promise<boolean> {
   if (!deferredPrompt) {
-    console.log('[PWA] Install prompt not available');
+
     return false;
   }
 
@@ -207,7 +200,6 @@ export async function promptInstall(): Promise<boolean> {
 
   // Wait for the user to respond to the prompt
   const { outcome } = await deferredPrompt.userChoice;
-  console.log(`[PWA] User response to install prompt: ${outcome}`);
 
   // Clear the deferredPrompt for next time
   deferredPrompt = null;
@@ -228,15 +220,13 @@ export async function initOfflineSupport() {
   try {
     // Initialize IndexedDB
     await offlineManager.init();
-    console.log('[PWA] Offline manager initialized');
 
     // Listen for messages from service worker
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.addEventListener('message', (event) => {
-        console.log('[PWA] Message from service worker:', event.data);
 
         if (event.data && event.data.type === 'SYNC_SUCCESS') {
-          console.log(`[PWA] Request synced successfully:`, event.data);
+
           // You can dispatch a custom event here for components to listen to
           window.dispatchEvent(new CustomEvent('sync-success', {
             detail: event.data,
@@ -247,7 +237,7 @@ export async function initOfflineSupport() {
 
     // Listen for online/offline events
     window.addEventListener('online', async () => {
-      console.log('[PWA] Back online - triggering sync');
+
       await offlineManager.triggerSync();
       window.dispatchEvent(new CustomEvent('connection-change', {
         detail: { online: true },
@@ -255,7 +245,7 @@ export async function initOfflineSupport() {
     });
 
     window.addEventListener('offline', () => {
-      console.log('[PWA] Gone offline');
+
       window.dispatchEvent(new CustomEvent('connection-change', {
         detail: { online: false },
       }));
@@ -263,7 +253,6 @@ export async function initOfflineSupport() {
 
     // Initial online status check
     const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
-    console.log(`[PWA] Initial online status: ${isOnline}`);
 
   } catch (error) {
     console.error('[PWA] Error initializing offline support:', error);
@@ -293,7 +282,7 @@ export async function getQueuedRequestsCount(): Promise<number> {
 export async function triggerManualSync(): Promise<void> {
   try {
     await offlineManager.triggerSync();
-    console.log('[PWA] Manual sync triggered');
+
   } catch (error) {
     console.error('[PWA] Error triggering manual sync:', error);
   }

@@ -372,7 +372,7 @@ const ElementColorMapperScreen = ({ navigation, route }: any) => {
       mappings[paletteId] = elementMapping;
 
       await settingsAPI.user.set(ELEMENT_COLOR_MAPPING_KEY, mappings);
-      console.log('[ElementColorMapper] Saved element mapping to database:', paletteId);
+
       setShowSuccessDialog(true);
     } catch (error) {
       console.error('Error saving element mapping:', error);

@@ -101,11 +101,9 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
 
   const loadSettings = async () => {
     try {
-      console.log('[TeamViewSettings] Loading settings from database...');
+
       const response = await settingsAPI.app.getAll();
       const settings = response.data;
-
-      console.log('[TeamViewSettings] Loaded settings:', settings);
 
       // Convert array of settings to a map for easy lookup
       const settingsMap: Record<string, any> = {};
@@ -155,7 +153,6 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
         setUserDefaultProjectsTable(settingsMap[SETTINGS_KEYS.USER_DEFAULT_PROJECTS_TABLE]);
       }
 
-      console.log('[TeamViewSettings] Settings loaded successfully from database');
     } catch (error) {
       console.error('[TeamViewSettings] Error loading settings:', error);
       // Don't show alert for 404 errors (settings don't exist yet)
@@ -167,38 +164,28 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
   };
 
   const handleSaveSettings = async () => {
-    console.log('[TeamViewSettings] Save button clicked');
-    console.log('[TeamViewSettings] Current state:', {
-      adminPageAccess,
-      adminDefaultPage,
-      managerPageAccess,
-      managerDefaultPage,
-      userPageAccess,
-      userDefaultPage,
-    });
 
     try {
       setSaving(true);
 
       // Validate that default pages are enabled
-      console.log('[TeamViewSettings] Starting validation...');
 
       if (!adminPageAccess[adminDefaultPage]) {
-        console.log('[TeamViewSettings] Validation failed: Admin default page not enabled');
+
         setValidationMessage('Admin default page must be enabled');
         setShowValidationDialog(true);
         setSaving(false);
         return;
       }
       if (!managerPageAccess[managerDefaultPage]) {
-        console.log('[TeamViewSettings] Validation failed: Manager default page not enabled');
+
         setValidationMessage('Manager default page must be enabled');
         setShowValidationDialog(true);
         setSaving(false);
         return;
       }
       if (!userPageAccess[userDefaultPage]) {
-        console.log('[TeamViewSettings] Validation failed: User default page not enabled');
+
         setValidationMessage('User default page must be enabled');
         setShowValidationDialog(true);
         setSaving(false);
@@ -210,21 +197,13 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
       const managerEnabled = Object.values(managerPageAccess).some((enabled) => enabled);
       const userEnabled = Object.values(userPageAccess).some((enabled) => enabled);
 
-      console.log('[TeamViewSettings] Page enabled checks:', {
-        adminEnabled,
-        managerEnabled,
-        userEnabled,
-      });
-
       if (!adminEnabled || !managerEnabled || !userEnabled) {
-        console.log('[TeamViewSettings] Validation failed: Not all roles have pages enabled');
+
         setValidationMessage('Each role must have at least one page enabled');
         setShowValidationDialog(true);
         setSaving(false);
         return;
       }
-
-      console.log('[TeamViewSettings] Validation passed, starting save...');
 
       // Prepare batch settings update
       const settingsToSave = [
@@ -245,10 +224,8 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
         { key: SETTINGS_KEYS.USER_DEFAULT_PROJECTS_TABLE, value: userDefaultProjectsTable },
       ];
 
-      console.log('[TeamViewSettings] Saving all settings to database...');
       await settingsAPI.app.batchSet(settingsToSave);
 
-      console.log('[TeamViewSettings] All settings saved successfully to database');
       setSaving(false);
       setSuccessMessage('Team view settings saved successfully');
       setShowSuccessDialog(true);
@@ -264,7 +241,7 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
   const togglePageAccess = (role: 'admin' | 'manager' | 'user', page: string) => {
     // Prevent disabling Profile for admin
     if (role === 'admin' && page === 'Profile') {
-      console.log('[TeamViewSettings] Cannot disable Profile for admin');
+
       return;
     }
 

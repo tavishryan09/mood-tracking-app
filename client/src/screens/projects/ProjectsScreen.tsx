@@ -48,7 +48,7 @@ const ProjectsScreen = () => {
           try {
             const userPrefResponse = await settingsAPI.user.get('projects_default_table_view');
             if (userPrefResponse.data?.value !== undefined) {
-              console.log('[ProjectsScreen] Loaded user personal table view preference:', userPrefResponse.data.value);
+
               if (userPrefResponse.data.value === true) {
                 (navigation as any).navigate('ProjectTableView');
               }
@@ -71,7 +71,7 @@ const ProjectsScreen = () => {
           try {
             const roleDefaultResponse = await settingsAPI.user.get(defaultTableViewKey);
             if (roleDefaultResponse.data?.value !== undefined) {
-              console.log('[ProjectsScreen] Loaded role default table view setting:', roleDefaultResponse.data.value);
+
               if (roleDefaultResponse.data.value === true) {
                 (navigation as any).navigate('ProjectTableView');
               }
@@ -80,7 +80,7 @@ const ProjectsScreen = () => {
             if (error.response?.status !== 404) {
               throw error;
             }
-            console.log('[ProjectsScreen] No table view preference found, staying on list view');
+
           }
         } catch (error) {
           console.error('[ProjectsScreen] Error checking default view:', error);

@@ -121,21 +121,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const logout = useCallback(async () => {
     try {
-      console.log('[AuthContext] Logging out...');
 
       // Clear state FIRST to trigger immediate UI update
       setToken(null);
       setUser(null);
-      console.log('[AuthContext] Cleared state');
 
       // Then clear AsyncStorage
       await AsyncStorage.removeItem('authToken');
       await AsyncStorage.removeItem('user');
-      console.log('[AuthContext] Cleared AsyncStorage');
 
       // Force clear localStorage on web
       if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        console.log('[AuthContext] Clearing localStorage...');
+
         try {
           window.localStorage.removeItem('authToken');
           window.localStorage.removeItem('user');
@@ -145,7 +142,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
 
         // Give React time to update UI before reload
-        console.log('[AuthContext] Reloading page in 200ms...');
+
         setTimeout(() => {
           window.location.href = '/';
         }, 200);
