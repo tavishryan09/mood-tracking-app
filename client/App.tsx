@@ -25,6 +25,11 @@ const ThemedApp = () => {
   // Get the status bar background color from element mapping
   const statusBarColor = getColorForElement('global', 'statusBarBackground');
 
+  // Debug: Log the status bar color
+  useEffect(() => {
+    console.log('[App] Status bar color:', statusBarColor);
+  }, [statusBarColor]);
+
   // Set status bar color on mount and when theme changes
   useEffect(() => {
     if (Platform.OS === 'android') {
@@ -41,7 +46,7 @@ const ThemedApp = () => {
           <PlanningColorsProvider>
             <AppNavigator />
             {Platform.OS === 'ios' && <ExpoStatusBar style="light" backgroundColor={statusBarColor} />}
-            {Platform.OS === 'android' && <ExpoStatusBar style="light" />}
+            {Platform.OS === 'android' && <ExpoStatusBar style="light" backgroundColor={statusBarColor} />}
           </PlanningColorsProvider>
           <InstallPrompt />
         </View>
