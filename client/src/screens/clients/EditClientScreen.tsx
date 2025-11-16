@@ -133,18 +133,18 @@ const EditClientScreen = ({ route, navigation }: any) => {
       const contacts = [
         {
           name: primaryContactName,
-          title: primaryContactTitle || undefined,
-          email: primaryContactEmail || undefined,
-          phone: primaryContactPhone || undefined,
+          title: primaryContactTitle || null,
+          email: primaryContactEmail || null,
+          phone: primaryContactPhone || null,
           isPrimary: true,
         },
         ...additionalContacts
           .filter(contact => contact.name.trim())
           .map(contact => ({
             name: contact.name,
-            title: contact.title || undefined,
-            email: contact.email || undefined,
-            phone: contact.phone || undefined,
+            title: contact.title || null,
+            email: contact.email || null,
+            phone: contact.phone || null,
             isPrimary: false,
           })),
       ];
@@ -152,10 +152,10 @@ const EditClientScreen = ({ route, navigation }: any) => {
       const clientData = {
         name: businessName,
         company: businessName,
-        address: address || undefined,
-        notes: notes || undefined,
-        email: primaryContactEmail || undefined,
-        phone: primaryContactPhone || undefined,
+        address: address || null,
+        notes: notes || null,
+        email: primaryContactEmail || null,
+        phone: primaryContactPhone || null,
         contacts: contacts,
       };
 
