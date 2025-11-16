@@ -290,6 +290,7 @@ const styles = StyleSheet.create({
   card: {
     marginBottom: 15,
     elevation: 2,
+    borderRadius: 10,
   },
   cardHeader: {
     flexDirection: 'row',

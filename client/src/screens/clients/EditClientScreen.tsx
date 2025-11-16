@@ -427,6 +427,7 @@ const styles = StyleSheet.create({
   section: {
     marginBottom: 20,
     elevation: 2,
+    borderRadius: 10,
   },
   sectionTitle: {
     fontSize: 18,
