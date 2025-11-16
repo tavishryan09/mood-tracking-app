@@ -5,6 +5,7 @@ import { HugeiconsIcon } from '@hugeicons/react-native';
 import { UserAdd02Icon } from '@hugeicons/core-free-icons';
 import { clientsAPI } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useCustomColorTheme } from '../../contexts/CustomColorThemeContext';
 import { CustomDialog } from '../../components/CustomDialog';
 
 interface Contact {
@@ -18,7 +19,12 @@ interface Contact {
 
 const EditClientScreen = ({ route, navigation }: any) => {
   const { currentColors } = useTheme();
+  const { getColorForElement } = useCustomColorTheme();
   const { clientId } = route.params;
+
+  // Get clients theme colors
+  const clientsBg = getColorForElement('clients', 'background');
+  const clientCardBg = getColorForElement('clients', 'clientCardBackground');
 
   // Business/Company information
   const [businessName, setBusinessName] = useState('');
@@ -198,12 +204,12 @@ const EditClientScreen = ({ route, navigation }: any) => {
   }
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: currentColors.background.bg700 }]}>
+    <ScrollView style={[styles.container, { backgroundColor: clientsBg }]}>
       <View style={styles.content}>
         <Title style={[styles.mainTitle, { color: currentColors.text }]}>Edit Client</Title>
 
         {/* Business Information Section */}
-        <Card style={styles.section}>
+        <Card style={[styles.section, { backgroundColor: clientCardBg }]}>
           <Card.Content>
             <Title style={[styles.sectionTitle, { color: currentColors.primary }]}>Business Information</Title>
 
@@ -239,7 +245,7 @@ const EditClientScreen = ({ route, navigation }: any) => {
         </Card>
 
         {/* Primary Contact Section */}
-        <Card style={styles.section}>
+        <Card style={[styles.section, { backgroundColor: clientCardBg }]}>
           <Card.Content>
             <Title style={[styles.sectionTitle, { color: currentColors.primary }]}>Primary Contact</Title>
 
@@ -282,7 +288,7 @@ const EditClientScreen = ({ route, navigation }: any) => {
         </Card>
 
         {/* Additional Contacts Section */}
-        <Card style={styles.section}>
+        <Card style={[styles.section, { backgroundColor: clientCardBg }]}>
           <Card.Content>
             <View style={styles.sectionHeader}>
               <Title style={[styles.sectionTitle, { color: currentColors.primary }]}>Additional Contacts</Title>
