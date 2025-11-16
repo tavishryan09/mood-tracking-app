@@ -28,7 +28,7 @@ export const getSetting = async (req: Request, res: Response, next: NextFunction
 
     res.json(setting);
   } catch (error) {
-    console.error('[getSetting] Error fetching setting:', key, error);
+    console.error('[getSetting] Error fetching setting:', error);
     next(error);
   }
 };
