@@ -13,18 +13,18 @@ import { CustomDialog } from '../../components/CustomDialog';
 
 const { width } = Dimensions.get('window');
 const TABLE_WIDTH = width > 1800 ? 1800 : width - 40;
-const PROJECT_NUM_WIDTH = 140;
-const PROJECT_NAME_WIDTH = 250;
-const CLIENT_WIDTH = 200;
-const COMMON_NAME_WIDTH = 200;
-const HOURS_WIDTH = 100;
-const HOURS_WEEK_WIDTH = 120;
-const HOURS_MONTH_WIDTH = 120;
-const HOURS_QUARTER_WIDTH = 120;
-const PROJECT_VALUE_WIDTH = 150;
-const BILLABLE_AMOUNT_WIDTH = 150;
-const PROGRESS_WIDTH = 120;
-const ACTIONS_WIDTH = 100;
+const PROJECT_NUM_WIDTH = 110;
+const PROJECT_NAME_WIDTH = 220;
+const CLIENT_WIDTH = 180;
+const COMMON_NAME_WIDTH = 150;
+const HOURS_WIDTH = 90;
+const HOURS_WEEK_WIDTH = 90;
+const HOURS_MONTH_WIDTH = 100;
+const HOURS_QUARTER_WIDTH = 100;
+const PROJECT_VALUE_WIDTH = 130;
+const BILLABLE_AMOUNT_WIDTH = 130;
+const PROGRESS_WIDTH = 100;
+const ACTIONS_WIDTH = 90;
 
 interface Project {
   id: string;
