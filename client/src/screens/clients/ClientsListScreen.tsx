@@ -10,15 +10,15 @@ import { useCustomColorTheme } from '../../contexts/CustomColorThemeContext';
 
 const ClientsListScreen = () => {
   const { currentColors } = useTheme();
-  const { getElementColor } = useCustomColorTheme();
+  const { getColorForElement } = useCustomColorTheme();
 
   // Get clients theme colors
-  const clientsBg = getElementColor('clients', 'background');
-  const clientCardBg = getElementColor('clients', 'clientCardBackground');
-  const clientCardText = getElementColor('clients', 'clientCardText');
-  const clientCardBorder = getElementColor('clients', 'clientCardBorder');
-  const addButtonBg = getElementColor('clients', 'addButtonBackground');
-  const addButtonIcon = getElementColor('clients', 'addButtonIcon');
+  const clientsBg = getColorForElement('clients', 'background');
+  const clientCardBg = getColorForElement('clients', 'clientCardBackground');
+  const clientCardText = getColorForElement('clients', 'clientCardText');
+  const clientCardBorder = getColorForElement('clients', 'clientCardBorder');
+  const addButtonBg = getColorForElement('clients', 'addButtonBackground');
+  const addButtonIcon = getColorForElement('clients', 'addButtonIcon');
   const navigation = useNavigation();
   const [clients, setClients] = useState<any[]>([]);
   const [filteredClients, setFilteredClients] = useState<any[]>([]);
