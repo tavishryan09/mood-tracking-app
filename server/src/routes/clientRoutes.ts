@@ -17,7 +17,8 @@ router.use(authenticate);
 // Validation rules
 const clientValidation = [
   body('name').notEmpty().withMessage('Client name is required'),
-  body('email').optional().isEmail().withMessage('Please provide a valid email'),
+  // Email validation removed - now handled via contacts array
+  // Contacts are validated separately in the controller
 ];
 
 // Routes
