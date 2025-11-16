@@ -22,7 +22,7 @@ export const getAllClients = async (req: AuthRequest, res: Response) => {
           },
         },
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { name: 'asc' },
     });
 
     res.json(clients);
