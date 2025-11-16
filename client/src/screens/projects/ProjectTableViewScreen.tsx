@@ -1502,9 +1502,10 @@ const getStyles = (currentColors: any) => StyleSheet.create({
   },
   headerText: {
     color: currentColors.white,
-    fontWeight: '700',
+    fontWeight: '900',
     fontSize: 13,
     textTransform: 'capitalize',
+    fontFamily: 'Juana',
   },
   sortIndicator: {
     color: currentColors.white,
