@@ -19,6 +19,10 @@ const ClientsListScreen = () => {
   const clientCardBorder = getColorForElement('clients', 'clientCardBorder');
   const addButtonBg = getColorForElement('clients', 'addButtonBackground');
   const addButtonIcon = getColorForElement('clients', 'addButtonIcon');
+  const searchIconColor = getColorForElement('clients', 'searchIconColor');
+  const searchTextColor = getColorForElement('clients', 'searchTextColor');
+  const searchBarBg = getColorForElement('clients', 'searchBarBackground');
+  const searchSectionBg = getColorForElement('clients', 'searchSectionBackground');
   const navigation = useNavigation();
   const [clients, setClients] = useState<any[]>([]);
   const [filteredClients, setFilteredClients] = useState<any[]>([]);
@@ -197,13 +201,17 @@ const ClientsListScreen = () => {
 
   return (
     <View style={[styles.container, { backgroundColor: clientsBg }]}>
-      <Searchbar
-        placeholder="Search clients..."
-        onChangeText={setSearchQuery}
-        value={searchQuery}
-        style={styles.searchbar}
-        icon={() => <HugeiconsIcon icon={Search01Icon} size={24} color={currentColors.icon} />}
-      />
+      <View style={{ backgroundColor: searchSectionBg }}>
+        <Searchbar
+          placeholder="Search clients..."
+          onChangeText={setSearchQuery}
+          value={searchQuery}
+          style={[styles.searchbar, { backgroundColor: searchBarBg }]}
+          inputStyle={{ color: searchTextColor }}
+          placeholderTextColor={currentColors.textTertiary}
+          icon={() => <HugeiconsIcon icon={Search01Icon} size={24} color={searchIconColor} />}
+        />
+      </View>
 
       {filteredClients.length === 0 ? (
         <View style={styles.emptyContainer}>
