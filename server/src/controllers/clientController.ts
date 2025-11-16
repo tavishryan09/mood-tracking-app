@@ -132,13 +132,13 @@ export const updateClient = async (req: AuthRequest, res: Response) => {
     });
 
     // Create contacts data if provided
+    // Note: Don't include clientId here - Prisma handles it automatically in nested create
     const contactsData = contacts && Array.isArray(contacts) ? contacts.map((contact: any) => ({
       name: contact.name,
       title: contact.title || null,
       email: contact.email || null,
       phone: contact.phone || null,
       isPrimary: contact.isPrimary || false,
-      clientId: id,
     })) : [];
 
     const client = await prisma.client.update({
