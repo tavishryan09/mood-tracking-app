@@ -169,10 +169,18 @@ const EditClientScreen = ({ route, navigation }: any) => {
       setShowSuccessDialog(true);
     } catch (error: any) {
       console.error('Client update error:', error);
+      console.error('Error response:', error.response?.data);
 
-      const message = error.message === 'Request timeout'
-        ? 'Unable to connect to server. Please check your connection and try again.'
-        : error.response?.data?.error || 'Failed to update client';
+      let message = 'Failed to update client';
+
+      if (error.message === 'Request timeout') {
+        message = 'Unable to connect to server. Please check your connection and try again.';
+      } else if (error.response?.data?.errors && Array.isArray(error.response.data.errors)) {
+        // Express-validator errors
+        message = error.response.data.errors.map((err: any) => err.msg).join('\n');
+      } else if (error.response?.data?.error) {
+        message = error.response.data.error;
+      }
 
       setErrorMessage(message);
       setShowErrorDialog(true);
