@@ -96,18 +96,18 @@ export default function App() {
           width: 100%;
         }
 
-        /* Force Josefin Sans to override React Native Web inline styles */
+        /* Force Josefin Sans with !important to override React Native Web inline styles */
         * {
-          font-family: 'Josefin Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          font-family: 'Josefin Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
         }
 
         body, body *, div, span, p, h1, h2, h3, h4, h5, h6, button, input, textarea, select {
-          font-family: 'Josefin Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          font-family: 'Josefin Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
         }
 
         /* Target React Native Web text elements specifically */
         [dir="auto"] {
-          font-family: 'Josefin Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          font-family: 'Josefin Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
         }
 
         /* Override for Juana font - must come after Josefin Sans rules */
