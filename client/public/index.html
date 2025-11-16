@@ -51,9 +51,14 @@
         font-display: swap;
       }
 
-      /* Force Juana font on planning headers */
-      .juana-font,
-      [dir="auto"].juana-font {
+      /* Force Juana font on planning headers - override React Native Web */
+      [dir="auto"] {
+        font-family: 'Josefin Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        font-weight: 300;
+      }
+
+      .juana-font[dir="auto"],
+      .juana-font {
         font-family: 'Juana', sans-serif !important;
         font-weight: 900 !important;
       }
