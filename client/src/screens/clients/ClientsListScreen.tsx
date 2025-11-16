@@ -6,9 +6,19 @@ import { HugeiconsIcon } from '@hugeicons/react-native';
 import { Search01Icon, AddCircleIcon, PencilEdit02Icon, Cancel01Icon } from '@hugeicons/core-free-icons';
 import { clientsAPI } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
+import { useCustomColorTheme } from '../../contexts/CustomColorThemeContext';
 
 const ClientsListScreen = () => {
   const { currentColors } = useTheme();
+  const { getElementColor } = useCustomColorTheme();
+
+  // Get clients theme colors
+  const clientsBg = getElementColor('clients', 'background');
+  const clientCardBg = getElementColor('clients', 'clientCardBackground');
+  const clientCardText = getElementColor('clients', 'clientCardText');
+  const clientCardBorder = getElementColor('clients', 'clientCardBorder');
+  const addButtonBg = getElementColor('clients', 'addButtonBackground');
+  const addButtonIcon = getElementColor('clients', 'addButtonIcon');
   const navigation = useNavigation();
   const [clients, setClients] = useState<any[]>([]);
   const [filteredClients, setFilteredClients] = useState<any[]>([]);
@@ -98,11 +108,11 @@ const ClientsListScreen = () => {
         onPress={() => (navigation as any).navigate('EditClient', { clientId: item.id })}
         activeOpacity={0.7}
       >
-        <Card style={styles.card}>
+        <Card style={[styles.card, { backgroundColor: clientCardBg, borderColor: clientCardBorder, borderWidth: 1 }]}>
           <Card.Content>
             <View style={styles.cardHeader}>
               <View style={styles.titleContainer}>
-                <Title>{item.name}</Title>
+                <Title style={{ color: clientCardText }}>{item.name}</Title>
                 {item.company && item.company !== item.name && (
                   <Paragraph style={[styles.company, { color: currentColors.textSecondary }]}>{item.company}</Paragraph>
                 )}
@@ -186,7 +196,7 @@ const ClientsListScreen = () => {
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: currentColors.background.bg700 }]}>
+    <View style={[styles.container, { backgroundColor: clientsBg }]}>
       <Searchbar
         placeholder="Search clients..."
         onChangeText={setSearchQuery}
@@ -211,8 +221,8 @@ const ClientsListScreen = () => {
       )}
 
       <FAB
-        style={[styles.fab, { backgroundColor: currentColors.primary }]}
-        icon={() => <HugeiconsIcon icon={AddCircleIcon} size={24} color="#FFFFFF" />}
+        style={[styles.fab, { backgroundColor: addButtonBg }]}
+        icon={() => <HugeiconsIcon icon={AddCircleIcon} size={24} color={addButtonIcon} />}
         label="New Client"
         onPress={() => {
           (navigation as any).navigate('CreateClient');
