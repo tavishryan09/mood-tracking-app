@@ -670,8 +670,8 @@ const ProjectTableViewScreen = () => {
                 onPress={() => handleHeaderClick('projectNumber')}
                 activeOpacity={0.7}
               >
-                <View className="juana-header" style={styles.headerContent}>
-                  <Text style={[styles.headerText, { color: tableHeaderText }]}>Project #</Text>
+                <View style={styles.headerContent}>
+                  <Text style={[styles.headerText, { color: tableHeaderText, fontFamily: 'Juana' }]}>Project #</Text>
                   {renderSortIndicator('projectNumber')}
                 </View>
               </TouchableOpacity>
@@ -682,8 +682,8 @@ const ProjectTableViewScreen = () => {
                 onPress={() => handleHeaderClick('name')}
                 activeOpacity={0.7}
               >
-                <View className="juana-header" style={styles.headerContent}>
-                  <Text style={[styles.headerText, { color: tableHeaderText }]}>Project Name</Text>
+                <View style={styles.headerContent}>
+                  <Text style={[styles.headerText, { color: tableHeaderText, fontFamily: 'Juana' }]}>Project Name</Text>
                   {renderSortIndicator('name')}
                 </View>
               </TouchableOpacity>
@@ -694,8 +694,8 @@ const ProjectTableViewScreen = () => {
                 onPress={() => handleHeaderClick('client')}
                 activeOpacity={0.7}
               >
-                <View className="juana-header" style={styles.headerContent}>
-                  <Text style={[styles.headerText, { color: tableHeaderText }]}>Client</Text>
+                <View style={styles.headerContent}>
+                  <Text style={[styles.headerText, { color: tableHeaderText, fontFamily: 'Juana' }]}>Client</Text>
                   {renderSortIndicator('client')}
                 </View>
               </TouchableOpacity>
@@ -714,8 +714,8 @@ const ProjectTableViewScreen = () => {
                 onPress={() => handleHeaderClick('description')}
                 activeOpacity={0.7}
               >
-                <View className="juana-header" style={styles.headerContent}>
-                  <Text style={[styles.headerText, { color: tableHeaderText }]}>Common Name</Text>
+                <View style={styles.headerContent}>
+                  <Text style={[styles.headerText, { color: tableHeaderText, fontFamily: 'Juana' }]}>Common Name</Text>
                   {renderSortIndicator('description')}
                 </View>
               </TouchableOpacity>
@@ -727,7 +727,7 @@ const ProjectTableViewScreen = () => {
                 activeOpacity={0.7}
               >
                 <View style={styles.headerContent}>
-                  <Text style={[styles.headerText, { color: tableHeaderText }]}>Hours</Text>
+                  <Text style={[styles.headerText, { color: tableHeaderText, fontFamily: 'Juana' }]}>Hours</Text>
                   {renderSortIndicator('hours')}
                 </View>
               </TouchableOpacity>
@@ -739,7 +739,7 @@ const ProjectTableViewScreen = () => {
                 activeOpacity={0.7}
               >
                 <View style={styles.headerContent}>
-                  <Text style={[styles.headerText, { color: tableHeaderText }]}>This Week</Text>
+                  <Text style={[styles.headerText, { color: tableHeaderText, fontFamily: 'Juana' }]}>This Week</Text>
                   {renderSortIndicator('hoursWeek')}
                 </View>
               </TouchableOpacity>
@@ -751,7 +751,7 @@ const ProjectTableViewScreen = () => {
                 activeOpacity={0.7}
               >
                 <View style={styles.headerContent}>
-                  <Text style={[styles.headerText, { color: tableHeaderText }]}>This Month</Text>
+                  <Text style={[styles.headerText, { color: tableHeaderText, fontFamily: 'Juana' }]}>This Month</Text>
                   {renderSortIndicator('hoursMonth')}
                 </View>
               </TouchableOpacity>
@@ -763,7 +763,7 @@ const ProjectTableViewScreen = () => {
                 activeOpacity={0.7}
               >
                 <View style={styles.headerContent}>
-                  <Text style={[styles.headerText, { color: tableHeaderText }]}>This Quarter</Text>
+                  <Text style={[styles.headerText, { color: tableHeaderText, fontFamily: 'Juana' }]}>This Quarter</Text>
                   {renderSortIndicator('hoursQuarter')}
                 </View>
               </TouchableOpacity>
@@ -775,7 +775,7 @@ const ProjectTableViewScreen = () => {
                 activeOpacity={0.7}
               >
                 <View style={styles.headerContent}>
-                  <Text style={[styles.headerText, { color: tableHeaderText }]}>Project Value</Text>
+                  <Text style={[styles.headerText, { color: tableHeaderText, fontFamily: 'Juana' }]}>Project Value</Text>
                   {renderSortIndicator('projectValue')}
                 </View>
               </TouchableOpacity>
@@ -787,7 +787,7 @@ const ProjectTableViewScreen = () => {
                 activeOpacity={0.7}
               >
                 <View style={styles.headerContent}>
-                  <Text style={[styles.headerText, { color: tableHeaderText }]}>Est. Billable</Text>
+                  <Text style={[styles.headerText, { color: tableHeaderText, fontFamily: 'Juana' }]}>Est. Billable</Text>
                   {renderSortIndicator('billableAmount')}
                 </View>
               </TouchableOpacity>
@@ -799,15 +799,13 @@ const ProjectTableViewScreen = () => {
                 activeOpacity={0.7}
               >
                 <View style={styles.headerContent}>
-                  <Text style={[styles.headerText, { color: tableHeaderText }]}>Progress %</Text>
+                  <Text style={[styles.headerText, { color: tableHeaderText, fontFamily: 'Juana' }]}>Progress %</Text>
                   {renderSortIndicator('progress')}
                 </View>
               </TouchableOpacity>
             )}
             <View style={[styles.headerCell, { width: ACTIONS_WIDTH }]}>
-              <View className="juana-header">
-                <Text style={[styles.headerText, { color: tableHeaderText }]}>Actions</Text>
-              </View>
+              <Text style={[styles.headerText, { color: tableHeaderText, fontFamily: 'Juana' }]}>Actions</Text>
             </View>
           </View>
 
