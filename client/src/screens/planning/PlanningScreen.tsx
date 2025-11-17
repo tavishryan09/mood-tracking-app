@@ -74,13 +74,13 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
     loadData: hookLoadData,
   } = dataHook;
 
-  // Use hook values with fallback to local state during transition
-  const users = hookUsers.length > 0 ? hookUsers : [];
-  const projects = hookProjects.length > 0 ? hookProjects : [];
-  const filteredProjects = hookFilteredProjects.length > 0 ? hookFilteredProjects : [];
-  const blockAssignments = Object.keys(hookBlockAssignments).length > 0 ? hookBlockAssignments : {};
-  const deadlineTasks = hookDeadlineTasks.length > 0 ? hookDeadlineTasks : [];
-  const visibleUserIds = hookVisibleUserIds.length > 0 ? hookVisibleUserIds : [];
+  // Use hook values directly (no fallback needed - hook manages state)
+  const users = hookUsers;
+  const projects = hookProjects;
+  const filteredProjects = hookFilteredProjects;
+  const blockAssignments = hookBlockAssignments;
+  const deadlineTasks = hookDeadlineTasks;
+  const visibleUserIds = hookVisibleUserIds;
   const loading = hookLoading;
   const currentQuarter = hookCurrentQuarter;
   const currentWeekStart = hookCurrentWeekStart;

@@ -171,9 +171,10 @@ export const usePlanningData = (): UsePlanningDataReturn => {
       setBlockAssignments(assignments);
 
       // Load user preferences: try database first, then global defaults
+      let userIds: string[] | null = null;
+      let visibleIds: string[] | null = null;
+
       try {
-        let userIds: string[] | null = null;
-        let visibleIds: string[] | null = null;
 
         // Try to load user-specific preferences from database
         try {
