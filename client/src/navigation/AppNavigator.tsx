@@ -577,14 +577,45 @@ const AppNavigator = () => {
             'OAuthCallback': 'callback',
           },
         },
-        // Main screens - shared paths for both desktop and mobile
-        'Dashboard': '',
-        'Planning': 'planning',
-        'Projects': 'projects',
-        'Profile': 'profile',
-        'Clients': 'clients',
-        'ProjectTableView': 'projects/table',
-        // Stack screens
+        // Desktop MainDrawer with empty path so it doesn't appear in URL
+        'MainDrawer': {
+          path: '',
+          screens: {
+            'Dashboard': '',
+            'Planning': 'planning',
+            'Projects': 'projects',
+            'Profile': 'profile',
+            'Clients': 'clients',
+            'ProjectTableView': 'projects/table',
+            'CreateEvent': 'events/create',
+            'EditEvent': 'events/edit/:eventId',
+            'CreateProject': 'projects/create',
+            'EditProject': 'projects/edit/:projectId',
+            'CreateClient': 'clients/create',
+            'EditClient': 'clients/edit/:clientId',
+            'ManageUsers': 'admin/users',
+            'InviteUser': 'admin/users/invite',
+            'EditUser': 'admin/users/edit/:userId',
+            'TeamViewSettings': 'admin/settings/team-view',
+            'UserRates': 'admin/users/rates',
+            'PlanningColors': 'profile/planning-colors',
+            'CustomColorManager': 'profile/colors/manager',
+            'ElementColorMapper': 'profile/colors/mapper',
+            'ManageCustomThemes': 'profile/colors/themes',
+          },
+        },
+        // Mobile MainTabs with same paths
+        'MainTabs': {
+          path: '',
+          screens: {
+            'Dashboard': '',
+            'Planning': 'planning',
+            'Projects': 'projects',
+            'Profile': 'profile',
+            'Clients': 'clients',
+          },
+        },
+        // Stack screens for mobile
         'CreateEvent': 'events/create',
         'EditEvent': 'events/edit/:eventId',
         'CreateProject': 'projects/create',
