@@ -20,6 +20,7 @@ import ManageTeamMembersModal from '../../components/planning/ManageTeamMembersM
 import ProjectAssignmentModal from '../../components/planning/ProjectAssignmentModal';
 import { usePlanningNavigation } from '../../hooks/usePlanningNavigation';
 import { usePlanningData } from '../../hooks/usePlanningData';
+import { usePlanningDragDrop } from '../../hooks/usePlanningDragDrop';
 
 const { width } = Dimensions.get('window');
 const WEEK_WIDTH = width > 1200 ? 1200 : width - 40; // Max width for week view
@@ -102,13 +103,55 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
   const setDeadlineTasks = hookSetDeadlineTasks;
   const setVisibleUserIds = hookSetVisibleUserIds;
 
+  // Drag & Drop hook
+  const dragDropHook = usePlanningDragDrop({
+    blockAssignments,
+    setBlockAssignments,
+    deadlineTasks,
+    setDeadlineTasks,
+    users,
+    setUsers,
+    currentQuarter,
+    hookLoadData,
+    setErrorMessage,
+    setShowErrorDialog,
+    invalidateDashboardQueries,
+  });
+
+  // Extract drag & drop values and handlers
+  const {
+    draggedTask,
+    dragOverCell,
+    handleTaskDragStart,
+    handleTaskDragOver,
+    handleTaskDrop,
+    handleTaskDragEnd,
+    draggedDeadlineTask,
+    dragOverDeadlineCell,
+    handleDeadlineTaskDragStart,
+    handleDeadlineCellDragOver,
+    handleDeadlineTaskDrop,
+    handleDeadlineTaskDragEnd,
+    draggingEdge,
+    isDraggingEdgeRef,
+    handleEdgeDragStart,
+    draggedUserId,
+    dragOverUserId,
+    handleUserDragStart: handleDragStart,
+    handleUserDragOver: handleDragOver,
+    handleUserDrop: handleDrop,
+    handleUserDragEnd: handleDragEnd,
+  } = dragDropHook;
+
   const scrollViewRef = useRef<ScrollView>(null);
   const scrollContainerRef = navigationHook.scrollContainerRef;
   const currentWeekRef = useRef<HTMLElement>(null);
   const [hasScrolled, setHasScrolled] = useState(false);
   const [showManageModal, setShowManageModal] = useState(false);
-  const [draggedUserId, setDraggedUserId] = useState<string | null>(null);
-  const [dragOverUserId, setDragOverUserId] = useState<string | null>(null);
+
+  // Error dialog state
+  const [errorMessage, setErrorMessage] = useState('');
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
 
   // View preferences
   const [showWeekendsDefault, setShowWeekendsDefault] = useState(false);
@@ -157,15 +200,6 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
 
   // Hover state
   const [hoveredBlock, setHoveredBlock] = useState<string | null>(null);
-  const [draggingEdge, setDraggingEdge] = useState<{
-    blockKey: string;
-    edge: 'top' | 'bottom';
-    startY: number;
-    userId: string;
-    date: string;
-    blockIndex: number;
-    initialSpan: number;
-  } | null>(null);
 
   // Copy/paste state
   const [selectedCell, setSelectedCell] = useState<string | null>(null);
@@ -286,23 +320,6 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
     queryClient.invalidateQueries({ queryKey: ['deadlines', 'upcoming'] });
   }, [queryClient, user?.id]);
 
-  // Drag and drop state for moving tasks
-  const [draggedTask, setDraggedTask] = useState<{
-    id: string;
-    userId: string;
-    date: string;
-    blockIndex: number;
-    projectId: string;
-    projectName: string;
-    task?: string;
-    span: number;
-  } | null>(null);
-  const [dragOverCell, setDragOverCell] = useState<string | null>(null);
-
-  // Drag and drop state for deadline tasks
-  const [draggedDeadlineTask, setDraggedDeadlineTask] = useState<DeadlineTask | null>(null);
-  const [dragOverDeadlineCell, setDragOverDeadlineCell] = useState<string | null>(null);
-
   // Deadline tasks state
   const [showDeadlineModal, setShowDeadlineModal] = useState(false);
   const [selectedDeadlineSlot, setSelectedDeadlineSlot] = useState<{
@@ -313,9 +330,6 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
 
   // Ref to store the span at the start of drag (for collapse detection)
   const dragStartSpanRef = useRef<number>(1);
-
-  // Ref to track if we're currently dragging an edge (to prevent cell drag)
-  const isDraggingEdgeRef = useRef<boolean>(false);
 
   // Generate color options from current palette's iOS colors only
   const colorOptions: Array<{ label: string; value: string }> = React.useMemo(() => {
@@ -463,327 +477,14 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
     });
   };
 
-  // Handle drag start
-  const handleDragStart = (userId: string) => {
-    setDraggedUserId(userId);
-  };
 
-  // Handle drag over
-  const handleDragOver = (userId: string) => {
-    if (draggedUserId && draggedUserId !== userId) {
-      setDragOverUserId(userId);
-    }
-  };
 
-  // Handle drop - reorder users
-  const handleDrop = (targetUserId: string) => {
-    if (!draggedUserId || draggedUserId === targetUserId) {
-      setDraggedUserId(null);
-      setDragOverUserId(null);
-      return;
-    }
 
-    // Reorder the users array
-    const newUsers = [...users];
-    const draggedIndex = newUsers.findIndex((u) => u.id === draggedUserId);
-    const targetIndex = newUsers.findIndex((u) => u.id === targetUserId);
-
-    if (draggedIndex !== -1 && targetIndex !== -1) {
-      // Remove dragged user
-      const [draggedUser] = newUsers.splice(draggedIndex, 1);
-      // Insert at target position
-      newUsers.splice(targetIndex, 0, draggedUser);
-      setUsers(newUsers);
-    }
-
-    setDraggedUserId(null);
-    setDragOverUserId(null);
-  };
-
-  // Handle drag end
-  const handleDragEnd = () => {
-    setDraggedUserId(null);
-    setDragOverUserId(null);
-  };
-
-  // Handle task drag start
-  const handleTaskDragStart = (e: any, userId: string, date: string, blockIndex: number) => {
-    const blockKey = `${userId}-${date}-${blockIndex}`;
-    const assignment = blockAssignments[blockKey];
-
-    if (!assignment || !assignment.id) {
-      return;
-    }
-
-    setDraggedTask({
-      id: assignment.id,
-      userId,
-      date,
-      blockIndex,
-      projectId: assignment.projectId,
-      projectName: assignment.projectName,
-      task: assignment.task,
-      span: assignment.span,
-    });
-
-  };
-
-  // Handle task drag over cell
-  const handleTaskDragOver = (e: any, userId: string, date: string, blockIndex: number) => {
-    e.preventDefault();
-
-    if (!draggedTask) {
-
-      return;
-    }
-
-    // Check if all cells needed for the span are available
-    const span = draggedTask.span;
-    let canDrop = true;
-
-    // Check if span would exceed block limit
-    if (blockIndex + span > 4) {
-
-      canDrop = false;
-    }
-
-    // Check each cell in the span
-    if (canDrop) {
-      for (let i = 0; i < span; i++) {
-        const checkBlockKey = `${userId}-${date}-${blockIndex + i}`;
-        const sourceBlockKey = `${draggedTask.userId}-${draggedTask.date}-${draggedTask.blockIndex}`;
-
-        // Allow dropping on the source location
-        if (checkBlockKey !== sourceBlockKey) {
-          const existingAssignment = blockAssignments[checkBlockKey];
-          if (existingAssignment) {
-
-            canDrop = false;
-            break;
-          }
-        }
-      }
-    }
-
-    // Set drag over highlight for all cells in the span (or null if can't drop)
-    if (canDrop) {
-      const blockKey = `${userId}-${date}-${blockIndex}`;
-
-      setDragOverCell(blockKey);
-    } else {
-
-      setDragOverCell(null);
-    }
-  };
-
-  // Handle task drop
-  const handleTaskDrop = async (e: any, targetUserId: string, targetDate: string, targetBlockIndex: number) => {
-    e.preventDefault();
-
-    if (!draggedTask) {
-      return;
-    }
-
-    const targetBlockKey = `${targetUserId}-${targetDate}-${targetBlockIndex}`;
-    const sourceBlockKey = `${draggedTask.userId}-${draggedTask.date}-${draggedTask.blockIndex}`;
-
-    // Can't drop on the same cell
-    if (targetBlockKey === sourceBlockKey) {
-      setDraggedTask(null);
-      setDragOverCell(null);
-      return;
-    }
-
-    // Check if span would exceed block limit
-    const span = draggedTask.span;
-    if (targetBlockIndex + span > 4) {
-
-      setErrorMessage('Cannot move task here - would exceed available blocks');
-      setShowErrorDialog(true);
-      setDraggedTask(null);
-      setDragOverCell(null);
-      return;
-    }
-
-    // Check if ALL cells needed for the span are empty
-    for (let i = 0; i < span; i++) {
-      const checkBlockKey = `${targetUserId}-${targetDate}-${targetBlockIndex + i}`;
-
-      // Skip checking the source cell (we're moving from there)
-      if (checkBlockKey === sourceBlockKey) {
-        continue;
-      }
-
-      const existingAssignment = blockAssignments[checkBlockKey];
-      if (existingAssignment) {
-
-        setErrorMessage('Cannot move task here - target cells are not empty');
-        setShowErrorDialog(true);
-        setDraggedTask(null);
-        setDragOverCell(null);
-        return;
-      }
-    }
-
-    try {
-      // Update the task to move it to the new location
-      // This preserves all properties including status events and ensures proper Outlook sync
-      const response = await planningTasksAPI.update(draggedTask.id, {
-        userId: targetUserId,
-        date: targetDate,
-        blockIndex: targetBlockIndex,
-      });
-
-      // Format the task data the same way we do in loadData
-      const task = response.data;
-      const isStatusEvent = !task.projectId;
-      const hasOutOfOfficeMarker = task.task?.startsWith('[OUT_OF_OFFICE]');
-      const isProjectWithOutOfOffice = task.projectId && hasOutOfOfficeMarker;
-
-      let projectName: string;
-      let taskDescription: string | undefined;
-
-      if (isStatusEvent) {
-        // Pure status event (Out of Office, Time Off, Unavailable)
-        projectName = task.task || '';
-        taskDescription = undefined;
-      } else if (isProjectWithOutOfOffice) {
-        // Project + Out of Office - append status to project name
-        projectName = (task.project?.description || task.project?.name || '') + ' (Out of Office)';
-        // Extract task description after marker
-        taskDescription = task.task.replace('[OUT_OF_OFFICE]', '') || undefined;
-      } else {
-        // Regular project task
-        projectName = task.project?.description || task.project?.name || '';
-        taskDescription = task.task || undefined;
-      }
-
-      // Update state
-      setBlockAssignments(prev => {
-        const newAssignments = { ...prev };
-        // Remove from old location
-        delete newAssignments[sourceBlockKey];
-        // Add to new location with properly formatted display data
-        newAssignments[targetBlockKey] = {
-          id: task.id,
-          projectId: task.projectId,
-          projectName: projectName,
-          task: taskDescription,
-          span: task.span,
-        };
-        return newAssignments;
-      });
-
-      // Invalidate dashboard queries to reflect the changes
-      invalidateDashboardQueries();
-
-    } catch (error) {
-      logger.error('Error moving task:', error, 'PlanningScreen');
-      setErrorMessage('Failed to move task');
-      setShowErrorDialog(true);
-      // Reload to restore correct state
-      await hookLoadData(currentQuarter);
-    }
-
-    setDraggedTask(null);
-    setDragOverCell(null);
-  };
 
   // Handle task drag end
-  const handleTaskDragEnd = () => {
-    setDraggedTask(null);
-    setDragOverCell(null);
-  };
 
   // Handle deadline task drag start
-  const handleDeadlineTaskDragStart = (e: React.DragEvent, task: DeadlineTask) => {
-    e.stopPropagation();
-    setDraggedDeadlineTask(task);
-    if (e.dataTransfer) {
-      e.dataTransfer.effectAllowed = 'move';
-    }
-  };
 
-  // Handle deadline cell drag over
-  const handleDeadlineCellDragOver = (e: React.DragEvent, date: Date, slotIndex: number) => {
-    e.preventDefault();
-    const dateString = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-    const cellKey = `${dateString}-${slotIndex}`;
-    setDragOverDeadlineCell(cellKey);
-  };
-
-  // Handle deadline task drop
-  const handleDeadlineTaskDrop = async (e: React.DragEvent, targetDate: Date, targetSlotIndex: number) => {
-    e.preventDefault();
-
-    if (!draggedDeadlineTask) {
-      return;
-    }
-
-    // Use local date (not UTC) since targetDate is already a local Date object representing the day
-    const targetDateString = `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, '0')}-${String(targetDate.getDate()).padStart(2, '0')}`;
-    const sourceDateObj = new Date(draggedDeadlineTask.date);
-    // Use UTC for source since it comes from the database as UTC
-    const sourceDateString = `${sourceDateObj.getUTCFullYear()}-${String(sourceDateObj.getUTCMonth() + 1).padStart(2, '0')}-${String(sourceDateObj.getUTCDate()).padStart(2, '0')}`;
-
-    // Can't drop on the same slot
-    if (targetDateString === sourceDateString && targetSlotIndex === draggedDeadlineTask.slotIndex) {
-      setDraggedDeadlineTask(null);
-      setDragOverDeadlineCell(null);
-      return;
-    }
-
-    // Check if target slot is already occupied
-    const existingTask = deadlineTasks.find((task) => {
-      const taskDate = new Date(task.date);
-      const taskDateString = `${taskDate.getUTCFullYear()}-${String(taskDate.getUTCMonth() + 1).padStart(2, '0')}-${String(taskDate.getUTCDate()).padStart(2, '0')}`;
-      return taskDateString === targetDateString && task.slotIndex === targetSlotIndex;
-    });
-
-    if (existingTask) {
-      setErrorMessage('Target slot is already occupied');
-      setShowErrorDialog(true);
-      setDraggedDeadlineTask(null);
-      setDragOverDeadlineCell(null);
-      return;
-    }
-
-    try {
-      // Store as 12:01 AM Pacific Time (PT is UTC-8, so 08:01 UTC = 00:01 PST)
-      // This ensures the date is correct for both Pacific and Eastern timezones
-      const targetDateISO = `${targetDateString}T08:01:00.000Z`;
-
-      // Update the deadline task
-      const response = await deadlineTasksAPI.update(draggedDeadlineTask.id, {
-        date: targetDateISO,
-        slotIndex: targetSlotIndex,
-      });
-
-      // Update state with new array to trigger re-render
-      const updatedTasks = deadlineTasks.map((task) =>
-        task.id === draggedDeadlineTask.id ? response.data : task
-      );
-
-      setDeadlineTasks(updatedTasks);
-
-      // Invalidate dashboard queries to reflect the changes
-      invalidateDashboardQueries();
-
-    } catch (error) {
-      logger.error('Error moving deadline task:', error, 'PlanningScreen');
-      setErrorMessage('Failed to move deadline task');
-      setShowErrorDialog(true);
-    }
-
-    setDraggedDeadlineTask(null);
-    setDragOverDeadlineCell(null);
-  };
-
-  // Handle deadline task drag end
-  const handleDeadlineTaskDragEnd = () => {
-    setDraggedDeadlineTask(null);
-    setDragOverDeadlineCell(null);
-  };
 
   // Handle block click (single or double)
   const handleBlockClick = async (userId: string, date: string, blockIndex: number) => {
@@ -866,229 +567,6 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
   };
 
   // Handle edge drag start
-  const handleEdgeDragStart = (userId: string, date: string, blockIndex: number, edge: 'top' | 'bottom', e: any, currentSpan: number) => {
-    // Set flag to prevent cell drag
-    isDraggingEdgeRef.current = true;
-
-    // For web, get clientY from the event
-    const startY = e.clientY || e.nativeEvent?.clientY || e.pageY || e.nativeEvent?.pageY || 0;
-
-    // Store the initial span
-    dragStartSpanRef.current = currentSpan;
-
-    const blockKey = `${userId}-${date}-${blockIndex}`;
-
-    setDraggingEdge({
-      blockKey,
-      edge,
-      startY,
-      userId,
-      date,
-      blockIndex,
-      initialSpan: currentSpan,
-    });
-  };
-
-  // Handle edge drag (global mouse move)
-  useEffect(() => {
-    if (!draggingEdge || Platform.OS !== 'web') {
-
-      return;
-    }
-
-    let lastBlocksMoved = 0;
-
-    const handleMouseMove = (e: MouseEvent | TouchEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-
-      // Get clientY from either mouse or touch event
-      const clientY = 'clientY' in e ? e.clientY : e.touches[0].clientY;
-      const deltaY = clientY - draggingEdge.startY;
-      const blocksMoved = Math.round(deltaY / TIME_BLOCK_HEIGHT);
-
-      // Only process if blocksMoved has changed
-      if (blocksMoved === lastBlocksMoved) {
-
-        return;
-      }
-
-      lastBlocksMoved = blocksMoved;
-
-      const { userId, date, blockIndex, edge, initialSpan } = draggingEdge;
-      const blockKey = `${userId}-${date}-${blockIndex}`;
-
-      // Get the base assignment from the current block
-      const baseAssignment = blockAssignmentsRef.current[blockKey];
-      const baseProjectId = baseAssignment?.projectId;
-      const baseProjectName = baseAssignment?.projectName;
-
-      if (!baseAssignment) {
-
-        return;
-      }
-
-      // Calculate new span based on edge and direction
-      let newSpan = initialSpan;
-      let newBlockIndex = blockIndex;
-
-      if (edge === 'bottom') {
-        // Dragging bottom edge
-        newSpan = initialSpan + blocksMoved;
-        // Clamp to max block index (blockIndex + newSpan - 1 <= 3)
-        newSpan = Math.max(1, Math.min(newSpan, 4 - blockIndex));
-      } else if (edge === 'top') {
-        // Dragging top edge
-        const endBlock = blockIndex + initialSpan - 1;
-        newBlockIndex = blockIndex + blocksMoved;
-        // Clamp to min block index (0)
-        newBlockIndex = Math.max(0, Math.min(newBlockIndex, endBlock));
-        newSpan = endBlock - newBlockIndex + 1;
-      }
-
-      // Check if all blocks in the range are either empty or same project/status
-      let canExpand = true;
-      for (let i = newBlockIndex; i < newBlockIndex + newSpan; i++) {
-        const checkKey = `${userId}-${date}-${i}`;
-        const checkAssignment = blockAssignmentsRef.current[checkKey];
-
-        // For status events (null projectId), compare by project name
-        // For regular projects, compare by projectId
-        if (checkAssignment) {
-          const isSameTask = baseProjectId
-            ? checkAssignment.projectId === baseProjectId
-            : checkAssignment.projectName === baseProjectName;
-
-          if (!isSameTask) {
-            canExpand = false;
-
-            break;
-          }
-        }
-      }
-
-      if (!canExpand) {
-        return;
-      }
-
-      // Update the assignment with new span and potentially new block index
-      setBlockAssignments((prev) => {
-        const newAssignments = { ...prev };
-
-        // Remove old assignment
-        delete newAssignments[blockKey];
-
-        // Add new assignment at new location with new span
-        const newKey = `${userId}-${date}-${newBlockIndex}`;
-        newAssignments[newKey] = {
-          ...baseAssignment,
-          span: newSpan,
-        };
-
-        return newAssignments;
-      });
-    };
-
-    const handleMouseUp = async (e: MouseEvent | TouchEvent) => {
-
-      e.preventDefault();
-      e.stopPropagation();
-
-      // Save span to database
-      if (draggingEdge) {
-        const { userId, date, blockIndex, initialSpan } = draggingEdge;
-        const originalBlockKey = `${userId}-${date}-${blockIndex}`;
-        const originalAssignment = blockAssignmentsRef.current[originalBlockKey];
-        const originalProjectId = originalAssignment?.projectId;
-        const originalProjectName = originalAssignment?.projectName;
-
-        // Find the current assignment (it may have moved)
-        let currentAssignment: any = null;
-        let currentBlockIndex = blockIndex;
-
-        // Search for the assignment with the same project ID/name and date
-        for (const [key, assignment] of Object.entries(blockAssignmentsRef.current)) {
-          if (assignment.id && key.startsWith(`${userId}-${date}-`)) {
-            // For status events (null projectId), compare by project name
-            // For regular projects, compare by projectId
-            const isSameTask = originalProjectId
-              ? assignment.projectId === originalProjectId
-              : assignment.projectName === originalProjectName;
-
-            if (isSameTask) {
-              // Extract the block index from the key using regex to handle UUIDs
-              const match = key.match(/(\d{4}-\d{2}-\d{2})-(\d+)$/);
-              if (match) {
-                currentBlockIndex = parseInt(match[2], 10);
-                currentAssignment = assignment;
-
-                break;
-              }
-            }
-          }
-        }
-
-        if (currentAssignment?.id) {
-          try {
-            const newSpan = currentAssignment.span;
-
-            // For status events (no projectId), the status name is in projectName, not task
-            // For Out of Office events, we need to preserve the [OUT_OF_OFFICE] marker
-            // We need to send it as the task field to preserve it in the database
-            const isStatusEvent = !currentAssignment.projectId;
-            const isOutOfOffice = currentAssignment.projectName?.includes('(Out of Office)');
-
-            let taskValue: string | undefined;
-            if (isStatusEvent) {
-              // Pure status event - use projectName as task
-              taskValue = currentAssignment.projectName;
-            } else if (isOutOfOffice) {
-              // Project with Out of Office - add marker back
-              taskValue = currentAssignment.task
-                ? `[OUT_OF_OFFICE]${currentAssignment.task}`
-                : '[OUT_OF_OFFICE]';
-            } else {
-              // Regular project task
-              taskValue = currentAssignment.task;
-            }
-
-            await planningTasksAPI.update(currentAssignment.id, {
-              projectId: currentAssignment.projectId,
-              task: taskValue,
-              span: newSpan,
-              blockIndex: currentBlockIndex,
-            });
-
-            // Invalidate dashboard queries to reflect the changes
-            invalidateDashboardQueries();
-
-          } catch (error) {
-            logger.error('Failed to save span:', error, 'PlanningScreen');
-            // Reload data to restore correct state
-            await hookLoadData(currentQuarter);
-          }
-        }
-      }
-
-      // Reset edge drag flag
-      isDraggingEdgeRef.current = false;
-      setDraggingEdge(null);
-    };
-
-    // Add both mouse and touch event listeners for cross-platform support
-    document.addEventListener('mousemove', handleMouseMove as EventListener);
-    document.addEventListener('mouseup', handleMouseUp as EventListener);
-    // Use { passive: false } for touch events to allow preventDefault() to work
-    document.addEventListener('touchmove', handleMouseMove as EventListener, { passive: false });
-    document.addEventListener('touchend', handleMouseUp as EventListener, { passive: false });
-
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove as EventListener);
-      document.removeEventListener('mouseup', handleMouseUp as EventListener);
-      document.removeEventListener('touchmove', handleMouseMove as EventListener, { passive: false } as any);
-      document.removeEventListener('touchend', handleMouseUp as EventListener, { passive: false } as any);
-    };
-  }, [draggingEdge, blockAssignments]);
 
   // Handle cell hover to show expand options
   const handleCellHover = (userId: string, date: string, blockIndex: number, isHovering: boolean) => {
