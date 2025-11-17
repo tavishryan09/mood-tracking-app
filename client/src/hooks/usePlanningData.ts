@@ -78,6 +78,7 @@ export const usePlanningData = (): UsePlanningDataReturn => {
 
   const loadData = useCallback(async (currentQuarter: QuarterInfo) => {
     try {
+      logger.log('Loading planning data...', { quarter: currentQuarter }, 'usePlanningData');
       setLoading(true);
 
       // Calculate quarter range for loading planning tasks
@@ -88,6 +89,11 @@ export const usePlanningData = (): UsePlanningDataReturn => {
 
       const quarterEnd = new Date(year, startMonth + 3, 0);
       quarterEnd.setHours(23, 59, 59, 999);
+
+      logger.log('Fetching data...', {
+        startDate: quarterStart.toISOString(),
+        endDate: quarterEnd.toISOString()
+      }, 'usePlanningData');
 
       // Load users, projects, planning tasks, and deadline tasks for the entire quarter
       const [usersResponse, projectsResponse, planningTasksResponse, deadlineTasksResponse] = await Promise.all([
@@ -102,6 +108,13 @@ export const usePlanningData = (): UsePlanningDataReturn => {
           endDate: quarterEnd.toISOString(),
         }),
       ]);
+
+      logger.log('Data fetched successfully', {
+        users: usersResponse.data.length,
+        projects: projectsResponse.data.length,
+        planningTasks: planningTasksResponse.data.length,
+        deadlineTasks: deadlineTasksResponse.data.length,
+      }, 'usePlanningData');
 
       // Set deadline tasks
       setDeadlineTasks(deadlineTasksResponse.data);
@@ -231,6 +244,12 @@ export const usePlanningData = (): UsePlanningDataReturn => {
         // Fall back to defaults
         setVisibleUserIds(loadedUsers.map((u: any) => u.id));
       }
+
+      logger.log('Planning data loaded successfully', {
+        totalUsers: loadedUsers.length,
+        visibleUsers: visibleIds?.length || loadedUsers.length,
+        totalAssignments: Object.keys(assignments).length,
+      }, 'usePlanningData');
     } catch (error) {
       logger.error('Error loading data:', error, 'usePlanningData');
       setUsers([]);
