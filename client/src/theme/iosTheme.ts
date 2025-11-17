@@ -207,4 +207,71 @@ export const createThemedIOSTheme = (palette: ColorPalette) => ({
     onPrimary: '#FFFFFF', // White text on primary colored elements
     onSecondary: '#FFFFFF', // White text on secondary colored elements
   },
+  fonts: {
+    ...DefaultTheme.fonts,
+    displayLarge: {
+      ...DefaultTheme.fonts.displayLarge,
+      fontFamily: Platform.OS === 'web' ? 'Josefin Sans' : 'JosefinSans_700Bold',
+    },
+    displayMedium: {
+      ...DefaultTheme.fonts.displayMedium,
+      fontFamily: Platform.OS === 'web' ? 'Josefin Sans' : 'JosefinSans_700Bold',
+    },
+    displaySmall: {
+      ...DefaultTheme.fonts.displaySmall,
+      fontFamily: Platform.OS === 'web' ? 'Josefin Sans' : 'JosefinSans_700Bold',
+    },
+    headlineLarge: {
+      ...DefaultTheme.fonts.headlineLarge,
+      fontFamily: Platform.OS === 'web' ? 'Josefin Sans' : 'JosefinSans_600SemiBold',
+    },
+    headlineMedium: {
+      ...DefaultTheme.fonts.headlineMedium,
+      fontFamily: Platform.OS === 'web' ? 'Josefin Sans' : 'JosefinSans_600SemiBold',
+    },
+    headlineSmall: {
+      ...DefaultTheme.fonts.headlineSmall,
+      fontFamily: Platform.OS === 'web' ? 'Josefin Sans' : 'JosefinSans_600SemiBold',
+    },
+    titleLarge: {
+      ...DefaultTheme.fonts.titleLarge,
+      fontFamily: Platform.OS === 'web' ? 'Josefin Sans' : 'JosefinSans_600SemiBold',
+    },
+    titleMedium: {
+      ...DefaultTheme.fonts.titleMedium,
+      fontFamily: Platform.OS === 'web' ? 'Josefin Sans' : 'JosefinSans_600SemiBold',
+    },
+    titleSmall: {
+      ...DefaultTheme.fonts.titleSmall,
+      fontFamily: Platform.OS === 'web' ? 'Josefin Sans' : 'JosefinSans_400Regular',
+    },
+    bodyLarge: {
+      ...DefaultTheme.fonts.bodyLarge,
+      fontFamily: Platform.OS === 'web' ? 'Josefin Sans' : 'JosefinSans_300Light',
+    },
+    bodyMedium: {
+      ...DefaultTheme.fonts.bodyMedium,
+      fontFamily: Platform.OS === 'web' ? 'Josefin Sans' : 'JosefinSans_300Light',
+    },
+    bodySmall: {
+      ...DefaultTheme.fonts.bodySmall,
+      fontFamily: Platform.OS === 'web' ? 'Josefin Sans' : 'JosefinSans_300Light',
+    },
+    labelLarge: {
+      ...DefaultTheme.fonts.labelLarge,
+      fontFamily: Platform.OS === 'web' ? 'Josefin Sans' : 'JosefinSans_400Regular',
+    },
+    labelMedium: {
+      ...DefaultTheme.fonts.labelMedium,
+      fontFamily: Platform.OS === 'web' ? 'Josefin Sans' : 'JosefinSans_400Regular',
+    },
+    labelSmall: {
+      ...DefaultTheme.fonts.labelSmall,
+      fontFamily: Platform.OS === 'web' ? 'Josefin Sans' : 'JosefinSans_400Regular',
+    },
+    default: {
+      ...DefaultTheme.fonts.default,
+      fontFamily: Platform.OS === 'web' ? 'Josefin Sans' : 'JosefinSans_300Light',
+    },
+  },
 });
