@@ -653,13 +653,7 @@ const AppNavigator = () => {
     >
       {!loading && isAuthenticated ? (
         isDesktop ? (
-          Platform.OS === 'web' ? (
-            <Suspense fallback={<LoadingFallback />}>
-              <DesktopNavigator />
-            </Suspense>
-          ) : (
-            <DesktopNavigator />
-          )
+          <DesktopNavigator />
         ) : (
           <MainStack />
         )
