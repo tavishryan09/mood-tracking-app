@@ -604,7 +604,7 @@ const AppNavigator = () => {
   }), []);
 
   return (
-    <NavigationContainer linking={linking}>
+    <NavigationContainer linking={linking} independent={true}>
       {!loading && isAuthenticated ? (
         isDesktop ? (
           Platform.OS === 'web' ? (
