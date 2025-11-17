@@ -522,38 +522,14 @@ const DesktopNavigator = () => {
         name="CreateClient"
         component={CreateClientScreen}
         options={{
-          headerShown: true,
-          title: 'Create Client',
-          headerStyle: {
-            backgroundColor: currentColors.primary,
-            borderBottomColor: currentColors.border,
-            borderBottomWidth: 0.5,
-          },
-          headerTitleStyle: {
-            fontSize: 17,
-            fontWeight: '600',
-            color: '#FFFFFF',
-          },
-          headerTintColor: '#FFFFFF',
+          headerShown: false,
         }}
       />
       <Stack.Screen
         name="EditClient"
         component={EditClientScreen}
         options={{
-          headerShown: true,
-          title: 'Edit Client',
-          headerStyle: {
-            backgroundColor: currentColors.primary,
-            borderBottomColor: currentColors.border,
-            borderBottomWidth: 0.5,
-          },
-          headerTitleStyle: {
-            fontSize: 17,
-            fontWeight: '600',
-            color: '#FFFFFF',
-          },
-          headerTintColor: '#FFFFFF',
+          headerShown: false,
         }}
       />
       <Stack.Screen
@@ -682,19 +658,7 @@ const DesktopNavigator = () => {
         name="CustomColorManager"
         component={CustomColorManagerScreen}
         options={{
-          headerShown: true,
-          title: 'Custom Color Manager',
-          headerStyle: {
-            backgroundColor: currentColors.primary,
-            borderBottomColor: currentColors.border,
-            borderBottomWidth: 0.5,
-          },
-          headerTitleStyle: {
-            fontSize: 17,
-            fontWeight: '600',
-            color: '#FFFFFF',
-          },
-          headerTintColor: '#FFFFFF',
+          headerShown: false,
         }}
       />
       <Stack.Screen
