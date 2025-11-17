@@ -1505,7 +1505,7 @@ const getStyles = (currentColors: any) => StyleSheet.create({
     fontWeight: '900',
     fontSize: 13,
     textTransform: 'capitalize',
-    // fontFamily removed - handled by className="juana-font" to avoid inline style conflicts
+    fontFamily: 'Juana',
   },
   sortIndicator: {
     color: currentColors.white,
