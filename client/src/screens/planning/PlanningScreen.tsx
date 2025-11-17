@@ -15,6 +15,11 @@ import DeadlineTaskModal, { DeadlineTask, DeadlineTaskData } from '../../compone
 import { CustomDialog } from '../../components/CustomDialog';
 import { PlanningScreenProps } from '../../types/navigation';
 import { logger } from '../../utils/logger';
+import PlanningHeader from '../../components/planning/PlanningHeader';
+import ManageTeamMembersModal from '../../components/planning/ManageTeamMembersModal';
+import ProjectAssignmentModal from '../../components/planning/ProjectAssignmentModal';
+import { usePlanningNavigation } from '../../hooks/usePlanningNavigation';
+import { usePlanningData } from '../../hooks/usePlanningData';
 
 const { width } = Dimensions.get('window');
 const WEEK_WIDTH = width > 1200 ? 1200 : width - 40; // Max width for week view
@@ -27,31 +32,80 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
   const { user } = useAuth();
   const { planningColors } = usePlanningColors();
   const queryClient = useQueryClient();
-  const [users, setUsers] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [currentQuarter, setCurrentQuarter] = useState(() => {
-    const now = new Date();
-    return {
-      year: now.getFullYear(),
-      quarter: Math.floor(now.getMonth() / 3) + 1,
-    };
-  });
-  const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
-    const now = new Date();
-    const dayOfWeek = now.getDay();
-    // Monday-based week: Monday = 0, Sunday = 6
-    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-    const monday = new Date(now);
-    monday.setDate(now.getDate() - daysFromMonday);
-    monday.setHours(0, 0, 0, 0);
-    return monday;
-  });
+
+  // Use custom hooks for navigation and data
+  const navigationHook = usePlanningNavigation();
+  const dataHook = usePlanningData();
+
+  // Navigation from hook
+  const {
+    currentQuarter: hookCurrentQuarter,
+    currentWeekStart: hookCurrentWeekStart,
+    visibleWeekIndex: hookVisibleWeekIndex,
+    quarterWeeks: hookQuarterWeeks,
+    visibleWeekStart: hookVisibleWeekStart,
+    weekNumber: hookWeekNumber,
+    weekTitle: hookWeekTitle,
+    setVisibleWeekIndex: hookSetVisibleWeekIndex,
+    loadNextWeek: hookLoadNextWeek,
+    loadPreviousWeek: hookLoadPreviousWeek,
+    getWeekNumber: hookGetWeekNumber,
+    getQuarterFromDate: hookGetQuarterFromDate,
+    generateQuarterWeeks: hookGenerateQuarterWeeks,
+  } = navigationHook;
+
+  // Data from hook
+  const {
+    users: hookUsers,
+    projects: hookProjects,
+    filteredProjects: hookFilteredProjects,
+    blockAssignments: hookBlockAssignments,
+    deadlineTasks: hookDeadlineTasks,
+    visibleUserIds: hookVisibleUserIds,
+    loading: hookLoading,
+    setUsers: hookSetUsers,
+    setProjects: hookSetProjects,
+    setFilteredProjects: hookSetFilteredProjects,
+    setBlockAssignments: hookSetBlockAssignments,
+    setDeadlineTasks: hookSetDeadlineTasks,
+    setVisibleUserIds: hookSetVisibleUserIds,
+    loadData: hookLoadData,
+  } = dataHook;
+
+  // Use hook values with fallback to local state during transition
+  const users = hookUsers.length > 0 ? hookUsers : [];
+  const projects = hookProjects.length > 0 ? hookProjects : [];
+  const filteredProjects = hookFilteredProjects.length > 0 ? hookFilteredProjects : [];
+  const blockAssignments = Object.keys(hookBlockAssignments).length > 0 ? hookBlockAssignments : {};
+  const deadlineTasks = hookDeadlineTasks.length > 0 ? hookDeadlineTasks : [];
+  const visibleUserIds = hookVisibleUserIds.length > 0 ? hookVisibleUserIds : [];
+  const loading = hookLoading;
+  const currentQuarter = hookCurrentQuarter;
+  const currentWeekStart = hookCurrentWeekStart;
+  const visibleWeekIndex = hookVisibleWeekIndex;
+  const quarterWeeks = hookQuarterWeeks;
+  const visibleWeekStart = hookVisibleWeekStart;
+  const weekNumber = hookWeekNumber;
+  const weekTitle = hookWeekTitle;
+  const setVisibleWeekIndex = hookSetVisibleWeekIndex;
+  const loadNextWeek = hookLoadNextWeek;
+  const loadPreviousWeek = hookLoadPreviousWeek;
+  const getWeekNumber = hookGetWeekNumber;
+  const getQuarterFromDate = hookGetQuarterFromDate;
+  const generateQuarterWeeks = hookGenerateQuarterWeeks;
+
+  // Setters - use hook setters
+  const setUsers = hookSetUsers;
+  const setProjects = hookSetProjects;
+  const setFilteredProjects = hookSetFilteredProjects;
+  const setBlockAssignments = hookSetBlockAssignments;
+  const setDeadlineTasks = hookSetDeadlineTasks;
+  const setVisibleUserIds = hookSetVisibleUserIds;
+
   const scrollViewRef = useRef<ScrollView>(null);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = navigationHook.scrollContainerRef;
   const currentWeekRef = useRef<HTMLElement>(null);
   const [hasScrolled, setHasScrolled] = useState(false);
-  const [visibleWeekIndex, setVisibleWeekIndex] = useState(0);
-  const [visibleUserIds, setVisibleUserIds] = useState<string[]>([]);
   const [showManageModal, setShowManageModal] = useState(false);
   const [draggedUserId, setDraggedUserId] = useState<string | null>(null);
   const [dragOverUserId, setDragOverUserId] = useState<string | null>(null);
@@ -63,8 +117,6 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
   // Project assignment modal state
   const [showProjectModal, setShowProjectModal] = useState(false);
   const [showDeletePlanningDialog, setShowDeletePlanningDialog] = useState(false);
-  const [projects, setProjects] = useState<any[]>([]);
-  const [filteredProjects, setFilteredProjects] = useState<any[]>([]);
   const [selectedBlock, setSelectedBlock] = useState<{
     userId: string;
     date: string;
@@ -91,10 +143,6 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
   const [monthlyRepeatType, setMonthlyRepeatType] = useState<'date' | 'weekday'>('date'); // Same date vs specific weekday
   const [monthlyWeekNumber, setMonthlyWeekNumber] = useState(1); // 1st, 2nd, 3rd, 4th week
   const [monthlyDayOfWeek, setMonthlyDayOfWeek] = useState(1); // Monday=1, Sunday=0
-
-  const [blockAssignments, setBlockAssignments] = useState<{
-    [key: string]: { id?: string; projectId: string; projectName: string; task?: string; span: number };
-  }>({});
 
   // Ref to hold the latest blockAssignments for drag operations
   const blockAssignmentsRef = useRef(blockAssignments);
@@ -256,7 +304,6 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
   const [dragOverDeadlineCell, setDragOverDeadlineCell] = useState<string | null>(null);
 
   // Deadline tasks state
-  const [deadlineTasks, setDeadlineTasks] = useState<DeadlineTask[]>([]);
   const [showDeadlineModal, setShowDeadlineModal] = useState(false);
   const [selectedDeadlineSlot, setSelectedDeadlineSlot] = useState<{
     date: Date;
@@ -389,254 +436,10 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
 
   useFocusEffect(
     React.useCallback(() => {
-
       setHasScrolled(false);
-      loadData();
-    }, [currentQuarter])
+      hookLoadData(currentQuarter);
+    }, [currentQuarter, hookLoadData])
   );
-
-  const loadData = async () => {
-    try {
-      setLoading(true);
-
-      // Calculate quarter range for loading planning tasks
-      const { year, quarter } = currentQuarter;
-      const startMonth = (quarter - 1) * 3;
-      const quarterStart = new Date(year, startMonth, 1);
-      quarterStart.setHours(0, 0, 0, 0);
-
-      const quarterEnd = new Date(year, startMonth + 3, 0);
-      quarterEnd.setHours(23, 59, 59, 999);
-
-      // Load users, projects, planning tasks, and deadline tasks for the entire quarter
-      const [usersResponse, projectsResponse, planningTasksResponse, deadlineTasksResponse] = await Promise.all([
-        usersAPI.getAll(),
-        projectsAPI.getAll(),
-        planningTasksAPI.getAll({
-          startDate: quarterStart.toISOString(),
-          endDate: quarterEnd.toISOString(),
-        }),
-        deadlineTasksAPI.getAll({
-          startDate: quarterStart.toISOString(),
-          endDate: quarterEnd.toISOString(),
-        }),
-      ]);
-
-      // Set deadline tasks
-      setDeadlineTasks(deadlineTasksResponse.data);
-
-      let loadedUsers = usersResponse.data;
-      setProjects(projectsResponse.data);
-      setFilteredProjects(projectsResponse.data);
-
-      // Transform planning tasks into blockAssignments with span values
-      const assignments: { [key: string]: { id?: string; projectId: string; projectName: string; task?: string; span: number } } = {};
-
-      planningTasksResponse.data.forEach((task: any) => {
-        const dateString = new Date(task.date).toISOString().split('T')[0];
-        const blockKey = `${task.userId}-${dateString}-${task.blockIndex}`;
-
-        // Get span directly from task (migrated from expansionBlocks)
-        const span = task.span || 1;
-
-        // Check if this is a status event (no projectId means status event)
-        const isStatusEvent = !task.projectId;
-
-        // Check if this is a project with Out of Office status
-        const hasOutOfOfficeMarker = task.task?.startsWith('[OUT_OF_OFFICE]');
-        const isProjectWithOutOfOffice = task.projectId && hasOutOfOfficeMarker;
-
-        // Determine project name
-        let projectName = '';
-        let taskDescription = task.task;
-
-        if (isStatusEvent) {
-          // Pure status event - use task field as project name
-          projectName = task.task || '';
-          taskDescription = undefined;
-        } else if (isProjectWithOutOfOffice) {
-          // Project + Out of Office - append status to project name
-          projectName = (task.project?.description || task.project?.name || '') + ' (Out of Office)';
-          // Extract task description after marker
-          taskDescription = task.task.replace('[OUT_OF_OFFICE]', '') || undefined;
-        } else {
-          // Regular project
-          projectName = task.project?.description || task.project?.name || '';
-          taskDescription = task.task || undefined;
-        }
-
-        assignments[blockKey] = {
-          id: task.id,
-          projectId: task.projectId,
-          projectName: projectName,
-          task: taskDescription,
-          span: span,
-        };
-
-      });
-
-      setBlockAssignments(assignments);
-
-      // Load user preferences: try database first, then global defaults
-      try {
-        let userIds: string[] | null = null;
-        let visibleIds: string[] | null = null;
-
-        // Try to load user-specific preferences from database
-        try {
-          const userOrderResponse = await settingsAPI.user.get(`planning_user_order`);
-          if (userOrderResponse.data?.value) {
-            userIds = userOrderResponse.data.value;
-
-          }
-        } catch (error: any) {
-          if (error.response?.status !== 404) {
-            logger.error('Error loading user order:', error, 'PlanningScreen');
-          }
-        }
-
-        try {
-          const visibleUsersResponse = await settingsAPI.user.get(`planning_visible_users`);
-          if (visibleUsersResponse.data?.value) {
-            visibleIds = visibleUsersResponse.data.value;
-
-          }
-        } catch (error: any) {
-          if (error.response?.status !== 404) {
-            logger.error('Error loading visible users:', error, 'PlanningScreen');
-          }
-        }
-
-        // If no user-specific preferences, try global defaults
-        if (!userIds || !visibleIds) {
-          const globalDefaults = await loadGlobalDefaults();
-          if (globalDefaults) {
-
-            if (!userIds && globalDefaults.userOrder) {
-              userIds = globalDefaults.userOrder;
-            }
-            if (!visibleIds && globalDefaults.visibleUsers) {
-              visibleIds = globalDefaults.visibleUsers;
-            }
-          }
-        }
-
-        // Apply user order if available
-        if (userIds) {
-          const orderedUsers: any[] = [];
-          userIds.forEach((userId: string) => {
-            const user = loadedUsers.find((u: any) => u.id === userId);
-            if (user) {
-              orderedUsers.push(user);
-            }
-          });
-
-          // Add any new users that weren't in the saved order
-          loadedUsers.forEach((user: any) => {
-            if (!userIds!.includes(user.id)) {
-              orderedUsers.push(user);
-            }
-          });
-
-          loadedUsers = orderedUsers;
-        }
-
-        setUsers(loadedUsers);
-
-        // Apply visible users if available, otherwise default to all visible
-        if (visibleIds) {
-          setVisibleUserIds(visibleIds);
-        } else {
-          setVisibleUserIds(loadedUsers.map((u: any) => u.id));
-        }
-      } catch (error) {
-        logger.error('Error loading preferences:', error, 'PlanningScreen');
-        // Fall back to defaults
-        setVisibleUserIds(loadedUsers.map((u: any) => u.id));
-      }
-    } catch (error) {
-      logger.error('Error loading data:', error, 'PlanningScreen');
-      setUsers([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Get ISO week number
-  const getWeekNumber = (date: Date): number => {
-    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-    const dayNum = d.getUTCDay() || 7;
-    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
-    return Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-  };
-
-  // Get quarter from date
-  const getQuarterFromDate = (date: Date): number => {
-    return Math.floor(date.getMonth() / 3) + 1;
-  };
-
-  // Generate weeks for the current quarter
-  const generateQuarterWeeks = () => {
-    const { year, quarter } = currentQuarter;
-    const startMonth = (quarter - 1) * 3;
-
-    // Find the first Monday of the quarter (or before if quarter doesn't start on Monday)
-    const quarterStart = new Date(year, startMonth, 1);
-    const firstMonday = new Date(quarterStart);
-    const dayOfWeek = quarterStart.getDay();
-    // Monday-based week: if Sunday (0), go back 6 days; otherwise go back (dayOfWeek - 1) days
-    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-    firstMonday.setDate(quarterStart.getDate() - daysFromMonday);
-
-    // Find the last day of the quarter
-    const quarterEnd = new Date(year, startMonth + 3, 0);
-
-    // Generate all weeks in the quarter
-    const weeks: Date[] = [];
-    const currentWeek = new Date(firstMonday);
-
-    while (currentWeek <= quarterEnd) {
-      weeks.push(new Date(currentWeek));
-      currentWeek.setDate(currentWeek.getDate() + 7);
-    }
-
-    return weeks;
-  };
-
-  // Scroll to next week
-  const loadNextWeek = () => {
-    if (Platform.OS === 'web') {
-      const scrollContainer = scrollContainerRef.current || (document.querySelector('[data-planning-scroll]') as HTMLDivElement);
-      if (!scrollContainer) {
-
-        return;
-      }
-
-      const nextWeekIndex = visibleWeekIndex + 1;
-      const scrollLeft = nextWeekIndex * 7 * DAY_CELL_WIDTH;
-
-      scrollContainer.scrollLeft = scrollLeft;
-      setVisibleWeekIndex(nextWeekIndex);
-    }
-  };
-
-  // Scroll to previous week
-  const loadPreviousWeek = () => {
-    if (Platform.OS === 'web') {
-      const scrollContainer = scrollContainerRef.current || (document.querySelector('[data-planning-scroll]') as HTMLDivElement);
-      if (!scrollContainer) {
-
-        return;
-      }
-
-      const prevWeekIndex = Math.max(0, visibleWeekIndex - 1);
-      const scrollLeft = prevWeekIndex * 7 * DAY_CELL_WIDTH;
-
-      scrollContainer.scrollLeft = scrollLeft;
-      setVisibleWeekIndex(prevWeekIndex);
-    }
-  };
 
   // Handle managing team members visibility
   const handleManageTeamMembers = () => {
@@ -879,7 +682,7 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
       setErrorMessage('Failed to move task');
       setShowErrorDialog(true);
       // Reload to restore correct state
-      await loadData();
+      await hookLoadData(currentQuarter);
     }
 
     setDraggedTask(null);
@@ -1262,7 +1065,7 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
           } catch (error) {
             logger.error('Failed to save span:', error, 'PlanningScreen');
             // Reload data to restore correct state
-            await loadData();
+            await hookLoadData(currentQuarter);
           }
         }
       }
@@ -2155,34 +1958,9 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
     }
   };
 
-  const loadGlobalDefaults = async () => {
-    try {
-      const response = await settingsAPI.app.get('planning_default_view');
-      if (response.data?.value) {
-        return response.data.value;
-      }
-    } catch (error) {
-      // Setting doesn't exist yet, that's okay
-
-    }
-    return null;
-  };
-
-  // Generate all weeks in the current quarter
-  const quarterWeeks = generateQuarterWeeks();
-
-  // Debug: log the first few weeks to verify they start on Monday
-  if (quarterWeeks.length > 0 && Platform.OS === 'web') {
-
-  }
-
-  // Calculate visible week based on scroll position or initial state
-  const visibleWeekStart = quarterWeeks[visibleWeekIndex] || currentWeekStart;
-  const weekNumber = getWeekNumber(visibleWeekStart);
+  // Get quarter and year from visibleWeekStart (from hook)
   const quarter = getQuarterFromDate(visibleWeekStart);
   const year = visibleWeekStart.getFullYear();
-
-  const weekTitle = `Q${quarter} ${year} - Week ${weekNumber} Planning`;
   const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   // Auto-scroll to the current week when component mounts or week changes
@@ -2450,17 +2228,15 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
   return (
     <View style={[styles.container, { backgroundColor: screenBackground }]}>
       {/* Header */}
-      <View style={[styles.header, { backgroundColor: calendarHeaderBg, borderBottomColor: currentColors.text }]}>
-        <View style={styles.headerNav}>
-          <TouchableOpacity onPress={loadPreviousWeek} style={styles.navButton}>
-            <HugeiconsIcon icon={ArrowLeft01Icon} size={28} color={prevNextIconColor} />
-          </TouchableOpacity>
-          <Title style={[styles.headerTitle, { color: calendarHeaderFont }]}>{weekTitle}</Title>
-          <TouchableOpacity onPress={loadNextWeek} style={styles.navButton}>
-            <HugeiconsIcon icon={ArrowRight01Icon} size={28} color={prevNextIconColor} />
-          </TouchableOpacity>
-        </View>
-      </View>
+      <PlanningHeader
+        weekTitle={weekTitle}
+        onPrevious={loadPreviousWeek}
+        onNext={loadNextWeek}
+        headerBgColor={calendarHeaderBg}
+        headerTextColor={calendarHeaderFont}
+        iconColor={prevNextIconColor}
+        borderColor={currentColors.text}
+      />
 
       {/* Main content area - unified table with sticky header and first column */}
       {/* Force rebuild */}
@@ -3164,453 +2940,63 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
       </TouchableOpacity>
 
       {/* Team Members Management Modal */}
-      <Modal
+      <ManageTeamMembersModal
         visible={showManageModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowManageModal(false)}
-      >
-        <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0, 0, 0, 0.8)' }]}>
-          <View style={[styles.modalContent, { backgroundColor: currentColors.background.bg300 }]}>
-            <Title style={[styles.modalTitle, { color: currentColors.text }]}>Manage Team Members</Title>
-            <Text style={[styles.modalSubtitle, { color: currentColors.text }]}>
-              Select team members to show in the planning view. Drag and drop to reorder.
-            </Text>
-
-            <ScrollView style={styles.modalList}>
-              {users.map((user) => {
-                const isVisible = visibleUserIds.includes(user.id);
-                const isBeingDragged = draggedUserId === user.id;
-                const isDragOver = dragOverUserId === user.id;
-
-                return (
-                  <View
-                    key={user.id}
-                    style={[
-                      styles.modalListItem,
-                      { borderBottomColor: currentColors.border },
-                      isBeingDragged && [styles.modalListItemDragging, { backgroundColor: currentColors.background.bg300 }],
-                      isDragOver && [styles.modalListItemDragOver, { backgroundColor: currentColors.background.bg300, borderBottomColor: currentColors.primary }],
-                    ]}
-                    onStartShouldSetResponder={() => false}
-                    onMoveShouldSetResponder={() => false}
-                  >
-                    {/* Drag handle */}
-                    <div
-                      draggable={Platform.OS === 'web'}
-                      onDragStart={(e: any) => {
-                        if (Platform.OS === 'web') {
-                          e.dataTransfer.effectAllowed = 'move';
-                          e.dataTransfer.setData('text/html', user.id);
-                          handleDragStart(user.id);
-                        }
-                      }}
-                      onDragEnd={(e: any) => {
-                        if (Platform.OS === 'web') {
-                          handleDragEnd();
-                        }
-                      }}
-                      onDragOver={(e: any) => {
-                        if (Platform.OS === 'web') {
-                          e.preventDefault();
-                          e.dataTransfer.dropEffect = 'move';
-                          handleDragOver(user.id);
-                        }
-                      }}
-                      onDrop={(e: any) => {
-                        if (Platform.OS === 'web') {
-                          e.preventDefault();
-                          handleDrop(user.id);
-                        }
-                      }}
-                      onDragLeave={() => {
-                        if (Platform.OS === 'web') {
-                          setDragOverUserId(null);
-                        }
-                      }}
-                      style={{
-                        display: 'flex',
-                        flexDirection: 'row',
-                        alignItems: 'center',
-                        width: '100%',
-                        justifyContent: 'space-between',
-                      }}
-                    >
-                      {/* User name */}
-                      <View style={styles.userNameContainer}>
-                        <Text style={[styles.modalListItemText, { color: currentColors.text }]}>
-                          {user.firstName} {user.lastName}
-                        </Text>
-                      </View>
-
-                      {/* Visibility Toggle */}
-                      <Switch
-                        value={isVisible}
-                        onValueChange={() => toggleUserVisibility(user.id)}
-                        color={currentColors.primary}
-                      />
-                    </div>
-                  </View>
-                );
-              })}
-            </ScrollView>
-
-            <View style={styles.modalButtons}>
-              <Button
-                mode="contained"
-                onPress={handleSaveSettings}
-                style={styles.modalButton}
-                buttonColor={currentColors.primary}
-              >
-                Save
-              </Button>
-              {user?.role === 'ADMIN' && (
-                <Button
-                  mode="outlined"
-                  onPress={handleSaveAsDefaultForAll}
-                  style={[styles.modalButton, { marginTop: 10 }]}
-                >
-                  Save as Default for All Users
-                </Button>
-              )}
-            </View>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setShowManageModal(false)}
+        users={users}
+        visibleUserIds={visibleUserIds}
+        draggedUserId={draggedUserId}
+        dragOverUserId={dragOverUserId}
+        currentUserRole={user?.role}
+        currentColors={currentColors}
+        onToggleUserVisibility={toggleUserVisibility}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
+        onDragLeave={() => setDragOverUserId(null)}
+        onSaveSettings={handleSaveSettings}
+        onSaveAsDefaultForAll={handleSaveAsDefaultForAll}
+      />
 
       {/* Project Assignment Modal */}
-      <Modal
+      <ProjectAssignmentModal
         visible={showProjectModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowProjectModal(false)}
-      >
-        <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0, 0, 0, 0.8)' }]}>
-          <View style={[styles.modalContent, { backgroundColor: currentColors.background.bg300 }]}>
-            <Title style={[styles.modalTitle, { color: currentColors.text }]}>Assign Project</Title>
-
-            <ScrollView style={styles.modalScrollView} showsVerticalScrollIndicator={true}>
-              {/* Only show project and task fields if Unavailable or Time Off is NOT selected */}
-              {/* Out of Office still allows project assignment */}
-              {!isUnavailable && !isTimeOff && (
-                <>
-                  <TextInput
-                    label="Project (by common name)"
-                    value={projectSearch}
-                    onChangeText={setProjectSearch}
-                    mode="outlined"
-                    style={styles.input}
-                    placeholder="Search by common name..."
-                    left={<TextInput.Icon icon={() => <HugeiconsIcon icon={Search01Icon} size={20} color={currentColors.icon} />} />}
-                  />
-
-                  {filteredProjects.length > 0 && projectSearch && (
-                    <View style={[styles.projectsList, { borderColor: currentColors.border }]}>
-                      {filteredProjects.map((project) => (
-                        <TouchableOpacity
-                          key={project.id}
-                          style={[styles.projectItem, { borderBottomColor: currentColors.border }]}
-                          onPress={() => setProjectSearch(project.description || project.name)}
-                          activeOpacity={0.7}
-                        >
-                          <Text style={[styles.projectItemText, { color: currentColors.text }]}>
-                            {project.description || project.name}
-                          </Text>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  )}
-
-                  <TextInput
-                    label="Task Description (Optional)"
-                    value={taskDescription}
-                    onChangeText={setTaskDescription}
-                    mode="outlined"
-                    multiline
-                    numberOfLines={3}
-                    style={styles.input}
-                    placeholder="What will you work on?"
-                  />
-                </>
-              )}
-
-            {/* Status Checkboxes */}
-            <View style={[styles.checkboxGroup, { borderColor: currentColors.border }]}>
-              <TouchableOpacity
-                style={styles.checkboxRow}
-                onPress={() => {
-                  setIsOutOfOffice(!isOutOfOffice);
-                  if (!isOutOfOffice) {
-                    setIsTimeOff(false);
-                    setIsUnavailable(false);
-                  }
-                }}
-                activeOpacity={0.7}
-              >
-                <HugeiconsIcon
-                  icon={isOutOfOffice ? CheckmarkCircle02Icon : CircleIcon}
-                  size={24}
-                  color={currentColors.primary}
-                />
-                <Text style={[styles.checkboxLabel, { color: currentColors.text }]}>Out of Office</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.checkboxRow}
-                onPress={() => {
-                  setIsTimeOff(!isTimeOff);
-                  if (!isTimeOff) {
-                    setIsOutOfOffice(false);
-                    setIsUnavailable(false);
-                  }
-                }}
-                activeOpacity={0.7}
-              >
-                <HugeiconsIcon
-                  icon={isTimeOff ? CheckmarkCircle02Icon : CircleIcon}
-                  size={24}
-                  color={currentColors.primary}
-                />
-                <Text style={[styles.checkboxLabel, { color: currentColors.text }]}>Time Off</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={styles.checkboxRow}
-                onPress={() => {
-                  setIsUnavailable(!isUnavailable);
-                  if (!isUnavailable) {
-                    setIsOutOfOffice(false);
-                    setIsTimeOff(false);
-                  }
-                }}
-                activeOpacity={0.7}
-              >
-                <HugeiconsIcon
-                  icon={isUnavailable ? CheckmarkCircle02Icon : CircleIcon}
-                  size={24}
-                  color={currentColors.primary}
-                />
-                <Text style={[styles.checkboxLabel, { color: currentColors.text }]}>Unavailable</Text>
-              </TouchableOpacity>
-            </View>
-
-            {/* Repeat Event Section */}
-            <View style={[styles.repeatSection, { borderColor: currentColors.border }]}>
-              <TouchableOpacity
-                style={styles.checkboxRow}
-                onPress={() => setIsRepeatEvent(!isRepeatEvent)}
-                activeOpacity={0.7}
-              >
-                <HugeiconsIcon
-                  icon={isRepeatEvent ? CheckmarkCircle02Icon : CircleIcon}
-                  size={24}
-                  color={currentColors.primary}
-                />
-                <Text style={[styles.checkboxLabel, { color: currentColors.text }]}>Repeat Event</Text>
-              </TouchableOpacity>
-
-              {isRepeatEvent && (
-                <View style={styles.repeatOptions}>
-                  {/* Repeat Type Selection */}
-                  <View style={styles.repeatTypeRow}>
-                    <TouchableOpacity
-                      style={[styles.repeatTypeButton, { borderColor: currentColors.border }, repeatType === 'weekly' && [styles.repeatTypeButtonActive, { backgroundColor: currentColors.primary, borderColor: currentColors.primary }]]}
-                      onPress={() => setRepeatType('weekly')}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={[styles.repeatTypeText, { color: currentColors.textSecondary }, repeatType === 'weekly' && [styles.repeatTypeTextActive, { color: currentColors.background.white }]]}>
-                        Weekly
-                      </Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.repeatTypeButton, { borderColor: currentColors.border }, repeatType === 'monthly' && [styles.repeatTypeButtonActive, { backgroundColor: currentColors.primary, borderColor: currentColors.primary }]]}
-                      onPress={() => setRepeatType('monthly')}
-                      activeOpacity={0.7}
-                    >
-                      <Text style={[styles.repeatTypeText, { color: currentColors.textSecondary }, repeatType === 'monthly' && [styles.repeatTypeTextActive, { color: currentColors.background.white }]]}>
-                        Monthly
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-
-                  {/* Weekly Options */}
-                  {repeatType === 'weekly' && (
-                    <View style={styles.weeklyOptions}>
-                      <Text style={[styles.repeatSubtitle, { color: currentColors.text }]}>Repeat on:</Text>
-                      <View style={styles.weekdayButtons}>
-                        {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, index) => (
-                          <TouchableOpacity
-                            key={day}
-                            style={[styles.weekdayButton, { borderColor: currentColors.border }, repeatWeeklyDays[index] && [styles.weekdayButtonActive, { backgroundColor: currentColors.primary, borderColor: currentColors.primary }]]}
-                            onPress={() => {
-                              const newDays = [...repeatWeeklyDays];
-                              newDays[index] = !newDays[index];
-                              setRepeatWeeklyDays(newDays);
-                            }}
-                            activeOpacity={0.7}
-                          >
-                            <Text style={[styles.weekdayText, { color: currentColors.textSecondary }, repeatWeeklyDays[index] && [styles.weekdayTextActive, { color: currentColors.background.white }]]}>
-                              {day}
-                            </Text>
-                          </TouchableOpacity>
-                        ))}
-                      </View>
-                    </View>
-                  )}
-
-                  {/* Monthly Options */}
-                  {repeatType === 'monthly' && (
-                    <View style={styles.monthlyOptions}>
-                      <TouchableOpacity
-                        style={styles.checkboxRow}
-                        onPress={() => setMonthlyRepeatType('date')}
-                        activeOpacity={0.7}
-                      >
-                        <HugeiconsIcon
-                          icon={monthlyRepeatType === 'date' ? CheckmarkCircle02Icon : CircleIcon}
-                          size={24}
-                          color={currentColors.primary}
-                        />
-                        <Text style={[styles.checkboxLabel, { color: currentColors.text }]}>Same date every month</Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        style={styles.checkboxRow}
-                        onPress={() => setMonthlyRepeatType('weekday')}
-                        activeOpacity={0.7}
-                      >
-                        <HugeiconsIcon
-                          icon={monthlyRepeatType === 'weekday' ? CheckmarkCircle02Icon : CircleIcon}
-                          size={24}
-                          color={currentColors.primary}
-                        />
-                        <Text style={[styles.checkboxLabel, { color: currentColors.text }]}>Specific week and day</Text>
-                      </TouchableOpacity>
-
-                      {monthlyRepeatType === 'weekday' && (
-                        <View style={styles.weekdaySelectors}>
-                          <View style={styles.selectorRow}>
-                            <Text style={[styles.selectorLabel, { color: currentColors.text }]}>Week:</Text>
-                            <View style={styles.weekNumbers}>
-                              {[1, 2, 3, 4].map((num) => (
-                                <TouchableOpacity
-                                  key={num}
-                                  style={[styles.weekNumberButton, { borderColor: currentColors.border }, monthlyWeekNumber === num && [styles.weekNumberButtonActive, { backgroundColor: currentColors.primary, borderColor: currentColors.primary }]]}
-                                  onPress={() => setMonthlyWeekNumber(num)}
-                                  activeOpacity={0.7}
-                                >
-                                  <Text style={[styles.weekNumberText, { color: currentColors.textSecondary }, monthlyWeekNumber === num && [styles.weekNumberTextActive, { color: currentColors.background.white }]]}>
-                                    {num === 1 ? '1st' : num === 2 ? '2nd' : num === 3 ? '3rd' : '4th'}
-                                  </Text>
-                                </TouchableOpacity>
-                              ))}
-                            </View>
-                          </View>
-
-                          <View style={styles.selectorRow}>
-                            <Text style={[styles.selectorLabel, { color: currentColors.text }]}>Day:</Text>
-                            <View style={styles.weekdayButtons}>
-                              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, index) => (
-                                <TouchableOpacity
-                                  key={day}
-                                  style={[styles.weekdayButton, { borderColor: currentColors.border }, monthlyDayOfWeek === (index + 1) && [styles.weekdayButtonActive, { backgroundColor: currentColors.primary, borderColor: currentColors.primary }]]}
-                                  onPress={() => setMonthlyDayOfWeek(index + 1)}
-                                  activeOpacity={0.7}
-                                >
-                                  <Text style={[styles.weekdayText, { color: currentColors.textSecondary }, monthlyDayOfWeek === (index + 1) && [styles.weekdayTextActive, { color: currentColors.background.white }]]}>
-                                    {day}
-                                  </Text>
-                                </TouchableOpacity>
-                              ))}
-                            </View>
-                          </View>
-                        </View>
-                      )}
-                    </View>
-                  )}
-
-                  {/* End Date */}
-                  <View style={styles.endDateSection}>
-                    <Text style={styles.repeatSubtitle}>End Date (Optional):</Text>
-                    {Platform.OS === 'web' ? (
-                      <input
-                        type="date"
-                        value={repeatEndDate ? repeatEndDate.toISOString().split('T')[0] : ''}
-                        onChange={(e) => {
-                          if (e.target.value) {
-                            setRepeatEndDate(new Date(e.target.value));
-                          } else {
-                            setRepeatEndDate(null);
-                          }
-                        }}
-                        style={{
-                          padding: 12,
-                          borderWidth: 1,
-                          borderColor: currentColors.border,
-                          borderRadius: 4,
-                          fontSize: 16,
-                          fontFamily: 'Josefin Sans',
-                        }}
-                      />
-                    ) : (
-                      <Button
-                        mode="outlined"
-                        onPress={() => setShowDatePicker(true)}
-                        style={{ marginTop: 8 }}
-                      >
-                        {repeatEndDate ? repeatEndDate.toISOString().split('T')[0] : 'Select End Date'}
-                      </Button>
-                    )}
-                  </View>
-                </View>
-              )}
-            </View>
-            </ScrollView>
-
-            <View style={styles.modalButtons}>
-              <Button
-                mode="text"
-                onPress={() => {
-                  setShowProjectModal(false);
-                  setProjectSearch('');
-                  setTaskDescription('');
-                  setIsOutOfOffice(false);
-                  setIsTimeOff(false);
-                  setIsUnavailable(false);
-                  setIsRepeatEvent(false);
-                  setRepeatType('weekly');
-                  setRepeatEndDate(null);
-                  setRepeatWeeklyDays([false, false, false, false, false, false, false]);
-                  setMonthlyRepeatType('date');
-                  setMonthlyWeekNumber(1);
-                  setMonthlyDayOfWeek(1);
-                  setSelectedBlock(null);
-                }}
-                style={styles.modalButton}
-              >
-                Cancel
-              </Button>
-              {selectedBlock && blockAssignments[`${selectedBlock.userId}-${selectedBlock.date}-${selectedBlock.blockIndex}`]?.id && (
-                <Button
-                  mode="outlined"
-                  onPress={() => setShowDeletePlanningDialog(true)}
-                  style={styles.modalButton}
-                  textColor={currentColors.secondary}
-                >
-                  Delete
-                </Button>
-              )}
-              <Button
-                mode="contained"
-                onPress={handleSaveProjectAssignment}
-                style={styles.modalButton}
-              >
-                Save
-              </Button>
-            </View>
-          </View>
-        </View>
-      </Modal>
+        onClose={() => setShowProjectModal(false)}
+        currentColors={currentColors}
+        selectedBlock={selectedBlock}
+        blockAssignments={blockAssignments}
+        projectSearch={projectSearch}
+        setProjectSearch={setProjectSearch}
+        taskDescription={taskDescription}
+        setTaskDescription={setTaskDescription}
+        filteredProjects={filteredProjects}
+        isOutOfOffice={isOutOfOffice}
+        setIsOutOfOffice={setIsOutOfOffice}
+        isTimeOff={isTimeOff}
+        setIsTimeOff={setIsTimeOff}
+        isUnavailable={isUnavailable}
+        setIsUnavailable={setIsUnavailable}
+        isRepeatEvent={isRepeatEvent}
+        setIsRepeatEvent={setIsRepeatEvent}
+        repeatType={repeatType}
+        setRepeatType={setRepeatType}
+        repeatWeeklyDays={repeatWeeklyDays}
+        setRepeatWeeklyDays={setRepeatWeeklyDays}
+        monthlyRepeatType={monthlyRepeatType}
+        setMonthlyRepeatType={setMonthlyRepeatType}
+        monthlyWeekNumber={monthlyWeekNumber}
+        setMonthlyWeekNumber={setMonthlyWeekNumber}
+        monthlyDayOfWeek={monthlyDayOfWeek}
+        setMonthlyDayOfWeek={setMonthlyDayOfWeek}
+        repeatEndDate={repeatEndDate}
+        setRepeatEndDate={setRepeatEndDate}
+        showDatePicker={showDatePicker}
+        setShowDatePicker={setShowDatePicker}
+        setSelectedBlock={setSelectedBlock}
+        setShowDeletePlanningDialog={setShowDeletePlanningDialog}
+        onSaveProjectAssignment={handleSaveProjectAssignment}
+      />
 
       {/* Long Press Action Menu */}
       {longPressAction && (
