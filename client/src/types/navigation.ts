@@ -55,6 +55,7 @@ export type EventsStackParamList = {
 // Admin Stack
 export type AdminStackParamList = {
   ManageUsers: undefined;
+  InviteUser: undefined;
   EditUser: { userId: string };
   UserRates: undefined;
   TeamViewSettings: undefined;
@@ -140,6 +141,11 @@ export type EditEventScreenProps = StackScreenProps<
 export type ManageUsersScreenProps = StackScreenProps<
   AdminStackParamList,
   'ManageUsers'
+>;
+
+export type InviteUserScreenProps = StackScreenProps<
+  AdminStackParamList,
+  'InviteUser'
 >;
 
 export type EditUserScreenProps = StackScreenProps<

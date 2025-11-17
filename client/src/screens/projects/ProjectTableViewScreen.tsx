@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, Dimensions, Text, TouchableOpacity, TextInput, FlatList, Modal, Platform } from 'react-native';
 import { ActivityIndicator, FAB, IconButton, Switch, Button } from 'react-native-paper';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -10,6 +10,8 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useCustomColorTheme } from '../../contexts/CustomColorThemeContext';
 import EditProjectModal from '../../components/EditProjectModal';
 import { CustomDialog } from '../../components/CustomDialog';
+import { logger } from '../../utils/logger';
+import { apiWithTimeout, TIMEOUT_DURATIONS } from '../../utils/apiWithTimeout';
 
 const { width } = Dimensions.get('window');
 const TABLE_WIDTH = width > 1800 ? 1800 : width - 40;
@@ -70,7 +72,7 @@ interface ColumnVisibility {
   progress: boolean;
 }
 
-const ProjectTableViewScreen = () => {
+const ProjectTableViewScreen = React.memo(() => {
   const { currentColors } = useTheme();
   const { user } = useAuth();
   const navigation = useNavigation();
@@ -168,7 +170,7 @@ const ProjectTableViewScreen = () => {
 
       }
     } catch (error) {
-      console.error('[ProjectTableView] Error loading column visibility:', error);
+      logger.error('Error loading column visibility:', error);
     }
   };
 
@@ -181,7 +183,7 @@ const ProjectTableViewScreen = () => {
       setShowSuccessDialog(true);
       setShowSettingsModal(false);
     } catch (error) {
-      console.error('[ProjectTableView] Error saving to profile:', error);
+      logger.error('Error saving to profile:', error);
       setErrorTitle('Error');
       setErrorMessage('Failed to save column visibility');
       setShowErrorDialog(true);
@@ -203,7 +205,7 @@ const ProjectTableViewScreen = () => {
       setShowSuccessDialog(true);
       setShowSettingsModal(false);
     } catch (error) {
-      console.error('[ProjectTableView] Error saving as default:', error);
+      logger.error('Error saving as default:', error);
       setErrorTitle('Error');
       setErrorMessage('Failed to save default column visibility');
       setShowErrorDialog(true);
@@ -217,7 +219,7 @@ const ProjectTableViewScreen = () => {
 
       setProjects(response.data);
     } catch (error) {
-      console.error('[ProjectTableView] Error loading projects:', error);
+      logger.error('Error loading projects:', error);
       setProjects([]);
     } finally {
       setLoading(false);
@@ -230,7 +232,7 @@ const ProjectTableViewScreen = () => {
 
       setClients(response.data);
     } catch (error) {
-      console.error('[ProjectTableView] Error loading clients:', error);
+      logger.error('Error loading clients:', error);
       setClients([]);
     }
   };
@@ -399,7 +401,7 @@ const ProjectTableViewScreen = () => {
           loadProjects();
         }
       } catch (error) {
-        console.error('[ProjectTableView] Error updating project:', error);
+        logger.error('Error updating project:', error);
         setErrorTitle('Error');
         setErrorMessage('Failed to update project. Please try again.');
         setShowErrorDialog(true);
@@ -417,7 +419,7 @@ const ProjectTableViewScreen = () => {
       // Reload projects to reflect changes
       loadProjects();
     } catch (error) {
-      console.error('[ProjectTableView] Error updating client:', error);
+      logger.error('Error updating client:', error);
       setErrorTitle('Error');
       setErrorMessage('Failed to update client. Please try again.');
       setShowErrorDialog(true);
@@ -440,7 +442,7 @@ const ProjectTableViewScreen = () => {
       loadClients();
       loadProjects();
     } catch (error) {
-      console.error('[ProjectTableView] Error creating client:', error);
+      logger.error('Error creating client:', error);
       setErrorTitle('Error');
       setErrorMessage('Failed to create client. Please try again.');
       setShowErrorDialog(true);
@@ -464,7 +466,7 @@ const ProjectTableViewScreen = () => {
       setDeletingProjectId(null);
       loadProjects();
     } catch (error) {
-      console.error('[ProjectTableView] Error deleting project:', error);
+      logger.error('Error deleting project:', error);
       setDeletingProjectId(null);
     }
   };
@@ -515,7 +517,7 @@ const ProjectTableViewScreen = () => {
       // Reload projects
       loadProjects();
     } catch (error) {
-      console.error('[ProjectTableView] Error creating project:', error);
+      logger.error('Error creating project:', error);
       setErrorTitle('Error');
       setErrorMessage('Failed to create project. Please try again.');
       setShowErrorDialog(true);
@@ -551,7 +553,7 @@ const ProjectTableViewScreen = () => {
       // Reload clients
       loadClients();
     } catch (error) {
-      console.error('[ProjectTableView] Error creating client:', error);
+      logger.error('Error creating client:', error);
       setErrorTitle('Error');
       setErrorMessage('Failed to create client. Please try again.');
       setShowErrorDialog(true);
@@ -1720,5 +1722,7 @@ const getStyles = (currentColors: any) => StyleSheet.create({
     color: currentColors.white,
   },
 });
+
+ProjectTableViewScreen.displayName = 'ProjectTableViewScreen';
 
 export default ProjectTableViewScreen;

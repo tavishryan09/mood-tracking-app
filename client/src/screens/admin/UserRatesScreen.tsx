@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { List, TextInput, Button, ActivityIndicator, Card, Title, Paragraph, IconButton } from 'react-native-paper';
 import { HugeiconsIcon } from '@hugeicons/react-native';
@@ -6,8 +6,12 @@ import { Edit02Icon } from '@hugeicons/core-free-icons';
 import { usersAPI } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import { CustomDialog } from '../../components/CustomDialog';
+import { UserRatesScreenProps } from '../../types/navigation';
+import { logger } from '../../utils/logger';
+import { validateAndSanitize } from '../../utils/sanitize';
+import { apiWithTimeout, TIMEOUT_DURATIONS } from '../../utils/apiWithTimeout';
 
-const UserRatesScreen = ({ navigation }: any) => {
+const UserRatesScreen = React.memo(({ navigation }: UserRatesScreenProps) => {
   const { currentColors } = useTheme();
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -20,40 +24,57 @@ const UserRatesScreen = ({ navigation }: any) => {
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
 
-  useEffect(() => {
-    loadUsers();
-  }, []);
-
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await usersAPI.getAll();
+      const response = await apiWithTimeout(usersAPI.getAll(), TIMEOUT_DURATIONS.QUICK) as any;
       setUsers(response.data);
-    } catch (error) {
-      console.error('Error loading users:', error);
-      setErrorMessage('Failed to load users');
+      logger.log('Users loaded successfully', { count: response.data.length }, 'UserRatesScreen');
+    } catch (error: any) {
+      logger.error('Error loading users:', error, 'UserRatesScreen');
+      const message = error.message === 'Request timeout'
+        ? 'Unable to connect to server. Please check your connection.'
+        : 'Failed to load users';
+      setErrorMessage(message);
       setShowErrorDialog(true);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const handleEditRate = (userId: string, currentRate: string) => {
+  useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
+
+  const handleEditRate = useCallback((userId: string, currentRate: string) => {
     setEditingUserId(userId);
     setEditRate(currentRate || '');
-  };
+  }, []);
 
-  const handleSaveRate = async (userId: string) => {
+  const handleSaveRate = useCallback(async (userId: string) => {
     try {
-      const rate = editRate ? parseFloat(editRate) : null;
+      // Validate and sanitize rate input
+      const { isValid, errors, sanitizedData } = validateAndSanitize(
+        { defaultHourlyRate: editRate },
+        {
+          defaultHourlyRate: { pattern: /^\d+(\.\d{1,2})?$/ }, // Optional numeric with 2 decimals
+        }
+      );
 
-      if (editRate && isNaN(rate as number)) {
-        setErrorMessage('Please enter a valid number');
+      if (editRate && !isValid) {
+        const errorMsg = Object.values(errors)[0] || 'Please enter a valid hourly rate';
+        setErrorMessage(errorMsg);
         setShowErrorDialog(true);
+        logger.warn('Rate validation failed:', errors, 'UserRatesScreen');
         return;
       }
 
-      await usersAPI.updateRate(userId, { defaultHourlyRate: rate });
+      const rate = sanitizedData.defaultHourlyRate ? parseFloat(sanitizedData.defaultHourlyRate) : null;
+
+      await apiWithTimeout(
+        usersAPI.updateRate(userId, { defaultHourlyRate: rate }),
+        TIMEOUT_DURATIONS.STANDARD
+      );
 
       // Update local state
       setUsers(users.map(u =>
@@ -66,16 +87,21 @@ const UserRatesScreen = ({ navigation }: any) => {
       setEditRate('');
       setSuccessMessage('User rate updated successfully');
       setShowSuccessDialog(true);
+      logger.log('User rate updated successfully', { userId, rate }, 'UserRatesScreen');
     } catch (error: any) {
-      setErrorMessage(error.response?.data?.error || 'Failed to update user rate');
+      logger.error('Error updating user rate:', error, 'UserRatesScreen');
+      const message = error.message === 'Request timeout'
+        ? 'Unable to connect to server. Please check your connection.'
+        : error.response?.data?.error || 'Failed to update user rate';
+      setErrorMessage(message);
       setShowErrorDialog(true);
     }
-  };
+  }, [editRate, users]);
 
-  const handleCancelEdit = () => {
+  const handleCancelEdit = useCallback(() => {
     setEditingUserId(null);
     setEditRate('');
-  };
+  }, []);
 
   if (loading) {
     return (
@@ -198,7 +224,9 @@ const UserRatesScreen = ({ navigation }: any) => {
       />
     </ScrollView>
   );
-};
+});
+
+UserRatesScreen.displayName = 'UserRatesScreen';
 
 const styles = StyleSheet.create({
   container: {

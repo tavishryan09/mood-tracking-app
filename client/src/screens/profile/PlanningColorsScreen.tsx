@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, Text } from 'react-native';
 import { Button, Title, Menu } from 'react-native-paper';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -6,8 +6,10 @@ import { useAuth } from '../../contexts/AuthContext';
 import { usePlanningColors } from '../../contexts/PlanningColorsContext';
 import { colorPalettes } from '../../theme/colorPalettes';
 import { CustomDialog } from '../../components/CustomDialog';
+import { PlanningColorsScreenProps } from '../../types/navigation';
+import { logger } from '../../utils/logger';
 
-const PlanningColorsScreen = ({ navigation }: any) => {
+const PlanningColorsScreen = React.memo(({ navigation }: PlanningColorsScreenProps) => {
   const { currentColors, selectedPalette } = useTheme();
   const { user } = useAuth();
   const { planningColors, savePlanningColors } = usePlanningColors();
@@ -136,7 +138,7 @@ const PlanningColorsScreen = ({ navigation }: any) => {
     );
   };
 
-  const handleSaveColors = async () => {
+  const handleSaveColors = useCallback(async () => {
     setSaving(true);
     try {
       const colors = {
@@ -173,19 +175,20 @@ const PlanningColorsScreen = ({ navigation }: any) => {
       };
 
       await savePlanningColors(colors, false);
+      logger.log('Planning colors saved successfully', {}, 'PlanningColorsScreen');
 
       setSuccessMessage('Your planning page colors have been saved and will appear on the planning page.');
       setShowSuccessDialog(true);
-    } catch (error) {
-      console.error('Error saving colors:', error);
+    } catch (error: any) {
+      logger.error('Error saving colors:', error, 'PlanningColorsScreen');
       setErrorMessage('Failed to save colors. Please try again.');
       setShowErrorDialog(true);
     } finally {
       setSaving(false);
     }
-  };
+  }, [calendarHeaderBg, calendarHeaderFont, prevNextIconColor, teamMemberColBg, teamMemberColText, weekdayHeaderBg, weekdayHeaderFont, weekendHeaderBg, weekendHeaderFont, weekendCellBg, currentDayBg, projectTaskBg, projectTaskFont, adminTaskBg, adminTaskFont, marketingTaskBg, marketingTaskFont, outOfOfficeBg, outOfOfficeFont, unavailableBg, unavailableFont, timeOffBg, timeOffFont, deadlineRowBg, deadlineBg, deadlineFont, internalDeadlineBg, internalDeadlineFont, milestoneBg, milestoneFont, savePlanningColors]);
 
-  const handleSaveAsDefault = async () => {
+  const handleSaveAsDefault = useCallback(async () => {
     setSaving(true);
     try {
       const colors = {
@@ -222,16 +225,17 @@ const PlanningColorsScreen = ({ navigation }: any) => {
       };
 
       await savePlanningColors(colors, true);
+      logger.log('Default planning colors saved successfully', {}, 'PlanningColorsScreen');
       setSuccessMessage('Default planning page colors have been saved for all users who haven\'t customized their own colors.');
       setShowSuccessDialog(true);
-    } catch (error) {
-      console.error('Error saving default colors:', error);
+    } catch (error: any) {
+      logger.error('Error saving default colors:', error, 'PlanningColorsScreen');
       setErrorMessage('Failed to save default colors. Please try again.');
       setShowErrorDialog(true);
     } finally {
       setSaving(false);
     }
-  };
+  }, [calendarHeaderBg, calendarHeaderFont, prevNextIconColor, teamMemberColBg, teamMemberColText, weekdayHeaderBg, weekdayHeaderFont, weekendHeaderBg, weekendHeaderFont, weekendCellBg, currentDayBg, projectTaskBg, projectTaskFont, adminTaskBg, adminTaskFont, marketingTaskBg, marketingTaskFont, outOfOfficeBg, outOfOfficeFont, unavailableBg, unavailableFont, timeOffBg, timeOffFont, deadlineRowBg, deadlineBg, deadlineFont, internalDeadlineBg, internalDeadlineFont, milestoneBg, milestoneFont, savePlanningColors]);
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: currentColors.background.bg700 }]}>
@@ -378,7 +382,9 @@ const PlanningColorsScreen = ({ navigation }: any) => {
       />
     </ScrollView>
   );
-};
+});
+
+PlanningColorsScreen.displayName = 'PlanningColorsScreen';
 
 const styles = StyleSheet.create({
   container: {

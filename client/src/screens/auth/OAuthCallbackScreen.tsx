@@ -1,24 +1,23 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
 import { Text, ActivityIndicator } from 'react-native-paper';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
+import { OAuthCallbackScreenProps } from '../../types/navigation';
+import { logger } from '../../utils/logger';
 
-const OAuthCallbackScreen = ({ navigation }: any) => {
+const OAuthCallbackScreen = React.memo(({ navigation }: OAuthCallbackScreenProps) => {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [errorMessage, setErrorMessage] = useState('');
   const { loginWithToken } = useAuth();
   const { currentColors } = useTheme();
 
-  useEffect(() => {
-    handleOAuthCallback();
-  }, []);
-
-  const handleOAuthCallback = async () => {
+  const handleOAuthCallback = useCallback(async () => {
     try {
       if (Platform.OS !== 'web') {
         setStatus('error');
         setErrorMessage('OAuth callback only supported on web');
+        logger.warn('OAuth callback attempted on non-web platform', { platform: Platform.OS }, 'OAuthCallbackScreen');
         return;
       }
 
@@ -34,6 +33,7 @@ const OAuthCallbackScreen = ({ navigation }: any) => {
             ? 'Microsoft authentication failed. Please try again.'
             : 'An error occurred during authentication.'
         );
+        logger.error('OAuth error received:', { error }, 'OAuthCallbackScreen');
         // Redirect to login after 3 seconds
         setTimeout(() => {
           window.location.href = '/';
@@ -44,6 +44,7 @@ const OAuthCallbackScreen = ({ navigation }: any) => {
       if (!token) {
         setStatus('error');
         setErrorMessage('No authentication token received.');
+        logger.warn('No token received from OAuth callback', {}, 'OAuthCallbackScreen');
         setTimeout(() => {
           window.location.href = '/';
         }, 3000);
@@ -53,6 +54,7 @@ const OAuthCallbackScreen = ({ navigation }: any) => {
       // Store auth token and fetch user profile
       await loginWithToken(token);
       setStatus('success');
+      logger.log('OAuth authentication successful', {}, 'OAuthCallbackScreen');
 
       // Clear URL parameters and redirect to main app
       window.history.replaceState({}, '', '/');
@@ -60,14 +62,18 @@ const OAuthCallbackScreen = ({ navigation }: any) => {
       // The AuthContext will handle navigation automatically
       // when it detects the token
     } catch (error: any) {
-      console.error('[OAuth Callback] Error:', error);
+      logger.error('OAuth Callback Error:', error, 'OAuthCallbackScreen');
       setStatus('error');
       setErrorMessage('Failed to complete authentication. Please try again.');
       setTimeout(() => {
         window.location.href = '/';
       }, 3000);
     }
-  };
+  }, [loginWithToken]);
+
+  useEffect(() => {
+    handleOAuthCallback();
+  }, [handleOAuthCallback]);
 
   const dynamicStyles = createStyles(currentColors);
 
@@ -92,7 +98,9 @@ const OAuthCallbackScreen = ({ navigation }: any) => {
       </View>
     </View>
   );
-};
+});
+
+OAuthCallbackScreen.displayName = 'OAuthCallbackScreen';
 
 const createStyles = (currentColors: any) =>
   StyleSheet.create({

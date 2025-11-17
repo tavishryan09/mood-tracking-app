@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, Text, TextInput, TouchableOpacity, Modal, Platform } from 'react-native';
 import { Button, Title, Menu, IconButton } from 'react-native-paper';
 import { ColorPicker } from 'react-native-color-picker';
@@ -9,10 +9,13 @@ import { CustomDialog } from '../../components/CustomDialog';
 import { settingsAPI } from '../../services/api';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { DragDropList02Icon, ArrowUp01Icon, ArrowDown01Icon } from '@hugeicons/core-free-icons';
+import { ColorPaletteEditorScreenProps } from '../../types/navigation';
+import { logger } from '../../utils/logger';
+import { apiWithTimeout, TIMEOUT_DURATIONS } from '../../utils/apiWithTimeout';
 
 const CUSTOM_PALETTES_KEY = 'custom_palettes';
 
-const ColorPaletteEditorScreen = ({ navigation, route }: any) => {
+const ColorPaletteEditorScreen = React.memo(({ navigation, route }: ColorPaletteEditorScreenProps) => {
   const { currentColors, selectedPalette, setSelectedPalette, loadCustomPalettes: reloadThemeCustomPalettes } = useTheme();
   const { user } = useAuth();
   const params = route?.params || {};
@@ -110,38 +113,40 @@ const ColorPaletteEditorScreen = ({ navigation, route }: any) => {
     },
   });
 
-  const loadCustomPalettes = async () => {
+  const loadCustomPalettes = useCallback(async () => {
     try {
       if (!user) return;
 
-      const response = await settingsAPI.user.get(CUSTOM_PALETTES_KEY);
+      const response = await apiWithTimeout(settingsAPI.user.get(CUSTOM_PALETTES_KEY), TIMEOUT_DURATIONS.QUICK) as any;
       if (response?.data?.value) {
         const palettes: Record<string, ColorPalette> = response.data.value;
         setCustomPalettes(palettes);
+        logger.log('Custom palettes loaded successfully', { count: Object.keys(palettes).length }, 'ColorPaletteEditorScreen');
       }
     } catch (error: any) {
       if (error?.response?.status !== 404) {
-        console.error('[ColorPaletteEditor] Error loading custom palettes:', error);
+        logger.error('Error loading custom palettes:', error, 'ColorPaletteEditorScreen');
       }
     }
-  };
+  }, [user]);
 
-  const saveCustomPalettes = async (palettes: Record<string, ColorPalette>) => {
+  const saveCustomPalettes = useCallback(async (palettes: Record<string, ColorPalette>) => {
     try {
       if (!user) throw new Error('User not logged in');
 
-      await settingsAPI.user.set(CUSTOM_PALETTES_KEY, palettes);
+      await apiWithTimeout(settingsAPI.user.set(CUSTOM_PALETTES_KEY, palettes), TIMEOUT_DURATIONS.STANDARD);
       setCustomPalettes(palettes);
       // Reload custom palettes in ThemeContext
       await reloadThemeCustomPalettes();
+      logger.log('Custom palettes saved successfully', { count: Object.keys(palettes).length }, 'ColorPaletteEditorScreen');
 
-    } catch (error) {
-      console.error('[ColorPaletteEditor] Error saving custom palettes:', error);
+    } catch (error: any) {
+      logger.error('Error saving custom palettes:', error, 'ColorPaletteEditorScreen');
       throw error;
     }
-  };
+  }, [user, reloadThemeCustomPalettes]);
 
-  const handleSavePalette = async () => {
+  const handleSavePalette = useCallback(async () => {
     if (!editedColors) return;
 
     setSaving(true);
@@ -151,6 +156,7 @@ const ColorPaletteEditorScreen = ({ navigation, route }: any) => {
           setErrorMessage('Please enter a palette name');
           setShowErrorDialog(true);
           setSaving(false);
+          logger.warn('Palette save failed: Empty palette name', {}, 'ColorPaletteEditorScreen');
           return;
         }
         const customId = `custom_${Date.now()}`;
@@ -162,6 +168,7 @@ const ColorPaletteEditorScreen = ({ navigation, route }: any) => {
         setSuccessMessage('Custom palette created successfully!');
         setSuccessCallback(() => () => navigation.goBack());
         setShowSuccessDialog(true);
+        logger.log('Custom palette created successfully', { paletteName: newPaletteName }, 'ColorPaletteEditorScreen');
       } else {
         const isPredefined = colorPalettes[editingPalette as ColorPaletteName];
 
@@ -170,6 +177,7 @@ const ColorPaletteEditorScreen = ({ navigation, route }: any) => {
           setErrorMessage('Cannot modify predefined palettes. Please duplicate the palette to create a custom version you can edit.');
           setShowErrorDialog(true);
           setSaving(false);
+          logger.warn('Non-admin attempted to edit predefined palette', { palette: editingPalette }, 'ColorPaletteEditorScreen');
           return;
         }
 
@@ -180,6 +188,7 @@ const ColorPaletteEditorScreen = ({ navigation, route }: any) => {
           setSuccessMessage('Predefined palette override saved successfully!');
           setSuccessCallback(() => () => navigation.goBack());
           setShowSuccessDialog(true);
+          logger.log('Admin override saved for predefined palette', { palette: editingPalette }, 'ColorPaletteEditorScreen');
         } else {
           // Editing an existing custom palette
           const updatedPalettes = { ...customPalettes, [editingPalette]: editedColors };
@@ -187,22 +196,23 @@ const ColorPaletteEditorScreen = ({ navigation, route }: any) => {
           setSuccessMessage('Palette updated successfully!');
           setSuccessCallback(() => () => navigation.goBack());
           setShowSuccessDialog(true);
+          logger.log('Custom palette updated successfully', { palette: editingPalette }, 'ColorPaletteEditorScreen');
         }
       }
-    } catch (error) {
-      console.error('Error saving palette:', error);
+    } catch (error: any) {
+      logger.error('Error saving palette:', error, 'ColorPaletteEditorScreen');
       setErrorMessage('Failed to save palette');
       setShowErrorDialog(true);
     } finally {
       setSaving(false);
     }
-  };
+  }, [editedColors, editMode, newPaletteName, customPalettes, saveCustomPalettes, editingPalette, isAdmin, setSelectedPalette, navigation]);
 
-  const handleDeleteClick = () => {
+  const handleDeleteClick = useCallback(() => {
     setShowDeleteConfirm(true);
-  };
+  }, []);
 
-  const handleDeleteConfirm = async () => {
+  const handleDeleteConfirm = useCallback(async () => {
     try {
       const paletteToDelete = editingPalette;
       setEditingPalette('default');
@@ -215,22 +225,23 @@ const ColorPaletteEditorScreen = ({ navigation, route }: any) => {
       if (selectedPalette === paletteToDelete) {
         await setSelectedPalette('default');
       }
-    } catch (error) {
-      console.error('Delete palette error:', error);
+      logger.log('Palette deleted successfully', { palette: paletteToDelete }, 'ColorPaletteEditorScreen');
+    } catch (error: any) {
+      logger.error('Delete palette error:', error, 'ColorPaletteEditorScreen');
       setShowDeleteConfirm(false);
     }
-  };
+  }, [editingPalette, customPalettes, saveCustomPalettes, selectedPalette, setSelectedPalette]);
 
-  const handleDeleteCancel = () => {
+  const handleDeleteCancel = useCallback(() => {
     setShowDeleteConfirm(false);
-  };
+  }, []);
 
-  const handleCreateNew = () => {
+  const handleCreateNew = useCallback(() => {
     setNewPaletteName('');
     setEditMode('create');
-  };
+  }, []);
 
-  const handleDuplicatePalette = () => {
+  const handleDuplicatePalette = useCallback(() => {
     if (!editedColors) return;
 
     const paletteBeingEdited = customPalettes[editingPalette] || colorPalettes[editingPalette as ColorPaletteName];
@@ -239,7 +250,8 @@ const ColorPaletteEditorScreen = ({ navigation, route }: any) => {
     setNewPaletteName(`${paletteBeingEdited.name} (Copy)`);
     setEditedColors(JSON.parse(JSON.stringify(paletteBeingEdited)));
     setEditMode('create');
-  };
+    logger.log('Palette duplicated for editing', { palette: editingPalette }, 'ColorPaletteEditorScreen');
+  }, [editedColors, customPalettes, editingPalette]);
 
   const openColorPickerForField = (fieldName: string, currentValue: string, onChange: (color: string) => void) => {
     setActiveColorField(fieldName);
@@ -836,5 +848,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 });
+
+ColorPaletteEditorScreen.displayName = 'ColorPaletteEditorScreen';
 
 export default ColorPaletteEditorScreen;
