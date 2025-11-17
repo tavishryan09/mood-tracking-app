@@ -423,7 +423,10 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
   };
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: currentColors.background.bg700 }]}>
+    <ScrollView
+      style={[styles.container, { backgroundColor: currentColors.background.bg700 }]}
+      keyboardShouldPersistTaps="always"
+    >
       <View style={[styles.header, { backgroundColor: currentColors.background.bg300 }]}>
         <Title style={[styles.title, { color: currentColors.text }]}>Team View Settings</Title>
         <Paragraph style={[styles.description, { color: currentColors.textSecondary }]}>
