@@ -447,7 +447,7 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
 
   }, [planningColors]);
 
-  // Initial data load on mount
+  // Initial data load on mount - v2 force rebuild
   useEffect(() => {
     logger.log('🚀 PlanningScreen mounted - triggering initial data load', { currentQuarter }, 'PlanningScreen');
     hookLoadData(currentQuarter);
