@@ -154,7 +154,7 @@ const CreateClientScreen = ({ navigation }: any) => {
         {/* Business Information Section */}
         <Card style={[styles.section, { backgroundColor: clientCardBg }]}>
           <Card.Content>
-            <Title style={[styles.sectionTitle, { color: currentColors.primary }]}>Business Information</Title>
+            <Title style={[styles.sectionTitle, { color: currentColors.text }]}>Business Information</Title>
 
             <TextInput
               label="Business Name *"
@@ -190,7 +190,7 @@ const CreateClientScreen = ({ navigation }: any) => {
         {/* Primary Contact Section */}
         <Card style={[styles.section, { backgroundColor: clientCardBg }]}>
           <Card.Content>
-            <Title style={[styles.sectionTitle, { color: currentColors.primary }]}>Primary Contact</Title>
+            <Title style={[styles.sectionTitle, { color: currentColors.text }]}>Primary Contact</Title>
 
             <TextInput
               label="Name *"
@@ -234,7 +234,7 @@ const CreateClientScreen = ({ navigation }: any) => {
         <Card style={[styles.section, { backgroundColor: clientCardBg }]}>
           <Card.Content>
             <View style={styles.sectionHeader}>
-              <Title style={[styles.sectionTitle, { color: currentColors.primary }]}>Additional Contacts</Title>
+              <Title style={[styles.sectionTitle, { color: currentColors.text }]}>Additional Contacts</Title>
               <IconButton
                 icon={() => <HugeiconsIcon icon={UserAdd02Icon} size={24} color={currentColors.primary} />}
                 size={24}

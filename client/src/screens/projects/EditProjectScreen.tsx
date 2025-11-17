@@ -603,11 +603,13 @@ const styles = StyleSheet.create({
     marginTop: 20,
     marginBottom: 15,
     elevation: 2,
+    borderRadius: 10,
   },
   teamSection: {
     marginTop: 15,
     marginBottom: 20,
     elevation: 2,
+    borderRadius: 10,
   },
   switchRow: {
     flexDirection: 'row',
