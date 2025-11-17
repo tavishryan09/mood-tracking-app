@@ -331,28 +331,45 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
         {/* Default Page Selector */}
         <List.Item
           title="Default Page"
-          description={`Page to show when ${roleLabel}s log in`}
+          description={
+            availablePages.length === 0
+              ? 'Enable at least one page above to set a default'
+              : availablePages.length === 1
+              ? 'Only one page is enabled'
+              : `Page to show when ${roleLabel}s log in (${availablePages.length} pages available)`
+          }
           right={() => (
             <Menu
               visible={menuVisible}
               onDismiss={() => setMenuVisible(false)}
               anchor={
-                <Button mode="outlined" onPress={() => setMenuVisible(true)}>
+                <Button
+                  mode="outlined"
+                  onPress={() => setMenuVisible(true)}
+                  disabled={availablePages.length === 0}
+                >
                   {PAGES.find((p) => p.key === defaultPage)?.label || 'Select'}
                 </Button>
               }
             >
-              {availablePages.map((page) => (
+              {availablePages.length === 0 ? (
                 <Menu.Item
-                  key={page.key}
-                  onPress={() => {
-                    setDefaultPage(page.key);
-                    setMenuVisible(false);
-                  }}
-                  title={page.label}
-                  leadingIcon={page.key === defaultPage ? 'check' : undefined}
+                  title="No pages available"
+                  disabled
                 />
-              ))}
+              ) : (
+                availablePages.map((page) => (
+                  <Menu.Item
+                    key={page.key}
+                    onPress={() => {
+                      setDefaultPage(page.key);
+                      setMenuVisible(false);
+                    }}
+                    title={page.label}
+                    leadingIcon={page.key === defaultPage ? 'check' : undefined}
+                  />
+                ))
+              )}
             </Menu>
           )}
         />
