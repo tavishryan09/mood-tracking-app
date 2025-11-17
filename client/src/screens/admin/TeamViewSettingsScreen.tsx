@@ -342,10 +342,14 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
             <Menu
               visible={menuVisible}
               onDismiss={() => setMenuVisible(false)}
+              contentStyle={{ backgroundColor: currentColors.background.bg300 }}
               anchor={
                 <Button
                   mode="outlined"
-                  onPress={() => setMenuVisible(true)}
+                  onPress={() => {
+                    console.log(`[TeamViewSettings] Opening menu for ${role}, visible:`, menuVisible);
+                    setMenuVisible(true);
+                  }}
                   disabled={availablePages.length === 0}
                 >
                   {PAGES.find((p) => p.key === defaultPage)?.label || 'Select'}
@@ -362,6 +366,7 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
                   <Menu.Item
                     key={page.key}
                     onPress={() => {
+                      console.log(`[TeamViewSettings] Selected page:`, page.label);
                       setDefaultPage(page.key);
                       setMenuVisible(false);
                     }}
