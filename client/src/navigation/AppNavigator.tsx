@@ -565,6 +565,7 @@ const AppNavigator = () => {
   // This prevents the infinite loading issue on web
 
   // Linking configuration for URL routing
+  // Use a dynamic approach based on current screen size
   const linking = {
     prefixes: ['http://localhost:8081', 'http://localhost:3000', 'https://lightingbymood-tracker.vercel.app'],
     config: {
@@ -576,66 +577,70 @@ const AppNavigator = () => {
             OAuthCallback: 'auth/callback',
           },
         },
-        // Desktop navigation (Drawer-based)
-        MainDrawer: {
-          path: '',
-          screens: {
-            Dashboard: '',
-            Planning: 'planning',
-            Projects: 'projects',
-            Profile: 'profile',
-            Clients: 'clients',
-            ProjectTableView: 'projects/table',
-            CreateEvent: 'events/create',
-            EditEvent: 'events/edit/:eventId',
-            CreateProject: 'projects/create',
-            EditProject: 'projects/edit/:projectId',
-            CreateClient: 'clients/create',
-            EditClient: 'clients/edit/:clientId',
-            ManageUsers: 'admin/users',
-            InviteUser: 'admin/users/invite',
-            EditUser: 'admin/users/edit/:userId',
-            TeamViewSettings: 'admin/settings/team-view',
-            UserRates: 'admin/users/rates',
-            PlanningColors: 'profile/planning-colors',
-            CustomColorManager: 'profile/colors/manager',
-            ElementColorMapper: 'profile/colors/mapper',
-            ManageCustomThemes: 'profile/colors/themes',
-          },
-        },
-        // Mobile navigation (Stack → Tabs)
-        MainStack: {
-          path: '',
-          screens: {
-            MainTabs: {
-              path: '',
-              screens: {
-                Dashboard: '',
-                Planning: 'planning',
-                Projects: 'projects',
-                Clients: 'clients',
-                Profile: 'profile',
-              },
+        // Only define one set of paths - React Navigation will resolve based on current navigator
+        ...(isDesktop ? {
+          // Desktop navigation (Drawer-based)
+          MainDrawer: {
+            path: '',
+            screens: {
+              Dashboard: '',
+              Planning: 'planning',
+              Projects: 'projects',
+              Profile: 'profile',
+              Clients: 'clients',
+              ProjectTableView: 'projects/table',
+              CreateEvent: 'events/create',
+              EditEvent: 'events/edit/:eventId',
+              CreateProject: 'projects/create',
+              EditProject: 'projects/edit/:projectId',
+              CreateClient: 'clients/create',
+              EditClient: 'clients/edit/:clientId',
+              ManageUsers: 'admin/users',
+              InviteUser: 'admin/users/invite',
+              EditUser: 'admin/users/edit/:userId',
+              TeamViewSettings: 'admin/settings/team-view',
+              UserRates: 'admin/users/rates',
+              PlanningColors: 'profile/planning-colors',
+              CustomColorManager: 'profile/colors/manager',
+              ElementColorMapper: 'profile/colors/mapper',
+              ManageCustomThemes: 'profile/colors/themes',
             },
-            CreateEvent: 'events/create',
-            EditEvent: 'events/edit/:eventId',
-            Planning: 'planning',
-            CreateProject: 'projects/create',
-            EditProject: 'projects/edit/:projectId',
-            CreateClient: 'clients/create',
-            ClientsList: 'clients',
-            EditClient: 'clients/edit/:clientId',
-            UserRates: 'admin/users/rates',
-            TeamViewSettings: 'admin/settings/team-view',
-            ManageUsers: 'admin/users',
-            InviteUser: 'admin/users/invite',
-            EditUser: 'admin/users/edit/:userId',
-            PlanningColors: 'profile/planning-colors',
-            CustomColorManager: 'profile/colors/manager',
-            ElementColorMapper: 'profile/colors/mapper',
-            ManageCustomThemes: 'profile/colors/themes',
           },
-        },
+        } : {
+          // Mobile navigation (Stack → Tabs)
+          MainStack: {
+            path: '',
+            screens: {
+              MainTabs: {
+                path: '',
+                screens: {
+                  Dashboard: '',
+                  Planning: 'planning',
+                  Projects: 'projects',
+                  Clients: 'clients',
+                  Profile: 'profile',
+                },
+              },
+              CreateEvent: 'events/create',
+              EditEvent: 'events/edit/:eventId',
+              Planning: 'planning',
+              CreateProject: 'projects/create',
+              EditProject: 'projects/edit/:projectId',
+              CreateClient: 'clients/create',
+              ClientsList: 'clients',
+              EditClient: 'clients/edit/:clientId',
+              UserRates: 'admin/users/rates',
+              TeamViewSettings: 'admin/settings/team-view',
+              ManageUsers: 'admin/users',
+              InviteUser: 'admin/users/invite',
+              EditUser: 'admin/users/edit/:userId',
+              PlanningColors: 'profile/planning-colors',
+              CustomColorManager: 'profile/colors/manager',
+              ElementColorMapper: 'profile/colors/mapper',
+              ManageCustomThemes: 'profile/colors/themes',
+            },
+          },
+        }),
       },
     },
   };
