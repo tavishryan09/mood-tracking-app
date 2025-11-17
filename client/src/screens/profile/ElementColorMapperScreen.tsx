@@ -322,6 +322,10 @@ const ElementColorMapperScreen = ({ navigation, route }: any) => {
         clientCardBorder: textColor.id,
         addButtonBackground: primaryColor.id,
         addButtonIcon: bgColor.id,
+        searchIconColor: textColor.id,
+        searchTextColor: textColor.id,
+        searchBarBackground: bgColor.id,
+        searchSectionBackground: bgColor.id,
       },
       events: {
         background: bgColor.id,

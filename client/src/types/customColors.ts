@@ -172,6 +172,10 @@ export interface ElementColorMapping {
     clientCardBorder: string;
     addButtonBackground: string;
     addButtonIcon: string;
+    searchIconColor: string;
+    searchTextColor: string;
+    searchBarBackground: string;
+    searchSectionBackground: string;
   };
 
   // Events Screen
@@ -384,6 +388,10 @@ export const ElementLabels = {
       clientCardBorder: 'Client Card Border',
       addButtonBackground: 'Add Button Background',
       addButtonIcon: 'Add Button Icon',
+      searchIconColor: 'Search Icon Color',
+      searchTextColor: 'Search Text Color',
+      searchBarBackground: 'Search Bar Background',
+      searchSectionBackground: 'Search Section Background',
     },
   },
   events: {
