@@ -577,30 +577,14 @@ const AppNavigator = () => {
             'OAuthCallback': 'callback',
           },
         },
-        // Desktop navigator wrapper - use empty path to hide from URL
-        'MainDrawer': {
-          path: '',
-          screens: {
-            'Dashboard': '',
-            'Planning': 'planning',
-            'Projects': 'projects',
-            'Profile': 'profile',
-            'Clients': 'clients',
-            'ProjectTableView': 'projects/table',
-          },
-        },
-        // Mobile tabs - paths without navigator prefix
-        'MainTabs': {
-          path: '',
-          screens: {
-            'Dashboard': '',
-            'Planning': 'planning',
-            'Projects': 'projects',
-            'Profile': 'profile',
-            'Clients': 'clients',
-          },
-        },
-        // Shared stack screens
+        // Main screens - shared paths for both desktop and mobile
+        'Dashboard': '',
+        'Planning': 'planning',
+        'Projects': 'projects',
+        'Profile': 'profile',
+        'Clients': 'clients',
+        'ProjectTableView': 'projects/table',
+        // Stack screens
         'CreateEvent': 'events/create',
         'EditEvent': 'events/edit/:eventId',
         'CreateProject': 'projects/create',
