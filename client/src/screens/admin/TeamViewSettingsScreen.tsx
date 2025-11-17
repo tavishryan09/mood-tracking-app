@@ -343,11 +343,19 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
           <View>
             <TouchableOpacity
               onPress={() => {
-                console.log(`[TeamViewSettings] TouchableOpacity pressed for ${role}, current menuVisible:`, menuVisible);
-                setMenuVisible(!menuVisible);
-                console.log(`[TeamViewSettings] Called setMenuVisible(${!menuVisible}) for ${role}`);
+                try {
+                  console.log('=== BUTTON CLICKED ===');
+                  console.log(`[TeamViewSettings] TouchableOpacity pressed for role: "${role}"`);
+                  console.log(`[TeamViewSettings] Current menuVisible value:`, menuVisible);
+                  console.log(`[TeamViewSettings] About to set menuVisible to:`, !menuVisible);
+                  setMenuVisible(!menuVisible);
+                  console.log(`[TeamViewSettings] setMenuVisible called successfully`);
+                } catch (error) {
+                  console.error('[TeamViewSettings] ERROR in onPress:', error);
+                }
               }}
               disabled={availablePages.length === 0}
+              activeOpacity={0.7}
               style={{
                 alignSelf: 'flex-start',
                 borderWidth: 1,
@@ -356,6 +364,7 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
                 paddingHorizontal: 16,
                 paddingVertical: 8,
                 opacity: availablePages.length === 0 ? 0.5 : 1,
+                backgroundColor: 'transparent',
               }}
             >
               <Text style={{ color: availablePages.length === 0 ? currentColors.textTertiary : currentColors.primary }}>
