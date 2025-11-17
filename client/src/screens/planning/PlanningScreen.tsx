@@ -3508,7 +3508,7 @@ const PlanningScreen = () => {
                           borderColor: currentColors.border,
                           borderRadius: 4,
                           fontSize: 16,
-                          fontFamily: 'system-ui',
+                          fontFamily: 'Josefin Sans',
                         }}
                       />
                     ) : (
