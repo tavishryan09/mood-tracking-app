@@ -18,6 +18,7 @@ import { logger } from '../../utils/logger';
 import PlanningHeader from '../../components/planning/PlanningHeader';
 import ManageTeamMembersModal from '../../components/planning/ManageTeamMembersModal';
 import ProjectAssignmentModal from '../../components/planning/ProjectAssignmentModal';
+import PlanningTaskCell from '../../components/planning/PlanningTaskCell';
 import { usePlanningNavigation } from '../../hooks/usePlanningNavigation';
 import { usePlanningData } from '../../hooks/usePlanningData';
 import { usePlanningDragDrop } from '../../hooks/usePlanningDragDrop';
@@ -103,6 +104,16 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
   const setDeadlineTasks = hookSetDeadlineTasks;
   const setVisibleUserIds = hookSetVisibleUserIds;
 
+  // Error dialog state (needed by drag-drop hook)
+  const [errorMessage, setErrorMessage] = useState('');
+  const [showErrorDialog, setShowErrorDialog] = useState(false);
+
+  // Helper function to invalidate dashboard queries after task changes
+  const invalidateDashboardQueries = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['planningTasks', 'dashboard', user?.id] });
+    queryClient.invalidateQueries({ queryKey: ['deadlines', 'upcoming'] });
+  }, [queryClient, user?.id]);
+
   // Drag & Drop hook
   const dragDropHook = usePlanningDragDrop({
     blockAssignments,
@@ -148,10 +159,6 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
   const currentWeekRef = useRef<HTMLElement>(null);
   const [hasScrolled, setHasScrolled] = useState(false);
   const [showManageModal, setShowManageModal] = useState(false);
-
-  // Error dialog state
-  const [errorMessage, setErrorMessage] = useState('');
-  const [showErrorDialog, setShowErrorDialog] = useState(false);
 
   // View preferences
   const [showWeekendsDefault, setShowWeekendsDefault] = useState(false);
@@ -249,8 +256,6 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
   const [deleteTaskBlockKey, setDeleteTaskBlockKey] = useState<string | null>(null);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
-  const [showErrorDialog, setShowErrorDialog] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
   const [showNoticeDialog, setShowNoticeDialog] = useState(false);
   const [noticeMessage, setNoticeMessage] = useState('');
   const [showWarningDialog, setShowWarningDialog] = useState(false);
@@ -313,12 +318,6 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
   const internalDeadlineFont = getColorForElement('planningTasks', 'internalDeadlineText');
   const milestoneBg = getColorForElement('planningTasks', 'milestoneBackground');
   const milestoneFont = getColorForElement('planningTasks', 'milestoneText');
-
-  // Helper function to invalidate dashboard queries after task changes
-  const invalidateDashboardQueries = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ['planningTasks', 'dashboard', user?.id] });
-    queryClient.invalidateQueries({ queryKey: ['deadlines', 'upcoming'] });
-  }, [queryClient, user?.id]);
 
   // Deadline tasks state
   const [showDeadlineModal, setShowDeadlineModal] = useState(false);
@@ -2042,335 +2041,56 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
 
                           return weekDays.map((day, dayIndex) => {
                             const dateString = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
-                            const blockKey = `${user.id}-${dateString}-${blockIndex}`;
-                            const assignment = blockAssignments[blockKey];
-
-                            // Check if this block is spanned by a previous block
-                            let isSpanned = false;
-                            for (let prevBlock = blockIndex - 1; prevBlock >= 0; prevBlock--) {
-                              const prevKey = `${user.id}-${dateString}-${prevBlock}`;
-                              const prevAssignment = blockAssignments[prevKey];
-                              if (prevAssignment && prevAssignment.span > (blockIndex - prevBlock)) {
-                                isSpanned = true;
-                                break;
-                              }
-                            }
-
-                            // Skip rendering cell if it's spanned by a previous block
-                            if (isSpanned) {
-                              return null;
-                            }
-
-                            const span = assignment?.span || 1;
-                            const isHovered = hoveredBlock === blockKey;
-                            const isSelected = selectedCell === blockKey;
-                            const today = new Date();
-                            const todayString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
-                            const isToday = dateString === todayString;
-
-                            // Check if this day is outside the current quarter
-                            const dayQuarter = getQuarterFromDate(day);
-                            const isOutsideQuarter = dayQuarter !== currentQuarter.quarter;
-
-                            // Check if this day is a weekend (Saturday = 6, Sunday = 0)
-                            const dayOfWeek = day.getDay();
-                            const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-
-                            // Check if there's an empty cell above (for top edge expansion)
-                            const blockAbove = blockIndex - 1;
-                            const hasEmptyCellAbove = blockAbove >= 0 && !blockAssignments[`${user.id}-${dateString}-${blockAbove}`];
-
-                            // Check if there's an empty cell below (for bottom edge expansion)
-                            const blockBelow = blockIndex + span;
-                            const hasEmptyCellBelow = blockBelow <= 3 && !blockAssignments[`${user.id}-${dateString}-${blockBelow}`];
-
-                            // Show top edge if: can expand up (empty cell above) OR can collapse (span > 1)
-                            const showTopEdge = hasEmptyCellAbove || span > 1;
-
-                            // Show bottom edge if: can expand down (empty cell below) OR can collapse (span > 1)
-                            const showBottomEdge = hasEmptyCellBelow || span > 1;
-
-                            // Determine if this is the last row for this user
-                            const isLastBlockForUser = (blockIndex + span - 1) === 3;
-
-                            // Check if this cell is being dragged over (part of the span)
-                            let isDragOver = false;
-                            if (dragOverCell && draggedTask) {
-                              // Parse the dragOverCell to get its blockIndex
-                              const match = dragOverCell.match(/(\d{4}-\d{2}-\d{2})-(\d+)$/);
-                              if (match) {
-                                const dragOverDate = match[1];
-                                const dragOverBlockIndex = parseInt(match[2], 10);
-                                const dragOverUserId = dragOverCell.substring(0, dragOverCell.length - match[0].length - 1);
-
-                                // Check if this cell is the same user, date, and within the span range
-                                if (user.id === dragOverUserId && dateString === dragOverDate) {
-                                  if (blockIndex >= dragOverBlockIndex && blockIndex < dragOverBlockIndex + draggedTask.span) {
-                                    isDragOver = true;
-
-                                  }
-                                }
-                              }
-                            }
+                            const assignment = blockAssignments[`${user.id}-${dateString}-${blockIndex}`];
 
                             return (
-                              <td
+                              <PlanningTaskCell
                                 key={`${weekIndex}-${dayIndex}`}
-                                rowSpan={span}
-                                onDragOver={(e) => handleTaskDragOver(e, user.id, dateString, blockIndex)}
-                                onDrop={(e) => handleTaskDrop(e, user.id, dateString, blockIndex)}
-                                onClick={() => {
-                                  // Desktop: no click-to-paste functionality
-                                  // Use keyboard shortcuts (Cmd+C, Cmd+V) only
-                                  // Mobile uses tap/long-press handlers instead
-                                }}
-                                style={{
-                                  width: `${DAY_CELL_WIDTH}px`,
-                                  minWidth: `${DAY_CELL_WIDTH}px`,
-                                  maxWidth: `${DAY_CELL_WIDTH}px`,
-                                  height: `${TIME_BLOCK_HEIGHT * span}px`,
-                                  borderBottom: (isLastBlockForUser && isLastUser) ? '0px' : (isLastBlockForUser ? `3px solid ${teamMemberBorderColor}` : `1px solid ${cellBorderColor}`),
-                                  borderRight: `1px solid ${cellBorderColor}`,
-                                  padding: assignment?.projectName === 'Unavailable' ? '0' : '2px',
-                                  position: 'relative',
-                                  backgroundColor: isToday ? todayCellBg : (isWeekend ? weekendCellBg : weekdayCellBg),
-                                  verticalAlign: 'top',
-                                  cursor: assignment ? 'pointer' : 'pointer',
-                                }}
-                                onMouseEnter={() => handleCellHover(user.id, dateString, blockIndex, true)}
-                                onMouseLeave={() => handleCellHover(user.id, dateString, blockIndex, false)}
-                              >
-                                <div
-                                  style={{
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    justifyContent: 'center',
-                                    alignItems: 'center',
-                                    height: assignment ? (assignment.projectName === 'Unavailable' ? '100%' : 'calc(100% - 4px)') : '100%',
-                                    cursor: 'pointer',
-                                    userSelect: 'none',
-                                    position: 'relative',
-                                    margin: assignment ? (assignment.projectName === 'Unavailable' ? '0' : '2px') : '0',
-                                    borderRadius: assignment ? (assignment.projectName === 'Unavailable' ? '0' : '6px') : '0',
-                                    overflow: assignment ? (assignment.projectName === 'Unavailable' ? 'visible' : 'hidden') : 'visible',
-                                    backgroundColor: isDragOver ? `${currentColors.secondary}99` : (isSelected ? `${currentColors.primary}66` : (isOutsideQuarter ? 'transparent' : (assignment ? (() => {
-                                      // Determine background color based on task type using custom planning colors
-                                      const projectName = assignment.projectName || '';
-                                      const projectNameLower = projectName.toLowerCase();
-
-                                      // Status events
-                                      if (projectName === 'Out of Office' || projectName.includes('(Out of Office)')) {
-                                        return outOfOfficeBg;
-                                      } else if (projectName === 'Time Off') {
-                                        return timeOffBg;
-                                      } else if (projectName === 'Unavailable') {
-                                        return unavailableBg;
-                                      }
-
-                                      // Task types based on project name
-                                      if (projectNameLower.includes('admin')) {
-                                        return adminTaskBg;
-                                      } else if (projectNameLower.includes('marketing')) {
-                                        return marketingTaskBg;
-                                      }
-
-                                      return projectTaskBg; // Default color for regular projects
-                                    })() : 'transparent'))),
-                                    borderWidth: copiedCell && selectedCell === blockKey ? 3 : 0,
-                                    borderColor: copiedCell && selectedCell === blockKey ? currentColors.primary : 'transparent',
-                                    borderStyle: 'solid',
-                                  }}
-                                  onClick={() => handleBlockClick(user.id, dateString, blockIndex)}
-                                  onTouchStart={(e) => {
-                                    if (assignment) {
-                                      // For filled cells, let the inner div handle it
-                                      return;
-                                    }
-                                    // For empty cells, handle tap for paste
-                                    e.stopPropagation();
-                                  }}
-                                  onTouchEnd={(e) => {
-                                    if (assignment) {
-                                      // For filled cells, let the inner div handle it
-                                      return;
-                                    }
-                                    // For empty cells, handle tap for paste
-                                    e.stopPropagation();
-                                    handleMobileCellTap(user.id, dateString, blockIndex, e);
-                                  }}
-                                >
-                                  {/* Draggable top edge */}
-                                  {assignment && showTopEdge && (
-                                    <div
-                                      style={{
-                                        position: 'absolute',
-                                        top: 0,
-                                        left: 0,
-                                        right: 0,
-                                        height: 10,
-                                        zIndex: 10,
-                                        backgroundColor: isHovered ? `${currentColors.primary}80` : 'transparent',
-                                        cursor: 'ns-resize',
-                                      }}
-                                      onMouseDown={(e) => {
-                                        e.stopPropagation();
-
-                                        handleEdgeDragStart(user.id, dateString, blockIndex, 'top', e, span);
-                                      }}
-                                      onTouchStart={(e) => {
-                                        e.stopPropagation();
-                                        e.preventDefault(); // Prevent window scroll during edge drag
-
-                                        handleEdgeDragStart(user.id, dateString, blockIndex, 'top', e.touches[0], span);
-                                      }}
-                                    />
-                                  )}
-                                  {assignment && (
-                                    <>
-                                      {/* Center area for displaying task and long-press menu */}
-                                      <div
-                                        draggable={Platform.OS === 'web'}
-                                        onDragStart={(e) => handleTaskDragStart(e, user.id, dateString, blockIndex)}
-                                        onDragEnd={handleTaskDragEnd}
-                                        onTouchStart={(e) => {
-                                          e.stopPropagation();
-                                          handleMobileLongPressStart(user.id, dateString, blockIndex, e);
-                                        }}
-                                        onTouchEnd={(e) => {
-                                          handleMobileLongPressEnd();
-                                          handleMobileCellTap(user.id, dateString, blockIndex, e);
-                                        }}
-                                        style={{
-                                          position: 'absolute',
-                                          top: '0',
-                                          bottom: '0',
-                                          left: '4px',
-                                          right: '4px',
-                                          cursor: 'move',
-                                          zIndex: 5,
-                                          display: 'flex',
-                                          flexDirection: 'column',
-                                          justifyContent: 'center',
-                                          alignItems: 'center',
-                                          padding: '4px',
-                                        }}
-                                      >
-                                        <div style={{
-                                          fontSize: 11,
-                                          lineHeight: '1.2',
-                                          color: (() => {
-                                            const projectName = assignment.projectName || '';
-                                            const projectNameLower = projectName.toLowerCase();
-
-                                            // Status events
-                                            if (projectName === 'Time Off') {
-                                              return timeOffFont;
-                                            }
-                                            if (projectName === 'Out of Office' || projectName.includes('(Out of Office)')) {
-                                              return outOfOfficeFont;
-                                            }
-                                            if (projectName === 'Unavailable') {
-                                              return unavailableFont;
-                                            }
-
-                                            // Task types based on project name
-                                            if (projectNameLower.includes('admin')) {
-                                              return adminTaskFont;
-                                            } else if (projectNameLower.includes('marketing')) {
-                                              return marketingTaskFont;
-                                            }
-
-                                            // Regular projects use custom project font color
-                                            return projectTaskFont;
-                                          })(),
-                                          fontWeight: 700,
-                                          marginBottom: 0,
-                                          overflow: 'hidden',
-                                          textOverflow: 'ellipsis',
-                                          display: '-webkit-box',
-                                          WebkitLineClamp: Math.max(3, span * 2),
-                                          WebkitBoxOrient: 'vertical',
-                                          userSelect: 'none',
-                                          pointerEvents: 'none',
-                                          textAlign: 'center',
-                                        }}>
-                                          {assignment.projectName}
-                                        </div>
-                                        {assignment.task && (
-                                          <div style={{
-                                            fontSize: 9,
-                                            lineHeight: '1.2',
-                                            marginTop: 2,
-                                            color: (() => {
-                                              const projectName = assignment.projectName || '';
-                                              const projectNameLower = projectName.toLowerCase();
-
-                                              // Status events
-                                              if (projectName === 'Time Off') {
-                                                return timeOffFont;
-                                              }
-                                              if (projectName === 'Out of Office' || projectName.includes('(Out of Office)')) {
-                                                return outOfOfficeFont;
-                                              }
-                                              if (projectName === 'Unavailable') {
-                                                return unavailableFont;
-                                              }
-
-                                              // Task types based on project name
-                                              if (projectNameLower.includes('admin')) {
-                                                return adminTaskFont;
-                                              } else if (projectNameLower.includes('marketing')) {
-                                                return marketingTaskFont;
-                                              }
-
-                                              // Regular projects use custom project font color
-                                              return projectTaskFont;
-                                            })(),
-                                            fontStyle: 'normal',
-                                            overflow: 'hidden',
-                                            textOverflow: 'ellipsis',
-                                            display: '-webkit-box',
-                                            WebkitLineClamp: span,
-                                            WebkitBoxOrient: 'vertical',
-                                            userSelect: 'none',
-                                            pointerEvents: 'none',
-                                            textAlign: 'center',
-                                          }}>
-                                            {assignment.task}
-                                          </div>
-                                        )}
-                                      </div>
-                                    </>
-                                  )}
-
-                                  {/* Draggable bottom edge */}
-                                  {assignment && showBottomEdge && (
-                                    <div
-                                      style={{
-                                        position: 'absolute',
-                                        bottom: 0,
-                                        left: 0,
-                                        right: 0,
-                                        height: 10,
-                                        zIndex: 10,
-                                        backgroundColor: isHovered ? `${currentColors.primary}80` : 'transparent',
-                                        cursor: 'ns-resize',
-                                      }}
-                                      onMouseDown={(e) => {
-                                        e.stopPropagation();
-
-                                        handleEdgeDragStart(user.id, dateString, blockIndex, 'bottom', e, span);
-                                      }}
-                                      onTouchStart={(e) => {
-                                        e.stopPropagation();
-                                        e.preventDefault(); // Prevent window scroll during edge drag
-
-                                        handleEdgeDragStart(user.id, dateString, blockIndex, 'bottom', e.touches[0], span);
-                                      }}
-                                    />
-                                  )}
-                                </div>
-                              </td>
+                                userId={user.id}
+                                date={day}
+                                dateString={dateString}
+                                blockIndex={blockIndex}
+                                assignment={assignment}
+                                blockAssignments={blockAssignments}
+                                hoveredBlock={hoveredBlock}
+                                selectedCell={selectedCell}
+                                copiedCell={copiedCell}
+                                dragOverCell={dragOverCell}
+                                draggedTask={draggedTask}
+                                currentQuarter={currentQuarter}
+                                isLastUser={isLastUser}
+                                weekIndex={weekIndex}
+                                dayIndex={dayIndex}
+                                handleTaskDragOver={handleTaskDragOver}
+                                handleTaskDrop={handleTaskDrop}
+                                handleCellHover={handleCellHover}
+                                handleBlockClick={handleBlockClick}
+                                handleTaskDragStart={handleTaskDragStart}
+                                handleTaskDragEnd={handleTaskDragEnd}
+                                handleEdgeDragStart={handleEdgeDragStart}
+                                handleMobileLongPressStart={handleMobileLongPressStart}
+                                handleMobileLongPressEnd={handleMobileLongPressEnd}
+                                handleMobileCellTap={handleMobileCellTap}
+                                getQuarterFromDate={getQuarterFromDate}
+                                currentColors={currentColors}
+                                cellBorderColor={cellBorderColor}
+                                teamMemberBorderColor={teamMemberBorderColor}
+                                weekdayCellBg={weekdayCellBg}
+                                weekendCellBg={weekendCellBg}
+                                todayCellBg={todayCellBg}
+                                projectTaskBg={projectTaskBg}
+                                projectTaskFont={projectTaskFont}
+                                adminTaskBg={adminTaskBg}
+                                adminTaskFont={adminTaskFont}
+                                marketingTaskBg={marketingTaskBg}
+                                marketingTaskFont={marketingTaskFont}
+                                outOfOfficeBg={outOfOfficeBg}
+                                outOfOfficeFont={outOfOfficeFont}
+                                unavailableBg={unavailableBg}
+                                unavailableFont={unavailableFont}
+                                timeOffBg={timeOffBg}
+                                timeOffFont={timeOffFont}
+                              />
                             );
                           });
                         })}
