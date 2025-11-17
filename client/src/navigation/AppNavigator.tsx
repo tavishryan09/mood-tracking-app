@@ -566,7 +566,7 @@ const AppNavigator = () => {
 
   // Linking configuration for URL routing
   const linking = {
-    prefixes: ['http://localhost:8081', 'http://localhost:3000', 'https://your-domain.com'],
+    prefixes: ['http://localhost:8081', 'http://localhost:3000', 'https://lightingbymood-tracker.vercel.app'],
     config: {
       screens: {
         Auth: {
@@ -576,21 +576,22 @@ const AppNavigator = () => {
             OAuthCallback: 'auth/callback',
           },
         },
+        // Desktop navigation (Drawer-based)
         MainDrawer: {
           path: '',
           screens: {
-            Dashboard: 'dashboard',
+            Dashboard: '',
             Planning: 'planning',
             Projects: 'projects',
             Profile: 'profile',
             Clients: 'clients',
-            CreateClient: 'clients/create',
-            EditClient: 'clients/edit/:clientId',
-            CreateProject: 'projects/create',
-            EditProject: 'projects/edit/:projectId',
             ProjectTableView: 'projects/table',
             CreateEvent: 'events/create',
             EditEvent: 'events/edit/:eventId',
+            CreateProject: 'projects/create',
+            EditProject: 'projects/edit/:projectId',
+            CreateClient: 'clients/create',
+            EditClient: 'clients/edit/:clientId',
             ManageUsers: 'admin/users',
             InviteUser: 'admin/users/invite',
             EditUser: 'admin/users/edit/:userId',
@@ -600,7 +601,39 @@ const AppNavigator = () => {
             CustomColorManager: 'profile/colors/manager',
             ElementColorMapper: 'profile/colors/mapper',
             ManageCustomThemes: 'profile/colors/themes',
-            ColorPaletteEditor: 'profile/colors/editor',
+          },
+        },
+        // Mobile navigation (Stack → Tabs)
+        MainStack: {
+          path: '',
+          screens: {
+            MainTabs: {
+              path: '',
+              screens: {
+                Dashboard: '',
+                Planning: 'planning',
+                Projects: 'projects',
+                Clients: 'clients',
+                Profile: 'profile',
+              },
+            },
+            CreateEvent: 'events/create',
+            EditEvent: 'events/edit/:eventId',
+            Planning: 'planning',
+            CreateProject: 'projects/create',
+            EditProject: 'projects/edit/:projectId',
+            CreateClient: 'clients/create',
+            ClientsList: 'clients',
+            EditClient: 'clients/edit/:clientId',
+            UserRates: 'admin/users/rates',
+            TeamViewSettings: 'admin/settings/team-view',
+            ManageUsers: 'admin/users',
+            InviteUser: 'admin/users/invite',
+            EditUser: 'admin/users/edit/:userId',
+            PlanningColors: 'profile/planning-colors',
+            CustomColorManager: 'profile/colors/manager',
+            ElementColorMapper: 'profile/colors/mapper',
+            ManageCustomThemes: 'profile/colors/themes',
           },
         },
       },
