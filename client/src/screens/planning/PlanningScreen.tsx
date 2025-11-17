@@ -447,6 +447,11 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
 
   }, [planningColors]);
 
+  // Initial data load on mount
+  useEffect(() => {
+    hookLoadData(currentQuarter);
+  }, [hookLoadData, currentQuarter]);
+
   useFocusEffect(
     React.useCallback(() => {
       setHasScrolled(false);
