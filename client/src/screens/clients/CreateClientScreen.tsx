@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Text } from 'react-native';
 import { TextInput, Button, Title, Card, IconButton, Divider, Paragraph } from 'react-native-paper';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-import { UserAdd02Icon } from '@hugeicons/core-free-icons';
+import { UserAdd02Icon, ArrowLeft01Icon } from '@hugeicons/core-free-icons';
 import { clientsAPI } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useCustomColorTheme } from '../../contexts/CustomColorThemeContext';
@@ -143,7 +143,13 @@ const CreateClientScreen = ({ navigation }: any) => {
   return (
     <ScrollView style={[styles.container, { backgroundColor: clientsBg }]}>
       <View style={styles.content}>
-        <Title style={[styles.mainTitle, { color: currentColors.text }]}>Create New Client</Title>
+        {/* Custom Header with Back Button */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <HugeiconsIcon icon={ArrowLeft01Icon} size={28} color={currentColors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.mainTitle, { color: currentColors.text }]}>Create New Client</Text>
+        </View>
 
         {/* Business Information Section */}
         <Card style={[styles.section, { backgroundColor: clientCardBg }]}>
@@ -360,9 +366,18 @@ const styles = StyleSheet.create({
   content: {
     padding: 20,
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  backButton: {
+    marginRight: 12,
+    padding: 4,
+  },
   mainTitle: {
     fontSize: 24,
-    marginBottom: 20,
+    fontWeight: '700',
   },
   section: {
     marginBottom: 20,
