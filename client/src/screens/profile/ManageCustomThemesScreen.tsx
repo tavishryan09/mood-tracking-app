@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Text, TouchableOpacity } from 'react-native';
 import { Button, Title, Card, IconButton, Chip } from 'react-native-paper';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-import { ArrowLeft01Icon, Cancel01Icon, Share03Icon, AddCircleIcon } from '@hugeicons/core-free-icons';
+import { ArrowLeft02Icon, Cancel01Icon, Share03Icon, AddCircleIcon } from '@hugeicons/core-free-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCustomColorTheme } from '../../contexts/CustomColorThemeContext';
@@ -612,8 +612,8 @@ const ManageCustomThemesScreen = ({ navigation }: any) => {
             style={styles.backButton}
           >
             <HugeiconsIcon
-              icon={ArrowLeft01Icon}
-              size={24}
+              icon={ArrowLeft02Icon}
+              size={28}
               color={currentColors.text}
             />
           </TouchableOpacity>
