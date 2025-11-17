@@ -178,6 +178,23 @@ export interface ElementColorMapping {
     searchSectionBackground: string;
   };
 
+  // Admin Screen
+  admin: {
+    background: string;
+    cardBackground: string;
+    cardText: string;
+    cardBorder: string;
+    sectionHeaderBackground: string;
+    sectionHeaderText: string;
+    menuItemBackground: string;
+    menuItemText: string;
+    menuItemIcon: string;
+    buttonBackground: string;
+    buttonText: string;
+    dangerButtonBackground: string;
+    dangerButtonText: string;
+  };
+
   // Profile Screen
   profile: {
     background: string;
@@ -366,6 +383,24 @@ export const ElementLabels = {
       searchTextColor: 'Search Text Color',
       searchBarBackground: 'Search Bar Background',
       searchSectionBackground: 'Search Section Background',
+    },
+  },
+  admin: {
+    title: 'Admin',
+    elements: {
+      background: 'Background',
+      cardBackground: 'Card Background',
+      cardText: 'Card Text',
+      cardBorder: 'Card Border',
+      sectionHeaderBackground: 'Section Header Background',
+      sectionHeaderText: 'Section Header Text',
+      menuItemBackground: 'Menu Item Background',
+      menuItemText: 'Menu Item Text',
+      menuItemIcon: 'Menu Item Icon',
+      buttonBackground: 'Button Background',
+      buttonText: 'Button Text',
+      dangerButtonBackground: 'Danger Button Background',
+      dangerButtonText: 'Danger Button Text',
     },
   },
   profile: {
