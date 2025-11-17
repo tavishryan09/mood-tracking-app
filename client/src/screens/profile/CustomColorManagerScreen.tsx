@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { Button, Title, IconButton, Checkbox } from 'react-native-paper';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-import { CheckmarkCircle01Icon, Cancel01Icon, ArrowUp01Icon, ArrowDown01Icon } from '@hugeicons/core-free-icons';
+import { CheckmarkCircle01Icon, Cancel01Icon, ArrowUp01Icon, ArrowDown01Icon, ArrowLeft02Icon } from '@hugeicons/core-free-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import { CustomColor, CustomColorPalette } from '../../types/customColors';
 import { CustomDialog } from '../../components/CustomDialog';
@@ -320,9 +320,15 @@ const CustomColorManagerScreen = ({ navigation, route }: any) => {
   return (
     <ScrollView style={[styles.container, { backgroundColor: currentColors.background.bg700 }]}>
       <View style={styles.content}>
-        <Title style={[styles.title, { color: currentColors.text }]}>
-          {isEditing ? 'Edit Color Palette' : 'Create Color Palette'}
-        </Title>
+        {/* Custom Header with Back Button */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <HugeiconsIcon icon={ArrowLeft02Icon} size={28} color={currentColors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.title, { color: currentColors.text }]}>
+            {isEditing ? 'Edit Color Palette' : 'Create Color Palette'}
+          </Text>
+        </View>
 
         <Text style={[styles.description, { color: currentColors.textSecondary }]}>
           Build your custom color palette by adding colors with custom names and hex codes.
@@ -437,11 +443,18 @@ const styles = StyleSheet.create({
   content: {
     padding: 20,
   },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  backButton: {
+    marginRight: 12,
+    padding: 4,
+  },
   title: {
     fontSize: 24,
-    marginBottom: 10,
-    textAlign: 'center',
-    fontWeight: 'bold',
+    fontWeight: '700',
   },
   description: {
     fontSize: 14,

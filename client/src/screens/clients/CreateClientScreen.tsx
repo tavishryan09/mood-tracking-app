@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Text } from 'react-native';
 import { TextInput, Button, Title, Card, IconButton, Divider, Paragraph } from 'react-native-paper';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-import { UserAdd02Icon, ArrowLeft01Icon } from '@hugeicons/core-free-icons';
+import { UserAdd02Icon, ArrowLeft02Icon } from '@hugeicons/core-free-icons';
 import { clientsAPI } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useCustomColorTheme } from '../../contexts/CustomColorThemeContext';
@@ -146,7 +146,7 @@ const CreateClientScreen = ({ navigation }: any) => {
         {/* Custom Header with Back Button */}
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-            <HugeiconsIcon icon={ArrowLeft01Icon} size={28} color={currentColors.text} />
+            <HugeiconsIcon icon={ArrowLeft02Icon} size={28} color={currentColors.text} />
           </TouchableOpacity>
           <Text style={[styles.mainTitle, { color: currentColors.text }]}>Create New Client</Text>
         </View>
