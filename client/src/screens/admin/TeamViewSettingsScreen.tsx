@@ -1,9 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Text, Pressable } from 'react-native';
 import { List, Switch, Title, Paragraph, Divider, Button, Menu } from 'react-native-paper';
 import { useTheme } from '../../contexts/ThemeContext';
 import { settingsAPI } from '../../services/api';
 import { CustomDialog } from '../../components/CustomDialog';
+import { TeamViewSettingsScreenProps } from '../../types/navigation';
+import { logger } from '../../utils/logger';
+import { apiWithTimeout, TIMEOUT_DURATIONS } from '../../utils/apiWithTimeout';
 
 // Settings keys (stored in database)
 const SETTINGS_KEYS = {
@@ -36,7 +39,7 @@ interface PageAccess {
   [key: string]: boolean;
 }
 
-const TeamViewSettingsScreen = ({ navigation }: any) => {
+const TeamViewSettingsScreen = React.memo(({ navigation }: TeamViewSettingsScreenProps) => {
   const { currentColors } = useTheme();
 
   // Admin settings
@@ -95,14 +98,9 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
   const [showValidationDialog, setShowValidationDialog] = useState(false);
   const [validationMessage, setValidationMessage] = useState('');
 
-  useEffect(() => {
-    loadSettings();
-  }, []);
-
-  const loadSettings = async () => {
+  const loadSettings = useCallback(async () => {
     try {
-
-      const response = await settingsAPI.app.getAll();
+      const response = await apiWithTimeout(settingsAPI.app.getAll(), TIMEOUT_DURATIONS.QUICK) as any;
       const settings = response.data;
 
       // Convert array of settings to a map for easy lookup
@@ -153,42 +151,48 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
         setUserDefaultProjectsTable(settingsMap[SETTINGS_KEYS.USER_DEFAULT_PROJECTS_TABLE]);
       }
 
-    } catch (error) {
-      console.error('[TeamViewSettings] Error loading settings:', error);
+      logger.log('Team view settings loaded successfully', {}, 'TeamViewSettingsScreen');
+    } catch (error: any) {
+      logger.error('Error loading settings:', error, 'TeamViewSettingsScreen');
       // Don't show alert for 404 errors (settings don't exist yet)
-      if ((error as any)?.response?.status !== 404) {
-        setErrorMessage('Failed to load team view settings');
+      if (error?.response?.status !== 404) {
+        const message = error.message === 'Request timeout'
+          ? 'Unable to connect to server. Please check your connection.'
+          : 'Failed to load team view settings';
+        setErrorMessage(message);
         setShowErrorDialog(true);
       }
     }
-  };
+  }, []);
 
-  const handleSaveSettings = async () => {
+  useEffect(() => {
+    loadSettings();
+  }, [loadSettings]);
 
+  const handleSaveSettings = useCallback(async () => {
     try {
       setSaving(true);
 
       // Validate that default pages are enabled
-
       if (!adminPageAccess[adminDefaultPage]) {
-
         setValidationMessage('Admin default page must be enabled');
         setShowValidationDialog(true);
         setSaving(false);
+        logger.warn('Validation failed: Admin default page must be enabled', {}, 'TeamViewSettingsScreen');
         return;
       }
       if (!managerPageAccess[managerDefaultPage]) {
-
         setValidationMessage('Manager default page must be enabled');
         setShowValidationDialog(true);
         setSaving(false);
+        logger.warn('Validation failed: Manager default page must be enabled', {}, 'TeamViewSettingsScreen');
         return;
       }
       if (!userPageAccess[userDefaultPage]) {
-
         setValidationMessage('User default page must be enabled');
         setShowValidationDialog(true);
         setSaving(false);
+        logger.warn('Validation failed: User default page must be enabled', {}, 'TeamViewSettingsScreen');
         return;
       }
 
@@ -198,10 +202,10 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
       const userEnabled = Object.values(userPageAccess).some((enabled) => enabled);
 
       if (!adminEnabled || !managerEnabled || !userEnabled) {
-
         setValidationMessage('Each role must have at least one page enabled');
         setShowValidationDialog(true);
         setSaving(false);
+        logger.warn('Validation failed: Each role must have at least one page enabled', {}, 'TeamViewSettingsScreen');
         return;
       }
 
@@ -224,24 +228,39 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
         { key: SETTINGS_KEYS.USER_DEFAULT_PROJECTS_TABLE, value: userDefaultProjectsTable },
       ];
 
-      await settingsAPI.app.batchSet(settingsToSave);
+      await apiWithTimeout(settingsAPI.app.batchSet(settingsToSave), TIMEOUT_DURATIONS.STANDARD);
 
+      logger.log('Team view settings saved successfully', {}, 'TeamViewSettingsScreen');
       setSaving(false);
       setSuccessMessage('Team view settings saved successfully');
       setShowSuccessDialog(true);
-    } catch (error) {
-      console.error('[TeamViewSettings] Error saving settings:', error);
-      console.error('[TeamViewSettings] Error details:', JSON.stringify(error, null, 2));
+    } catch (error: any) {
+      logger.error('Error saving settings:', error, 'TeamViewSettingsScreen');
       setSaving(false);
-      setErrorMessage('Failed to save team view settings');
+      const message = error.message === 'Request timeout'
+        ? 'Unable to connect to server. Please check your connection.'
+        : 'Failed to save team view settings';
+      setErrorMessage(message);
       setShowErrorDialog(true);
     }
-  };
+  }, [
+    adminPageAccess,
+    adminDefaultPage,
+    managerPageAccess,
+    managerDefaultPage,
+    userPageAccess,
+    userDefaultPage,
+    adminShowWeekends,
+    adminDefaultProjectsTable,
+    managerShowWeekends,
+    managerDefaultProjectsTable,
+    userShowWeekends,
+    userDefaultProjectsTable,
+  ]);
 
-  const togglePageAccess = (role: 'admin' | 'manager' | 'user', page: string) => {
+  const togglePageAccess = useCallback((role: 'admin' | 'manager' | 'user', page: string) => {
     // Prevent disabling Profile for admin
     if (role === 'admin' && page === 'Profile') {
-
       return;
     }
 
@@ -282,7 +301,7 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
         return newAccess;
       });
     }
-  };
+  }, [adminDefaultPage, managerDefaultPage, userDefaultPage]);
 
   const renderRoleSection = (
     role: 'admin' | 'manager' | 'user',
@@ -344,14 +363,10 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
             <Pressable
               onPress={() => {
                 try {
-                  console.log('=== BUTTON CLICKED ===');
-                  console.log(`[TeamViewSettings] Pressable pressed for role: "${role}"`);
-                  console.log(`[TeamViewSettings] Current menuVisible value:`, menuVisible);
-                  console.log(`[TeamViewSettings] About to set menuVisible to:`, !menuVisible);
+                  logger.log('Menu button clicked', { role, menuVisible }, 'TeamViewSettingsScreen');
                   setMenuVisible(!menuVisible);
-                  console.log(`[TeamViewSettings] setMenuVisible called successfully`);
                 } catch (error) {
-                  console.error('[TeamViewSettings] ERROR in onPress:', error);
+                  logger.error('Error in menu button onPress:', error, 'TeamViewSettingsScreen');
                 }
               }}
               disabled={availablePages.length === 0}
@@ -374,7 +389,7 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
             <Menu
               visible={menuVisible}
               onDismiss={() => {
-                console.log(`[TeamViewSettings] Menu dismissed for ${role}`);
+                logger.log('Menu dismissed', { role }, 'TeamViewSettingsScreen');
                 setMenuVisible(false);
               }}
               contentStyle={{ backgroundColor: currentColors.background.bg300 }}
@@ -390,7 +405,7 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
                   <Menu.Item
                     key={page.key}
                     onPress={() => {
-                      console.log(`[TeamViewSettings] Selected page:`, page.label);
+                      logger.log('Default page selected', { role, page: page.label }, 'TeamViewSettingsScreen');
                       setDefaultPage(page.key);
                       setMenuVisible(false);
                     }}
@@ -562,7 +577,9 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
       />
     </ScrollView>
   );
-};
+});
+
+TeamViewSettingsScreen.displayName = 'TeamViewSettingsScreen';
 
 const styles = StyleSheet.create({
   container: {
