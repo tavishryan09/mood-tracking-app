@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Text } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Text, Pressable } from 'react-native';
 import { List, Switch, Title, Paragraph, Divider, Button, Menu } from 'react-native-paper';
 import { useTheme } from '../../contexts/ThemeContext';
 import { settingsAPI } from '../../services/api';
@@ -340,12 +340,12 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
               ? 'Only one page is enabled'
               : `Page to show when ${roleLabel}s log in (${availablePages.length} pages available)`}
           </Paragraph>
-          <View>
-            <TouchableOpacity
+          <View style={{ pointerEvents: 'auto' }}>
+            <Pressable
               onPress={() => {
                 try {
                   console.log('=== BUTTON CLICKED ===');
-                  console.log(`[TeamViewSettings] TouchableOpacity pressed for role: "${role}"`);
+                  console.log(`[TeamViewSettings] Pressable pressed for role: "${role}"`);
                   console.log(`[TeamViewSettings] Current menuVisible value:`, menuVisible);
                   console.log(`[TeamViewSettings] About to set menuVisible to:`, !menuVisible);
                   setMenuVisible(!menuVisible);
@@ -355,22 +355,22 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
                 }
               }}
               disabled={availablePages.length === 0}
-              activeOpacity={0.7}
-              style={{
+              style={({ pressed }) => ({
                 alignSelf: 'flex-start',
                 borderWidth: 1,
                 borderColor: availablePages.length === 0 ? currentColors.textTertiary : currentColors.primary,
                 borderRadius: 4,
                 paddingHorizontal: 16,
                 paddingVertical: 8,
-                opacity: availablePages.length === 0 ? 0.5 : 1,
-                backgroundColor: 'transparent',
-              }}
+                opacity: availablePages.length === 0 ? 0.5 : pressed ? 0.7 : 1,
+                backgroundColor: pressed ? currentColors.background.bg500 : 'transparent',
+                pointerEvents: 'auto',
+              })}
             >
               <Text style={{ color: availablePages.length === 0 ? currentColors.textTertiary : currentColors.primary }}>
                 {PAGES.find((p) => p.key === defaultPage)?.label || 'Select'}
               </Text>
-            </TouchableOpacity>
+            </Pressable>
             <Menu
               visible={menuVisible}
               onDismiss={() => {
