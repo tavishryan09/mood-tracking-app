@@ -206,6 +206,14 @@ const EditClientScreen = ({ route, navigation }: any) => {
   return (
     <ScrollView style={[styles.container, { backgroundColor: clientsBg }]}>
       <View style={styles.content}>
+        {/* Custom Header with Back Button */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <HugeiconsIcon icon={ArrowLeft02Icon} size={28} color={currentColors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.mainTitle, { color: currentColors.text }]}>Edit Client</Text>
+        </View>
+
         {/* Business Information Section */}
         <Card style={[styles.section, { backgroundColor: clientCardBg }]}>
           <Card.Content>
