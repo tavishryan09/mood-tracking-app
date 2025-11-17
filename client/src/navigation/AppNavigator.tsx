@@ -565,74 +565,50 @@ const AppNavigator = () => {
   // This prevents the infinite loading issue on web
 
   // Linking configuration for URL routing
-  // Build conditionally based on desktop vs mobile to avoid duplicate path conflicts
-  const linking = useMemo(() => {
-    const screenPaths = {
-      'Dashboard': '',
-      'Planning': 'planning',
-      'Projects': 'projects',
-      'Profile': 'profile',
-      'Clients': 'clients',
-      'ProjectTableView': 'projects/table',
-      'CreateEvent': 'events/create',
-      'EditEvent': 'events/edit/:eventId',
-      'CreateProject': 'projects/create',
-      'EditProject': 'projects/edit/:projectId',
-      'CreateClient': 'clients/create',
-      'EditClient': 'clients/edit/:clientId',
-      'ManageUsers': 'admin/users',
-      'InviteUser': 'admin/users/invite',
-      'EditUser': 'admin/users/edit/:userId',
-      'TeamViewSettings': 'admin/settings/team-view',
-      'UserRates': 'admin/users/rates',
-      'PlanningColors': 'profile/planning-colors',
-      'CustomColorManager': 'profile/colors/manager',
-      'ElementColorMapper': 'profile/colors/mapper',
-      'ManageCustomThemes': 'profile/colors/themes',
-    };
-
-    return {
-      prefixes: ['http://localhost:8081', 'http://localhost:3000', 'https://lightingbymood-tracker.vercel.app'],
-      config: {
-        screens: {
-          // Auth screens
-          'Auth': {
-            path: 'auth',
-            screens: {
-              'Login': 'login',
-              'OAuthCallback': 'callback',
-            },
+  // Disable linking for desktop since the nested navigator structure makes it complex
+  // Instead we'll handle URL navigation manually in DesktopNavigator
+  const linking = isDesktop ? undefined : useMemo(() => ({
+    prefixes: ['http://localhost:8081', 'http://localhost:3000', 'https://lightingbymood-tracker.vercel.app'],
+    config: {
+      screens: {
+        // Auth screens
+        'Auth': {
+          path: 'auth',
+          screens: {
+            'Login': 'login',
+            'OAuthCallback': 'callback',
           },
-          // Use appropriate navigator based on device
-          ...(isDesktop ? {
-            // Desktop: MainDrawer with empty path so it doesn't appear in URL
-            'MainDrawer': {
-              path: '',
-              screens: screenPaths,
-            },
-          } : {
-            // Mobile: MainTabs with same paths
-            'MainTabs': {
-              path: '',
-              screens: {
-                'Dashboard': '',
-                'Planning': 'planning',
-                'Projects': 'projects',
-                'Profile': 'profile',
-                'Clients': 'clients',
-              },
-            },
-            // Mobile stack screens at top level
-            ...Object.fromEntries(
-              Object.entries(screenPaths).filter(([key]) =>
-                !['Dashboard', 'Planning', 'Projects', 'Profile', 'Clients', 'ProjectTableView'].includes(key)
-              )
-            ),
-          }),
         },
+        // Mobile: MainTabs with paths
+        'MainTabs': {
+          path: '',
+          screens: {
+            'Dashboard': '',
+            'Planning': 'planning',
+            'Projects': 'projects',
+            'Profile': 'profile',
+            'Clients': 'clients',
+          },
+        },
+        // Mobile stack screens at top level
+        'CreateEvent': 'events/create',
+        'EditEvent': 'events/edit/:eventId',
+        'CreateProject': 'projects/create',
+        'EditProject': 'projects/edit/:projectId',
+        'CreateClient': 'clients/create',
+        'EditClient': 'clients/edit/:clientId',
+        'ManageUsers': 'admin/users',
+        'InviteUser': 'admin/users/invite',
+        'EditUser': 'admin/users/edit/:userId',
+        'TeamViewSettings': 'admin/settings/team-view',
+        'UserRates': 'admin/users/rates',
+        'PlanningColors': 'profile/planning-colors',
+        'CustomColorManager': 'profile/colors/manager',
+        'ElementColorMapper': 'profile/colors/mapper',
+        'ManageCustomThemes': 'profile/colors/themes',
       },
-    };
-  }, [isDesktop]);
+    },
+  }), []);
 
   // Debug: Log the current path and linking config
   React.useEffect(() => {
