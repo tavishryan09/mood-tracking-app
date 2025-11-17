@@ -7,6 +7,9 @@ import { clientsAPI } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useCustomColorTheme } from '../../contexts/CustomColorThemeContext';
 import { CustomDialog } from '../../components/CustomDialog';
+import { EditClientScreenProps } from '../../types/navigation';
+import { logger } from '../../utils/logger';
+import { validateAndSanitize, ValidationPatterns } from '../../utils/sanitize';
 
 interface Contact {
   id: string;
@@ -17,7 +20,7 @@ interface Contact {
   isPrimary?: boolean;
 }
 
-const EditClientScreen = ({ route, navigation }: any) => {
+const EditClientScreen = ({ route, navigation }: EditClientScreenProps) => {
   const { currentColors } = useTheme();
   const { getColorForElement } = useCustomColorTheme();
   const { clientId } = route.params;
@@ -89,7 +92,7 @@ const EditClientScreen = ({ route, navigation }: any) => {
         setAdditionalContacts(additional);
       }
     } catch (error) {
-      console.error('Error loading client:', error);
+      logger.error('Error loading client:', error, 'EditClientScreen');
       setErrorMessage('Failed to load client details');
       setShowErrorDialog(true);
     } finally {
@@ -121,47 +124,79 @@ const EditClientScreen = ({ route, navigation }: any) => {
   };
 
   const handleSubmit = async () => {
-    if (!businessName) {
-      setErrorMessage('Please enter a business name');
-      setShowErrorDialog(true);
-      return;
-    }
+    // Validate and sanitize primary contact data
+    const { isValid, errors, sanitizedData } = validateAndSanitize(
+      {
+        businessName,
+        address,
+        notes,
+        primaryContactName,
+        primaryContactTitle,
+        primaryContactEmail,
+        primaryContactPhone,
+      },
+      {
+        businessName: { required: true, minLength: 2, maxLength: 200 },
+        address: { maxLength: 500 },
+        notes: { maxLength: 1000 },
+        primaryContactName: { required: true, minLength: 2, maxLength: 100 },
+        primaryContactTitle: { maxLength: 100 },
+        primaryContactEmail: { pattern: ValidationPatterns.email },
+        primaryContactPhone: { pattern: ValidationPatterns.phone },
+      }
+    );
 
-    if (!primaryContactName) {
-      setErrorMessage('Please enter a primary contact name');
+    if (!isValid) {
+      const errorMsg = Object.values(errors)[0] || 'Please check your input';
+      setErrorMessage(errorMsg);
       setShowErrorDialog(true);
+      logger.warn('Validation failed:', errors, 'EditClientScreen');
       return;
     }
 
     setSaving(true);
     try {
+      // Sanitize additional contacts
+      const sanitizedAdditionalContacts = additionalContacts
+        .filter(contact => contact.name.trim()) // Only include contacts with names
+        .map(contact => {
+          const { sanitizedData: contactData } = validateAndSanitize(
+            contact,
+            {
+              name: { required: true, maxLength: 100 },
+              title: { maxLength: 100 },
+              email: { pattern: ValidationPatterns.email },
+              phone: { pattern: ValidationPatterns.phone },
+            }
+          );
+          return {
+            name: contactData.name,
+            title: contactData.title || null,
+            email: contactData.email || null,
+            phone: contactData.phone || null,
+            isPrimary: false,
+          };
+        });
+
       // Prepare contacts array
       const contacts = [
         {
-          name: primaryContactName,
-          title: primaryContactTitle || null,
-          email: primaryContactEmail || null,
-          phone: primaryContactPhone || null,
+          name: sanitizedData.primaryContactName,
+          title: sanitizedData.primaryContactTitle || null,
+          email: sanitizedData.primaryContactEmail || null,
+          phone: sanitizedData.primaryContactPhone || null,
           isPrimary: true,
         },
-        ...additionalContacts
-          .filter(contact => contact.name.trim())
-          .map(contact => ({
-            name: contact.name,
-            title: contact.title || null,
-            email: contact.email || null,
-            phone: contact.phone || null,
-            isPrimary: false,
-          })),
+        ...sanitizedAdditionalContacts,
       ];
 
       const clientData = {
-        name: businessName,
-        company: businessName,
-        address: address || null,
-        notes: notes || null,
-        email: primaryContactEmail || null,
-        phone: primaryContactPhone || null,
+        name: sanitizedData.businessName,
+        company: sanitizedData.businessName,
+        address: sanitizedData.address || null,
+        notes: sanitizedData.notes || null,
+        email: sanitizedData.primaryContactEmail || null,
+        phone: sanitizedData.primaryContactPhone || null,
         contacts: contacts,
       };
 
@@ -171,11 +206,11 @@ const EditClientScreen = ({ route, navigation }: any) => {
 
       await Promise.race([clientsAPI.update(clientId, clientData), timeout]);
 
+      logger.log('Client updated successfully', { clientName: sanitizedData.businessName }, 'EditClientScreen');
       setSuccessMessage('Client updated successfully');
       setShowSuccessDialog(true);
     } catch (error: any) {
-      console.error('Client update error:', error);
-      console.error('Error response:', error.response?.data);
+      logger.error('Client update error:', error, 'EditClientScreen');
 
       let message = 'Failed to update client';
 

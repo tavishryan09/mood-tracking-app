@@ -9,8 +9,10 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { colorPalettes, ColorPaletteName } from '../../theme/colorPalettes';
 import { settingsAPI, userManagementAPI, outlookAPI, exportAPI } from '../../services/api';
 import axios from 'axios';
+import { ProfileScreenProps } from '../../types/navigation';
+import { logger } from '../../utils/logger';
 
-const ProfileScreen = ({ navigation }: any) => {
+const ProfileScreen = ({ navigation, route }: ProfileScreenProps) => {
   const { user, logout, refreshUser, token } = useAuth();
   const { selectedPalette, setSelectedPalette, currentColors, customPalettes, loadCustomPalettes: reloadThemeCustomPalettes } = useTheme();
 
@@ -123,10 +125,10 @@ const ProfileScreen = ({ navigation }: any) => {
         const outlookResponse = await outlookAPI.getStatus();
         setOutlookConnected(outlookResponse.data.connected);
       } catch (error) {
-        console.error('[ProfileScreen] Error loading Outlook status:', error);
+        logger.error('Error loading Outlook status:', error, 'ProfileScreen');
       }
     } catch (error) {
-      console.error('[ProfileScreen] Error loading preferences:', error);
+      logger.error('Error loading preferences:', error, 'ProfileScreen');
     }
   };
 
@@ -137,7 +139,7 @@ const ProfileScreen = ({ navigation }: any) => {
       setSuccessMessage(`Color palette changed to ${palette?.name || 'Custom'}`);
       setShowSuccessDialog(true);
     } catch (error) {
-      console.error('Error changing color palette:', error);
+      logger.error('Error changing color palette:', error, 'ProfileScreen');
       setErrorMessage('Failed to change color palette');
       setShowErrorDialog(true);
     }
@@ -155,7 +157,7 @@ const ProfileScreen = ({ navigation }: any) => {
       setSuccessMessage('Complete the authorization in the popup window. After authorizing, please reload this page to see the connection status.');
       setShowSuccessDialog(true);
     } catch (error: any) {
-      console.error('[ProfileScreen] Error connecting Outlook:', error);
+      logger.error('Error connecting Outlook:', error, 'ProfileScreen');
       const errorMsg = error.response?.data?.error || error.message || 'Failed to connect Outlook calendar';
       setErrorMessage(errorMsg);
       setShowErrorDialog(true);
@@ -172,7 +174,7 @@ const ProfileScreen = ({ navigation }: any) => {
       setSuccessMessage('Outlook calendar disconnected. Your tasks will no longer sync to Outlook.');
       setShowSuccessDialog(true);
     } catch (error) {
-      console.error('[ProfileScreen] Error disconnecting Outlook:', error);
+      logger.error('Error disconnecting Outlook:', error, 'ProfileScreen');
       setErrorMessage('Failed to disconnect Outlook calendar');
       setShowErrorDialog(true);
     } finally {
@@ -250,7 +252,7 @@ const ProfileScreen = ({ navigation }: any) => {
       setShowSuccessDialog(true);
 
     } catch (error: any) {
-      console.error('[ProfileScreen] Error during sync:', error);
+      logger.error('Error during sync:', error, 'ProfileScreen');
       setOutlookSyncing(false);
       setSyncProgress(null);
 
@@ -276,7 +278,7 @@ const ProfileScreen = ({ navigation }: any) => {
       setSuccessMessage('Project summary exported successfully');
       setShowSuccessDialog(true);
     } catch (error: any) {
-      console.error('[ProfileScreen] Error exporting project summary:', error);
+      logger.error('Error exporting project summary:', error, 'ProfileScreen');
       setErrorMessage(error.response?.data?.error || 'Failed to export project summary');
       setShowErrorDialog(true);
     }
@@ -315,7 +317,7 @@ const ProfileScreen = ({ navigation }: any) => {
       setSuccessMessage('Profile updated successfully');
       setShowSuccessDialog(true);
     } catch (error: any) {
-      console.error('Update profile error:', error);
+      logger.error('Update profile error:', error, 'ProfileScreen');
       setErrorMessage(error.response?.data?.error || 'Failed to update profile');
       setShowErrorDialog(true);
     } finally {
@@ -362,7 +364,7 @@ const ProfileScreen = ({ navigation }: any) => {
       setSuccessMessage('Password changed successfully');
       setShowSuccessDialog(true);
     } catch (error: any) {
-      console.error('Change password error:', error);
+      logger.error('Change password error:', error, 'ProfileScreen');
       setErrorMessage(error.response?.data?.error || 'Failed to change password');
       setShowErrorDialog(true);
     } finally {
@@ -379,7 +381,7 @@ const ProfileScreen = ({ navigation }: any) => {
       setSuccessMessage('Notification preferences saved');
       setShowSuccessDialog(true);
     } catch (error) {
-      console.error('Save notifications error:', error);
+      logger.error('Save notifications error:', error, 'ProfileScreen');
       setErrorMessage('Failed to save notification preferences');
       setShowErrorDialog(true);
     }

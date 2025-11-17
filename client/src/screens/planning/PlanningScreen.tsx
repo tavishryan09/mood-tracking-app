@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, Dimensions, Platform, Text, TouchableOpacity, Modal, PanResponder, TextInput as RNTextInput, FlatList, Pressable, TouchableWithoutFeedback, KeyboardAvoidingView, Keyboard } from 'react-native';
 import { Title, ActivityIndicator, IconButton, Button, Checkbox, TextInput, Menu, Divider, Portal, Switch } from 'react-native-paper';
 import { useFocusEffect } from '@react-navigation/native';
+import { useQueryClient } from '@tanstack/react-query';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { Settings01Icon, DragDropIcon, ArrowLeft01Icon, ArrowRight01Icon, CheckmarkCircle02Icon, CircleIcon, Search01Icon } from '@hugeicons/core-free-icons';
 import { usersAPI, projectsAPI, planningTasksAPI, settingsAPI, deadlineTasksAPI } from '../../services/api';
@@ -25,6 +26,7 @@ const PlanningScreen = ({ navigation, route }: PlanningScreenProps) => {
   const { currentColors, selectedPalette } = useTheme();
   const { user } = useAuth();
   const { planningColors } = usePlanningColors();
+  const queryClient = useQueryClient();
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentQuarter, setCurrentQuarter] = useState(() => {
@@ -229,6 +231,12 @@ const PlanningScreen = ({ navigation, route }: PlanningScreenProps) => {
   const internalDeadlineFont = getColorForElement('planningTasks', 'internalDeadlineText');
   const milestoneBg = getColorForElement('planningTasks', 'milestoneBackground');
   const milestoneFont = getColorForElement('planningTasks', 'milestoneText');
+
+  // Helper function to invalidate dashboard queries after task changes
+  const invalidateDashboardQueries = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['planningTasks', 'dashboard', user?.id] });
+    queryClient.invalidateQueries({ queryKey: ['deadlines', 'upcoming'] });
+  }, [queryClient, user?.id]);
 
   // Drag and drop state for moving tasks
   const [draggedTask, setDraggedTask] = useState<{
@@ -863,6 +871,9 @@ const PlanningScreen = ({ navigation, route }: PlanningScreenProps) => {
         return newAssignments;
       });
 
+      // Invalidate dashboard queries to reflect the changes
+      invalidateDashboardQueries();
+
     } catch (error) {
       logger.error('Error moving task:', error, 'PlanningScreen');
       setErrorMessage('Failed to move task');
@@ -951,6 +962,9 @@ const PlanningScreen = ({ navigation, route }: PlanningScreenProps) => {
       );
 
       setDeadlineTasks(updatedTasks);
+
+      // Invalidate dashboard queries to reflect the changes
+      invalidateDashboardQueries();
 
     } catch (error) {
       logger.error('Error moving deadline task:', error, 'PlanningScreen');
@@ -1242,6 +1256,9 @@ const PlanningScreen = ({ navigation, route }: PlanningScreenProps) => {
               blockIndex: currentBlockIndex,
             });
 
+            // Invalidate dashboard queries to reflect the changes
+            invalidateDashboardQueries();
+
           } catch (error) {
             logger.error('Failed to save span:', error, 'PlanningScreen');
             // Reload data to restore correct state
@@ -1448,6 +1465,9 @@ const PlanningScreen = ({ navigation, route }: PlanningScreenProps) => {
         },
       }));
 
+      // Invalidate dashboard queries to reflect the changes
+      invalidateDashboardQueries();
+
       // If in reposition mode, delete the original task
       if (repositionMode && copiedCell.sourceId && copiedCell.sourceBlockKey) {
 
@@ -1606,6 +1626,9 @@ const PlanningScreen = ({ navigation, route }: PlanningScreenProps) => {
 
       setDeadlineTasks([...deadlineTasks, response.data]);
 
+      // Invalidate dashboard queries to reflect the changes
+      invalidateDashboardQueries();
+
       // If in reposition mode, delete the original task
       if (repositionDeadlineMode && copiedDeadlineTask.sourceId) {
 
@@ -1691,6 +1714,9 @@ const PlanningScreen = ({ navigation, route }: PlanningScreenProps) => {
       delete newAssignments[deleteTaskBlockKey];
       setBlockAssignments(newAssignments);
       setSelectedCell(null);
+
+      // Invalidate dashboard queries to reflect the changes
+      invalidateDashboardQueries();
 
       setShowDeleteDialog(false);
       setDeleteTaskId(null);
@@ -1918,6 +1944,10 @@ const PlanningScreen = ({ navigation, route }: PlanningScreenProps) => {
       }
 
       setBlockAssignments(newAssignments);
+
+      // Invalidate dashboard queries to reflect the changes
+      invalidateDashboardQueries();
+
       setShowProjectModal(false);
       setProjectSearch('');
       setTaskDescription('');
@@ -2024,6 +2054,9 @@ const PlanningScreen = ({ navigation, route }: PlanningScreenProps) => {
         setDeadlineTasks([...deadlineTasks, response.data]);
       }
 
+      // Invalidate dashboard queries to reflect the changes
+      invalidateDashboardQueries();
+
       setShowDeadlineModal(false);
       setSelectedDeadlineSlot(null);
       setEditingDeadlineTask(null);
@@ -2041,6 +2074,9 @@ const PlanningScreen = ({ navigation, route }: PlanningScreenProps) => {
       await deadlineTasksAPI.delete(taskId);
 
       setDeadlineTasks(deadlineTasks.filter((task) => task.id !== taskId));
+
+      // Invalidate dashboard queries to reflect the changes
+      invalidateDashboardQueries();
 
     } catch (error: any) {
       logger.error('Error deleting deadline task:', error, 'PlanningScreen');
@@ -2371,6 +2407,9 @@ const PlanningScreen = ({ navigation, route }: PlanningScreenProps) => {
                 span: copiedCell.span,
               },
             }));
+
+            // Invalidate dashboard queries to reflect the changes
+            invalidateDashboardQueries();
 
             // Clear error state and set success
             setShowErrorDialog(false);

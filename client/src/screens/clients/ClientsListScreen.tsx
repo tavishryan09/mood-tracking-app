@@ -7,8 +7,10 @@ import { Search01Icon, AddCircleIcon, PencilEdit02Icon, Cancel01Icon } from '@hu
 import { clientsAPI } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useCustomColorTheme } from '../../contexts/CustomColorThemeContext';
+import { ClientsListScreenProps } from '../../types/navigation';
+import { logger } from '../../utils/logger';
 
-const ClientsListScreen = () => {
+const ClientsListScreen = ({ navigation, route }: ClientsListScreenProps) => {
   const { currentColors } = useTheme();
   const { getColorForElement } = useCustomColorTheme();
 
@@ -23,7 +25,6 @@ const ClientsListScreen = () => {
   const searchTextColor = getColorForElement('clients', 'searchTextColor');
   const searchBarBg = getColorForElement('clients', 'searchBarBackground');
   const searchSectionBg = getColorForElement('clients', 'searchSectionBackground');
-  const navigation = useNavigation();
   const [clients, setClients] = useState<any[]>([]);
   const [filteredClients, setFilteredClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,7 +80,7 @@ const ClientsListScreen = () => {
       setClients(sortedClients);
       setFilteredClients(sortedClients);
     } catch (error) {
-      console.error('Error loading clients:', error);
+      logger.error('Error loading clients:', error, 'ClientsListScreen');
       setClients([]);
       setFilteredClients([]);
     } finally {
@@ -119,7 +120,7 @@ const ClientsListScreen = () => {
       setDeletingClientId(null);
       loadClients();
     } catch (error: any) {
-      console.error('Delete error:', error);
+      logger.error('Delete error:', error, 'ClientsListScreen');
       setDeletingClientId(null);
       const errorMessage = error.message === 'Request timeout'
         ? 'Unable to connect to server'
@@ -137,7 +138,7 @@ const ClientsListScreen = () => {
 
     return (
       <TouchableOpacity
-        onPress={() => (navigation as any).navigate('EditClient', { clientId: item.id })}
+        onPress={() => navigation.navigate('EditClient', { clientId: item.id })}
         activeOpacity={0.7}
       >
         <Card style={[styles.card, { backgroundColor: clientCardBg, borderColor: clientCardBorder, borderWidth: 1 }]}>
@@ -163,7 +164,7 @@ const ClientsListScreen = () => {
                 <Menu.Item
                   onPress={() => {
                     setMenuVisible(null);
-                    (navigation as any).navigate('EditClient', { clientId: item.id });
+                    navigation.navigate('EditClient', { clientId: item.id });
                   }}
                   title="Edit"
                   leadingIcon={() => <HugeiconsIcon icon={PencilEdit02Icon} size={20} color={currentColors.icon} />}
@@ -262,7 +263,7 @@ const ClientsListScreen = () => {
         label="New Client"
         color={addButtonIcon}
         onPress={() => {
-          (navigation as any).navigate('CreateClient');
+          navigation.navigate('CreateClient');
         }}
       />
 
