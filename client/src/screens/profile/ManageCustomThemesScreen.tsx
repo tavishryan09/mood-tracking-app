@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, Text, TouchableOpacity } from 'react-native';
 import { Button, Title, Card, IconButton, Chip } from 'react-native-paper';
 import { HugeiconsIcon } from '@hugeicons/react-native';
@@ -9,10 +9,13 @@ import { useCustomColorTheme } from '../../contexts/CustomColorThemeContext';
 import { CustomColorPalette } from '../../types/customColors';
 import { CustomDialog } from '../../components/CustomDialog';
 import { settingsAPI } from '../../services/api';
+import { ManageCustomThemesScreenProps } from '../../types/navigation';
+import { logger } from '../../utils/logger';
+import { apiWithTimeout, TIMEOUT_DURATIONS } from '../../utils/apiWithTimeout';
 
 const CUSTOM_COLOR_PALETTES_KEY = 'custom_color_palettes';
 
-const ManageCustomThemesScreen = ({ navigation }: any) => {
+const ManageCustomThemesScreen = React.memo(({ navigation }: ManageCustomThemesScreenProps) => {
   const { currentColors } = useTheme();
   const { user } = useAuth();
   const {
@@ -70,7 +73,7 @@ const ManageCustomThemesScreen = ({ navigation }: any) => {
         }
       } catch (error: any) {
         if (error?.response?.status !== 404) {
-          console.error('Error loading user palettes:', error);
+          logger.error('Error loading user palettes:', error);
         }
         setPalettes({});
       }
@@ -86,12 +89,12 @@ const ManageCustomThemesScreen = ({ navigation }: any) => {
         }
       } catch (error: any) {
         if (error?.response?.status !== 404) {
-          console.error('Error loading shared palettes:', error);
+          logger.error('Error loading shared palettes:', error);
         }
         setSharedPalettes({});
       }
     } catch (error: any) {
-      console.error('Error in loadPalettes:', error);
+      logger.error('Error in loadPalettes:', error);
     }
   };
 
@@ -108,7 +111,7 @@ const ManageCustomThemesScreen = ({ navigation }: any) => {
       if (error.response?.status === 404) {
         setDefaultThemeId(null);
       } else {
-        console.error('Error loading default theme:', error);
+        logger.error('Error loading default theme:', error);
       }
     }
   };
@@ -199,7 +202,7 @@ const ManageCustomThemesScreen = ({ navigation }: any) => {
       setSuccessMessage('This theme\'s colors are now applied as the default for all users who haven\'t selected their own theme. They will see these exact colors.');
       setShowSuccessDialog(true);
     } catch (error: any) {
-      console.error('Error setting default theme:', error);
+      logger.error('Error setting default theme:', error);
       setErrorMessage(error.message || 'Failed to set default theme');
       setShowErrorDialog(true);
     } finally {
@@ -224,7 +227,7 @@ const ManageCustomThemesScreen = ({ navigation }: any) => {
       setSuccessMessage('Default theme cleared. Users will now use the hardcoded default theme');
       setShowSuccessDialog(true);
     } catch (error) {
-      console.error('Error clearing default theme:', error);
+      logger.error('Error clearing default theme:', error);
       setErrorMessage('Failed to clear default theme');
       setShowErrorDialog(true);
     } finally {
@@ -288,7 +291,7 @@ const ManageCustomThemesScreen = ({ navigation }: any) => {
       setSuccessMessage(`"${palette.name}" is now shared with all users and will appear in their theme selection.`);
       setShowSuccessDialog(true);
     } catch (error: any) {
-      console.error('Error sharing theme:', error);
+      logger.error('Error sharing theme:', error);
       setErrorMessage(error.message || 'Failed to share theme with all users');
       setShowErrorDialog(true);
     } finally {
@@ -345,7 +348,7 @@ const ManageCustomThemesScreen = ({ navigation }: any) => {
       setSuccessMessage(`"${palette.name}" is no longer shared. Users will not see it in their theme selection.`);
       setShowSuccessDialog(true);
     } catch (error: any) {
-      console.error('Error unsharing theme:', error);
+      logger.error('Error unsharing theme:', error);
       setErrorMessage(error.message || 'Failed to unshare theme');
       setShowErrorDialog(true);
     } finally {
@@ -363,7 +366,7 @@ const ManageCustomThemesScreen = ({ navigation }: any) => {
       setSuccessMessage('Custom theme activated successfully! Your colors are now applied throughout the app.');
       setShowSuccessDialog(true);
     } catch (error: any) {
-      console.error('Error activating theme:', error);
+      logger.error('Error activating theme:', error);
       setErrorMessage(error.message || 'Failed to activate theme. Make sure you have mapped colors to elements for this palette.');
       setShowErrorDialog(true);
     } finally {
@@ -378,7 +381,7 @@ const ManageCustomThemesScreen = ({ navigation }: any) => {
       setSuccessMessage('Custom theme deactivated. Using default theme.');
       setShowSuccessDialog(true);
     } catch (error) {
-      console.error('Error deactivating theme:', error);
+      logger.error('Error deactivating theme:', error);
       setErrorMessage('Failed to deactivate theme');
       setShowErrorDialog(true);
     } finally {
@@ -412,7 +415,7 @@ const ManageCustomThemesScreen = ({ navigation }: any) => {
         setShowSuccessDialog(true);
       }
     } catch (error) {
-      console.error('Error deleting palette:', error);
+      logger.error('Error deleting palette:', error);
       setErrorMessage('Failed to delete palette');
       setShowErrorDialog(true);
     } finally {
@@ -832,5 +835,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
 });
+
+ManageCustomThemesScreen.displayName = 'ManageCustomThemesScreen';
 
 export default ManageCustomThemesScreen;

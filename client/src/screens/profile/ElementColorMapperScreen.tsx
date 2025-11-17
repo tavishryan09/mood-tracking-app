@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, Text, TouchableOpacity } from 'react-native';
 import { Button, Title, Menu, Divider, Chip, IconButton } from 'react-native-paper';
 import { HugeiconsIcon } from '@hugeicons/react-native';
@@ -7,11 +7,14 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { CustomColor, CustomColorPalette, ElementColorMapping, ElementLabels } from '../../types/customColors';
 import { CustomDialog } from '../../components/CustomDialog';
 import { settingsAPI } from '../../services/api';
+import { ElementColorMapperScreenProps } from '../../types/navigation';
+import { logger } from '../../utils/logger';
+import { apiWithTimeout, TIMEOUT_DURATIONS } from '../../utils/apiWithTimeout';
 
 const CUSTOM_COLOR_PALETTES_KEY = 'custom_color_palettes';
 const ELEMENT_COLOR_MAPPING_KEY = 'element_color_mapping';
 
-const ElementColorMapperScreen = ({ navigation, route }: any) => {
+const ElementColorMapperScreen = React.memo(({ navigation, route }: ElementColorMapperScreenProps) => {
   const { currentColors } = useTheme();
   const { paletteId } = route.params;
 
@@ -50,7 +53,7 @@ const ElementColorMapperScreen = ({ navigation, route }: any) => {
         }
       }
     } catch (error) {
-      console.error('Error loading palette:', error);
+      logger.error('Error loading palette:', error);
       setErrorMessage('Failed to load palette');
       setShowErrorDialog(true);
     }
@@ -171,7 +174,7 @@ const ElementColorMapperScreen = ({ navigation, route }: any) => {
       // Create default mapping using first color or primary/secondary
       initializeDefaultMapping();
     } catch (error) {
-      console.error('Error loading element mapping:', error);
+      logger.error('Error loading element mapping:', error);
       initializeDefaultMapping();
     }
   };
@@ -403,7 +406,7 @@ const ElementColorMapperScreen = ({ navigation, route }: any) => {
 
       setShowSuccessDialog(true);
     } catch (error) {
-      console.error('Error saving element mapping:', error);
+      logger.error('Error saving element mapping:', error);
       setErrorMessage('Failed to save element mapping');
       setShowErrorDialog(true);
     } finally {
@@ -744,5 +747,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
 });
+
+ElementColorMapperScreen.displayName = 'ElementColorMapperScreen';
 
 export default ElementColorMapperScreen;

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, Text, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { Button, Title, IconButton, Checkbox } from 'react-native-paper';
 import { HugeiconsIcon } from '@hugeicons/react-native';
@@ -8,10 +8,13 @@ import { CustomColor, CustomColorPalette } from '../../types/customColors';
 import { CustomDialog } from '../../components/CustomDialog';
 import { settingsAPI } from '../../services/api';
 import { Ionicons } from '@expo/vector-icons';
+import { CustomColorManagerScreenProps } from '../../types/navigation';
+import { logger } from '../../utils/logger';
+import { apiWithTimeout, TIMEOUT_DURATIONS } from '../../utils/apiWithTimeout';
 
 const CUSTOM_COLOR_PALETTES_KEY = 'custom_color_palettes';
 
-const CustomColorManagerScreen = ({ navigation, route }: any) => {
+const CustomColorManagerScreen = React.memo(({ navigation, route }: CustomColorManagerScreenProps) => {
   const { currentColors } = useTheme();
   const params = route?.params || {};
   const isEditing = !!params.paletteId;
@@ -50,7 +53,7 @@ const CustomColorManagerScreen = ({ navigation, route }: any) => {
         }
       }
     } catch (error) {
-      console.error('Error loading palette:', error);
+      logger.error('Error loading palette:', error);
       setErrorMessage('Failed to load palette');
       setShowErrorDialog(true);
     }
@@ -192,7 +195,7 @@ const CustomColorManagerScreen = ({ navigation, route }: any) => {
       setSavedPaletteId(paletteId);
       setShowSuccessDialog(true);
     } catch (error) {
-      console.error('Error saving palette:', error);
+      logger.error('Error saving palette:', error);
       setErrorMessage('Failed to save palette');
       setShowErrorDialog(true);
     } finally {
@@ -592,5 +595,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
 });
+
+CustomColorManagerScreen.displayName = 'CustomColorManagerScreen';
 
 export default CustomColorManagerScreen;
