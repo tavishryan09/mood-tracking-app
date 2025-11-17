@@ -596,7 +596,7 @@ const ElementColorMapperScreen = React.memo(({ navigation, route }: ElementColor
       />
     </ScrollView>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {

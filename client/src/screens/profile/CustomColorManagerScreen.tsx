@@ -437,7 +437,7 @@ const CustomColorManagerScreen = React.memo(({ navigation, route }: CustomColorM
       />
     </ScrollView>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {

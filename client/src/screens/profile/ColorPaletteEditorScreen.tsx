@@ -603,7 +603,7 @@ const ColorPaletteEditorScreen = React.memo(({ navigation, route }: ColorPalette
       />
     </ScrollView>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {

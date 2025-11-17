@@ -723,7 +723,7 @@ const ManageCustomThemesScreen = React.memo(({ navigation }: ManageCustomThemesS
       />
     </ScrollView>
   );
-};
+});
 
 const styles = StyleSheet.create({
   container: {
