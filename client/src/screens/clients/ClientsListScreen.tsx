@@ -41,6 +41,32 @@ const ClientsListScreen = () => {
     filterClients();
   }, [searchQuery, clients]);
 
+  const sortClients = (clientsList: any[]) => {
+    return [...clientsList].sort((a, b) => {
+      const nameA = (a.name || '').toLowerCase();
+      const nameB = (b.name || '').toLowerCase();
+
+      const isInternalA = nameA === 'internal';
+      const isInternalB = nameB === 'internal';
+      const isNAA = nameA === 'na';
+      const isNAB = nameB === 'na';
+
+      // Internal and NA clients go to the end
+      if (isInternalA && !isInternalB && !isNAB) return 1;
+      if (isInternalB && !isInternalA && !isNAA) return -1;
+      if (isNAA && !isNAB && !isInternalB) return 1;
+      if (isNAB && !isNAA && !isInternalA) return -1;
+
+      // Both are Internal or NA, sort between them
+      if ((isInternalA || isNAA) && (isInternalB || isNAB)) {
+        return nameA.localeCompare(nameB);
+      }
+
+      // Normal alphabetical sort for all other clients
+      return nameA.localeCompare(nameB);
+    });
+  };
+
   const loadClients = async () => {
     try {
       setLoading(true);
@@ -49,8 +75,9 @@ const ClientsListScreen = () => {
       );
 
       const response = await Promise.race([clientsAPI.getAll(), timeout]) as any;
-      setClients(response.data);
-      setFilteredClients(response.data);
+      const sortedClients = sortClients(response.data);
+      setClients(sortedClients);
+      setFilteredClients(sortedClients);
     } catch (error) {
       console.error('Error loading clients:', error);
       setClients([]);
@@ -72,7 +99,8 @@ const ClientsListScreen = () => {
         client.company?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         client.email?.toLowerCase().includes(searchQuery.toLowerCase())
     );
-    setFilteredClients(filtered);
+    const sortedFiltered = sortClients(filtered);
+    setFilteredClients(sortedFiltered);
   };
 
   const handleDeleteClick = (clientId: string) => {
