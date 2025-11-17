@@ -329,55 +329,56 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
         })}
 
         {/* Default Page Selector */}
-        <List.Item
-          title="Default Page"
-          description={
-            availablePages.length === 0
+        <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+          <Title style={{ fontSize: 16, color: currentColors.text, marginBottom: 4 }}>
+            Default Page
+          </Title>
+          <Paragraph style={{ fontSize: 12, color: currentColors.textSecondary, marginBottom: 12 }}>
+            {availablePages.length === 0
               ? 'Enable at least one page above to set a default'
               : availablePages.length === 1
               ? 'Only one page is enabled'
-              : `Page to show when ${roleLabel}s log in (${availablePages.length} pages available)`
-          }
-          right={() => (
-            <Menu
-              visible={menuVisible}
-              onDismiss={() => setMenuVisible(false)}
-              contentStyle={{ backgroundColor: currentColors.background.bg300 }}
-              anchor={
-                <Button
-                  mode="outlined"
-                  onPress={() => {
-                    console.log(`[TeamViewSettings] Opening menu for ${role}, visible:`, menuVisible);
-                    setMenuVisible(true);
-                  }}
-                  disabled={availablePages.length === 0}
-                >
-                  {PAGES.find((p) => p.key === defaultPage)?.label || 'Select'}
-                </Button>
-              }
-            >
-              {availablePages.length === 0 ? (
+              : `Page to show when ${roleLabel}s log in (${availablePages.length} pages available)`}
+          </Paragraph>
+          <Menu
+            visible={menuVisible}
+            onDismiss={() => setMenuVisible(false)}
+            contentStyle={{ backgroundColor: currentColors.background.bg300 }}
+            anchor={
+              <Button
+                mode="outlined"
+                onPress={() => {
+                  console.log(`[TeamViewSettings] Opening menu for ${role}, visible:`, menuVisible);
+                  setMenuVisible(true);
+                }}
+                disabled={availablePages.length === 0}
+                style={{ alignSelf: 'flex-start' }}
+              >
+                {PAGES.find((p) => p.key === defaultPage)?.label || 'Select'}
+              </Button>
+            }
+          >
+            {availablePages.length === 0 ? (
+              <Menu.Item
+                title="No pages available"
+                disabled
+              />
+            ) : (
+              availablePages.map((page) => (
                 <Menu.Item
-                  title="No pages available"
-                  disabled
+                  key={page.key}
+                  onPress={() => {
+                    console.log(`[TeamViewSettings] Selected page:`, page.label);
+                    setDefaultPage(page.key);
+                    setMenuVisible(false);
+                  }}
+                  title={page.label}
+                  leadingIcon={page.key === defaultPage ? 'check' : undefined}
                 />
-              ) : (
-                availablePages.map((page) => (
-                  <Menu.Item
-                    key={page.key}
-                    onPress={() => {
-                      console.log(`[TeamViewSettings] Selected page:`, page.label);
-                      setDefaultPage(page.key);
-                      setMenuVisible(false);
-                    }}
-                    title={page.label}
-                    leadingIcon={page.key === defaultPage ? 'check' : undefined}
-                  />
-                ))
-              )}
-            </Menu>
-          )}
-        />
+              ))
+            )}
+          </Menu>
+        </View>
 
         {/* View Preferences */}
         <Divider style={{ marginVertical: 10 }} />
