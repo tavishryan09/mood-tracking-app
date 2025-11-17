@@ -22,7 +22,7 @@ const DAY_CELL_WIDTH = 180; // Fixed width for each day column
 const USER_COLUMN_WIDTH = 100; // Fixed width for user names column
 const TIME_BLOCK_HEIGHT = 48; // Height for each 2-hour block
 
-const PlanningScreen = ({ navigation, route }: PlanningScreenProps) => {
+const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) => {
   const { currentColors, selectedPalette } = useTheme();
   const { user } = useAuth();
   const { planningColors } = usePlanningColors();
@@ -4058,7 +4058,9 @@ const PlanningScreen = ({ navigation, route }: PlanningScreenProps) => {
       />
     </View>
   );
-};
+});
+
+PlanningScreen.displayName = 'PlanningScreen';
 
 const ROW_HEIGHT = 200; // Increased to fit 4 time blocks
 

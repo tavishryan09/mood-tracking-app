@@ -8,7 +8,7 @@ import { EditProjectScreenProps } from '../../types/navigation';
 import { logger } from '../../utils/logger';
 import { validateAndSanitize } from '../../utils/sanitize';
 
-const EditProjectScreen = ({ route, navigation }: EditProjectScreenProps) => {
+const EditProjectScreen = React.memo(({ route, navigation }: EditProjectScreenProps) => {
   const { projectId } = route.params;
   const { currentColors } = useTheme();
   const [clients, setClients] = useState<any[]>([]);
@@ -589,7 +589,9 @@ const EditProjectScreen = ({ route, navigation }: EditProjectScreenProps) => {
       </View>
     </ScrollView>
   );
-};
+});
+
+EditProjectScreen.displayName = 'EditProjectScreen';
 
 const styles = StyleSheet.create({
   container: {

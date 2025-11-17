@@ -10,6 +10,7 @@ import { CustomDialog } from '../../components/CustomDialog';
 import { EditClientScreenProps } from '../../types/navigation';
 import { logger } from '../../utils/logger';
 import { validateAndSanitize, ValidationPatterns } from '../../utils/sanitize';
+import { apiWithTimeout, TIMEOUT_DURATIONS } from '../../utils/apiWithTimeout';
 
 interface Contact {
   id: string;
@@ -20,7 +21,7 @@ interface Contact {
   isPrimary?: boolean;
 }
 
-const EditClientScreen = ({ route, navigation }: EditClientScreenProps) => {
+const EditClientScreen = React.memo(({ route, navigation }: EditClientScreenProps) => {
   const { currentColors } = useTheme();
   const { getColorForElement } = useCustomColorTheme();
   const { clientId } = route.params;
@@ -59,11 +60,7 @@ const EditClientScreen = ({ route, navigation }: EditClientScreenProps) => {
   const loadClient = async () => {
     try {
       setLoading(true);
-      const timeout = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Request timeout')), 800)
-      );
-
-      const response = await Promise.race([clientsAPI.getById(clientId), timeout]) as any;
+      const response = await apiWithTimeout(clientsAPI.getById(clientId), TIMEOUT_DURATIONS.QUICK) as any;
       const client = response.data;
 
       setBusinessName(client.name || '');
@@ -200,11 +197,7 @@ const EditClientScreen = ({ route, navigation }: EditClientScreenProps) => {
         contacts: contacts,
       };
 
-      const timeout = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Request timeout')), 2000)
-      );
-
-      await Promise.race([clientsAPI.update(clientId, clientData), timeout]);
+      await apiWithTimeout(clientsAPI.update(clientId, clientData), TIMEOUT_DURATIONS.STANDARD);
 
       logger.log('Client updated successfully', { clientName: sanitizedData.businessName }, 'EditClientScreen');
       setSuccessMessage('Client updated successfully');
@@ -461,7 +454,9 @@ const EditClientScreen = ({ route, navigation }: EditClientScreenProps) => {
       />
     </ScrollView>
   );
-};
+});
+
+EditClientScreen.displayName = 'EditClientScreen';
 
 const styles = StyleSheet.create({
   container: {

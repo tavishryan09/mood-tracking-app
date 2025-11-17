@@ -13,7 +13,7 @@ import { useCustomColorTheme } from '../../contexts/CustomColorThemeContext';
 import { planningTasksAPI, deadlineTasksAPI } from '../../services/api';
 import { logger } from '../../utils/logger';
 
-const DashboardScreen = ({ navigation, route }: DashboardScreenProps) => {
+const DashboardScreen = React.memo(({ navigation, route }: DashboardScreenProps) => {
   const { user } = useAuth();
   const { currentColors } = useTheme();
   const { planningColors } = usePlanningColors();
@@ -518,7 +518,9 @@ const DashboardScreen = ({ navigation, route }: DashboardScreenProps) => {
 
     </ScrollView>
   );
-};
+});
+
+DashboardScreen.displayName = 'DashboardScreen';
 
 const styles = StyleSheet.create({
   container: {

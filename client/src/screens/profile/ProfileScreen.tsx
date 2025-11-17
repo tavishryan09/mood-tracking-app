@@ -12,7 +12,7 @@ import axios from 'axios';
 import { ProfileScreenProps } from '../../types/navigation';
 import { logger } from '../../utils/logger';
 
-const ProfileScreen = ({ navigation, route }: ProfileScreenProps) => {
+const ProfileScreen = React.memo(({ navigation, route }: ProfileScreenProps) => {
   const { user, logout, refreshUser, token } = useAuth();
   const { selectedPalette, setSelectedPalette, currentColors, customPalettes, loadCustomPalettes: reloadThemeCustomPalettes } = useTheme();
 
@@ -1760,7 +1760,9 @@ const ProfileScreen = ({ navigation, route }: ProfileScreenProps) => {
 
     </ScrollView>
   );
-};
+});
+
+ProfileScreen.displayName = 'ProfileScreen';
 
 const styles = StyleSheet.create({
   container: {

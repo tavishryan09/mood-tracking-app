@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, FlatList, TouchableOpacity, Modal, Text } from 'react-native';
 import { Card, Title, Paragraph, FAB, ActivityIndicator, Searchbar, IconButton, Menu, Divider } from 'react-native-paper';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { Search01Icon, AddCircleIcon, PencilEdit02Icon, Cancel01Icon } from '@hugeicons/core-free-icons';
 import { clientsAPI } from '../../services/api';
@@ -9,8 +9,9 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { useCustomColorTheme } from '../../contexts/CustomColorThemeContext';
 import { ClientsListScreenProps } from '../../types/navigation';
 import { logger } from '../../utils/logger';
+import { apiWithTimeout, TIMEOUT_DURATIONS } from '../../utils/apiWithTimeout';
 
-const ClientsListScreen = ({ navigation, route }: ClientsListScreenProps) => {
+const ClientsListScreen = React.memo(({ navigation, route }: ClientsListScreenProps) => {
   const { currentColors } = useTheme();
   const { getColorForElement } = useCustomColorTheme();
 
@@ -71,11 +72,7 @@ const ClientsListScreen = ({ navigation, route }: ClientsListScreenProps) => {
   const loadClients = async () => {
     try {
       setLoading(true);
-      const timeout = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Request timeout')), 800)
-      );
-
-      const response = await Promise.race([clientsAPI.getAll(), timeout]) as any;
+      const response = await apiWithTimeout(clientsAPI.getAll(), TIMEOUT_DURATIONS.QUICK) as any;
       const sortedClients = sortClients(response.data);
       setClients(sortedClients);
       setFilteredClients(sortedClients);
@@ -112,11 +109,7 @@ const ClientsListScreen = ({ navigation, route }: ClientsListScreenProps) => {
     if (!deletingClientId) return;
 
     try {
-      const timeout = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Request timeout')), 10000)
-      );
-
-      await Promise.race([clientsAPI.delete(deletingClientId), timeout]);
+      await apiWithTimeout(clientsAPI.delete(deletingClientId), TIMEOUT_DURATIONS.VERY_LONG);
       setDeletingClientId(null);
       loadClients();
     } catch (error: any) {
@@ -317,7 +310,9 @@ const ClientsListScreen = ({ navigation, route }: ClientsListScreenProps) => {
       )}
     </View>
   );
-};
+});
+
+ClientsListScreen.displayName = 'ClientsListScreen';
 
 const styles = StyleSheet.create({
   container: {

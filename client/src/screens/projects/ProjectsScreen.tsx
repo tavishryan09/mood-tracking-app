@@ -12,7 +12,7 @@ import { ProjectsScreenProps } from '../../types/navigation';
 import { Project } from '../../types/api';
 import { logger } from '../../utils/logger';
 
-const ProjectsScreen = ({ navigation, route }: ProjectsScreenProps) => {
+const ProjectsScreen = React.memo(({ navigation, route }: ProjectsScreenProps) => {
   const { currentColors } = useTheme();
   const { user } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
@@ -205,7 +205,9 @@ const ProjectsScreen = ({ navigation, route }: ProjectsScreenProps) => {
       />
     </View>
   );
-};
+});
+
+ProjectsScreen.displayName = 'ProjectsScreen';
 
 const styles = StyleSheet.create({
   container: {

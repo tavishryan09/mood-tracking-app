@@ -9,8 +9,9 @@ import { CustomDialog } from '../../components/CustomDialog';
 import { CreateProjectScreenProps } from '../../types/navigation';
 import { logger } from '../../utils/logger';
 import { validateAndSanitize } from '../../utils/sanitize';
+import { apiWithTimeout, TIMEOUT_DURATIONS } from '../../utils/apiWithTimeout';
 
-const CreateProjectScreen = ({ navigation, route }: CreateProjectScreenProps) => {
+const CreateProjectScreen = React.memo(({ navigation, route }: CreateProjectScreenProps) => {
   const { currentColors } = useTheme();
   const [clients, setClients] = useState<any[]>([]);
   const [name, setName] = useState('');
@@ -38,17 +39,12 @@ const CreateProjectScreen = ({ navigation, route }: CreateProjectScreenProps) =>
 
   const loadData = async () => {
     try {
-      // Add timeout to prevent infinite loading
-      const timeout = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Request timeout')), 800)
-      );
-
       const apiCalls = Promise.all([
         clientsAPI.getAll(),
         usersAPI.getAll(),
       ]);
 
-      const [clientsResponse, usersResponse] = await Promise.race([apiCalls, timeout]) as any;
+      const [clientsResponse, usersResponse] = await apiWithTimeout(apiCalls, TIMEOUT_DURATIONS.QUICK) as any;
       setClients(clientsResponse.data);
       setAllUsers(usersResponse.data);
     } catch (error) {
@@ -112,12 +108,7 @@ const CreateProjectScreen = ({ navigation, route }: CreateProjectScreenProps) =>
         memberIds: selectedMembers.length > 0 ? selectedMembers : undefined,
       };
 
-      // Add timeout to API call
-      const timeout = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Request timeout')), 2000)
-      );
-
-      await Promise.race([projectsAPI.create(projectData), timeout]);
+      await apiWithTimeout(projectsAPI.create(projectData), TIMEOUT_DURATIONS.STANDARD);
 
       logger.log('Project created successfully', { projectName: sanitizedData.name }, 'CreateProjectScreen');
       setSuccessMessage('Project created successfully');
@@ -322,7 +313,9 @@ const CreateProjectScreen = ({ navigation, route }: CreateProjectScreenProps) =>
       />
     </ScrollView>
   );
-};
+});
+
+CreateProjectScreen.displayName = 'CreateProjectScreen';
 
 const styles = StyleSheet.create({
   container: {

@@ -10,6 +10,7 @@ import { CustomDialog } from '../../components/CustomDialog';
 import { CreateClientScreenProps } from '../../types/navigation';
 import { logger } from '../../utils/logger';
 import { validateAndSanitize, ValidationPatterns } from '../../utils/sanitize';
+import { apiWithTimeout, TIMEOUT_DURATIONS } from '../../utils/apiWithTimeout';
 
 interface Contact {
   id: string;
@@ -19,7 +20,7 @@ interface Contact {
   phone: string;
 }
 
-const CreateClientScreen = ({ navigation, route }: CreateClientScreenProps) => {
+const CreateClientScreen = React.memo(({ navigation, route }: CreateClientScreenProps) => {
   const { currentColors } = useTheme();
   const { getColorForElement } = useCustomColorTheme();
 
@@ -150,12 +151,7 @@ const CreateClientScreen = ({ navigation, route }: CreateClientScreenProps) => {
         primaryContactTitle: sanitizedData.primaryContactTitle || undefined,
       };
 
-      // Add timeout to API call
-      const timeout = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('Request timeout')), 2000)
-      );
-
-      await Promise.race([clientsAPI.create(clientData), timeout]);
+      await apiWithTimeout(clientsAPI.create(clientData), TIMEOUT_DURATIONS.STANDARD);
 
       logger.log('Client created successfully', { clientName: sanitizedData.businessName }, 'CreateClientScreen');
       setShowSuccessDialog(true);
@@ -391,7 +387,9 @@ const CreateClientScreen = ({ navigation, route }: CreateClientScreenProps) => {
       />
     </ScrollView>
   );
-};
+});
+
+CreateClientScreen.displayName = 'CreateClientScreen';
 
 const styles = StyleSheet.create({
   container: {
