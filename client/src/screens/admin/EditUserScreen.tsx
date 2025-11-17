@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import {
   TextInput,
@@ -12,6 +12,10 @@ import {
 import { userManagementAPI } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import { CustomDialog } from '../../components/CustomDialog';
+import { EditUserScreenProps } from '../../types/navigation';
+import { logger } from '../../utils/logger';
+import { validateAndSanitize, ValidationPatterns } from '../../utils/sanitize';
+import { apiWithTimeout, TIMEOUT_DURATIONS } from '../../utils/apiWithTimeout';
 
 interface User {
   id: string;
@@ -23,7 +27,7 @@ interface User {
   defaultHourlyRate?: number;
 }
 
-const EditUserScreen = ({ route, navigation }: any) => {
+const EditUserScreen = React.memo(({ route, navigation }: EditUserScreenProps) => {
   const { userId } = route.params;
   const { currentColors } = useTheme();
   const [user, setUser] = useState<User | null>(null);
@@ -50,14 +54,10 @@ const EditUserScreen = ({ route, navigation }: any) => {
   const [resetPasswordError, setResetPasswordError] = useState('');
   const [showResetPasswordErrorDialog, setShowResetPasswordErrorDialog] = useState(false);
 
-  useEffect(() => {
-    loadUser();
-  }, [userId]);
-
-  const loadUser = async () => {
+  const loadUser = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await userManagementAPI.getAllUsers();
+      const response = await apiWithTimeout(userManagementAPI.getAllUsers(), TIMEOUT_DURATIONS.QUICK) as any;
       const foundUser = response.data.find((u: User) => u.id === userId);
 
       if (foundUser) {
@@ -67,77 +67,118 @@ const EditUserScreen = ({ route, navigation }: any) => {
         setRole(foundUser.role);
         setIsActive(foundUser.isActive);
         setDefaultHourlyRate(foundUser.defaultHourlyRate?.toString() || '');
+        logger.log('User loaded successfully', { userId }, 'EditUserScreen');
       } else {
+        logger.warn('User not found', { userId }, 'EditUserScreen');
         setErrorMessage('User not found');
         setShowErrorDialog(true);
         setSuccessAction(() => () => navigation.goBack());
       }
     } catch (error: any) {
-      console.error('Error loading user:', error);
-      setErrorMessage('Failed to load user');
+      logger.error('Error loading user:', error, 'EditUserScreen');
+      const message = error.message === 'Request timeout'
+        ? 'Unable to connect to server. Please check your connection.'
+        : 'Failed to load user';
+      setErrorMessage(message);
       setShowErrorDialog(true);
       setSuccessAction(() => () => navigation.goBack());
     } finally {
       setLoading(false);
     }
-  };
+  }, [userId, navigation]);
 
-  const handleUpdateUser = async () => {
-    if (!firstName || !lastName) {
-      setErrorMessage('Please fill in all required fields');
+  useEffect(() => {
+    loadUser();
+  }, [loadUser]);
+
+  const handleUpdateUser = useCallback(async () => {
+    // Validate and sanitize inputs
+    const { isValid, errors, sanitizedData } = validateAndSanitize(
+      { firstName, lastName, defaultHourlyRate },
+      {
+        firstName: { required: true, minLength: 2, maxLength: 50 },
+        lastName: { required: true, minLength: 2, maxLength: 50 },
+        defaultHourlyRate: { pattern: /^\d+(\.\d{1,2})?$/ }, // Optional numeric with 2 decimals
+      }
+    );
+
+    if (!isValid) {
+      const errorMsg = Object.values(errors)[0] || 'Please check your input';
+      setErrorMessage(errorMsg);
       setShowErrorDialog(true);
+      logger.warn('User update validation failed:', errors, 'EditUserScreen');
       return;
     }
 
     setSaving(true);
     try {
       const data: any = {
-        firstName,
-        lastName,
+        firstName: sanitizedData.firstName,
+        lastName: sanitizedData.lastName,
         role,
         isActive,
       };
 
-      if (defaultHourlyRate) {
-        data.defaultHourlyRate = parseFloat(defaultHourlyRate);
+      if (sanitizedData.defaultHourlyRate) {
+        data.defaultHourlyRate = parseFloat(sanitizedData.defaultHourlyRate);
       }
 
-      await userManagementAPI.updateUser(userId, data);
+      await apiWithTimeout(userManagementAPI.updateUser(userId, data), TIMEOUT_DURATIONS.STANDARD);
+      logger.log('User updated successfully', { userId }, 'EditUserScreen');
       setSuccessMessage('User updated successfully');
       setShowSuccessDialog(true);
       setSuccessAction(() => () => navigation.goBack());
     } catch (error: any) {
-      setErrorMessage(error.response?.data?.error || 'Failed to update user');
+      logger.error('Error updating user:', error, 'EditUserScreen');
+      const message = error.message === 'Request timeout'
+        ? 'Unable to connect to server. Please check your connection.'
+        : error.response?.data?.error || 'Failed to update user';
+      setErrorMessage(message);
       setShowErrorDialog(true);
     } finally {
       setSaving(false);
     }
-  };
+  }, [firstName, lastName, role, isActive, defaultHourlyRate, userId, navigation]);
 
-  const handleResetPassword = () => {
+  const handleResetPassword = useCallback(() => {
     setNewPassword('');
     setShowResetPasswordDialog(true);
-  };
+  }, []);
 
-  const handleResetPasswordConfirm = async () => {
-    if (!newPassword || newPassword.length < 6) {
-      setResetPasswordError('Password must be at least 6 characters long');
+  const handleResetPasswordConfirm = useCallback(async () => {
+    // Validate password
+    const { isValid, errors, sanitizedData } = validateAndSanitize(
+      { password: newPassword },
+      {
+        password: { required: true, minLength: 6, maxLength: 128 },
+      }
+    );
+
+    if (!isValid) {
+      const errorMsg = Object.values(errors)[0] || 'Password must be at least 6 characters long';
+      setResetPasswordError(errorMsg);
       setShowResetPasswordErrorDialog(true);
+      logger.warn('Password reset validation failed:', errors, 'EditUserScreen');
       return;
     }
 
     setShowResetPasswordDialog(false);
 
     try {
-      await userManagementAPI.resetPassword(userId, newPassword);
+      await apiWithTimeout(userManagementAPI.resetPassword(userId, sanitizedData.password), TIMEOUT_DURATIONS.STANDARD);
+      logger.log('Password reset successfully', { userId }, 'EditUserScreen');
       setSuccessMessage('Password reset successfully');
       setShowSuccessDialog(true);
       setNewPassword('');
     } catch (error: any) {
-      setErrorMessage(error.response?.data?.error || 'Failed to reset password');
+      logger.error('Error resetting password:', error, 'EditUserScreen');
+      const message = error.message === 'Request timeout'
+        ? 'Unable to connect to server. Please check your connection.'
+        : error.response?.data?.error || 'Failed to reset password';
+      setErrorMessage(message);
       setShowErrorDialog(true);
     }
-  };
+  }, [newPassword, userId]);
 
   if (loading) {
     return (
@@ -345,7 +386,9 @@ const EditUserScreen = ({ route, navigation }: any) => {
       />
     </ScrollView>
   );
-};
+});
+
+EditUserScreen.displayName = 'EditUserScreen';
 
 const styles = StyleSheet.create({
   container: {
