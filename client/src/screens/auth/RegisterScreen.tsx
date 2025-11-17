@@ -10,8 +10,11 @@ import { TextInput, Button, Title, Text } from 'react-native-paper';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { CustomDialog } from '../../components/CustomDialog';
+import { RegisterScreenProps } from '../../types/navigation';
+import { logger } from '../../utils/logger';
+import { validateAndSanitize, ValidationPatterns } from '../../utils/sanitize';
 
-const RegisterScreen = ({ navigation }: any) => {
+const RegisterScreen = React.memo(({ navigation }: RegisterScreenProps) => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
@@ -42,34 +45,43 @@ const RegisterScreen = ({ navigation }: any) => {
   };
 
   const handleRegister = async () => {
-    if (!firstName || !lastName || !email || !password || !confirmPassword) {
-      setDialogTitle('Error');
-      setDialogMessage('Please fill in all fields');
-      setDialogButtons([{ text: 'OK', onPress: () => {} }]);
-      setDialogVisible(true);
-      return;
-    }
-
+    // Check password match first
     if (password !== confirmPassword) {
       setDialogTitle('Error');
       setDialogMessage('Passwords do not match');
       setDialogButtons([{ text: 'OK', onPress: () => {} }]);
       setDialogVisible(true);
+      logger.warn('Password mismatch', null, 'RegisterScreen');
       return;
     }
 
-    if (password.length < 6) {
+    // Validate and sanitize all fields
+    const { isValid, errors, sanitizedData } = validateAndSanitize(
+      { firstName, lastName, email, password },
+      {
+        firstName: { required: true, minLength: 2, maxLength: 50 },
+        lastName: { required: true, minLength: 2, maxLength: 50 },
+        email: { required: true, pattern: ValidationPatterns.email, maxLength: 254 },
+        password: { required: true, minLength: 6, maxLength: 128 },
+      }
+    );
+
+    if (!isValid) {
+      const errorMsg = Object.values(errors)[0] || 'Please check your input';
       setDialogTitle('Error');
-      setDialogMessage('Password must be at least 6 characters');
+      setDialogMessage(errorMsg);
       setDialogButtons([{ text: 'OK', onPress: () => {} }]);
       setDialogVisible(true);
+      logger.warn('Registration validation failed:', errors, 'RegisterScreen');
       return;
     }
 
     setLoading(true);
     try {
-      await register({ firstName, lastName, email, password });
+      await register(sanitizedData);
+      logger.log('User registered successfully', { email: sanitizedData.email }, 'RegisterScreen');
     } catch (error: any) {
+      logger.error('Registration error:', error, 'RegisterScreen');
       setDialogTitle('Registration Failed');
       setDialogMessage(error.message);
       setDialogButtons([{ text: 'OK', onPress: () => {} }]);
@@ -176,7 +188,9 @@ const RegisterScreen = ({ navigation }: any) => {
       />
     </KeyboardAvoidingView>
   );
-};
+});
+
+RegisterScreen.displayName = 'RegisterScreen';
 
 const styles = StyleSheet.create({
   container: {

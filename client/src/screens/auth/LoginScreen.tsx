@@ -13,8 +13,11 @@ import { ViewIcon, ViewOffIcon, UserIcon, LockPasswordIcon } from '@hugeicons/co
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { CustomDialog } from '../../components/CustomDialog';
+import { LoginScreenProps } from '../../types/navigation';
+import { logger } from '../../utils/logger';
+import { validateAndSanitize, ValidationPatterns } from '../../utils/sanitize';
 
-const LoginScreen = ({ navigation }: any) => {
+const LoginScreen = React.memo(({ navigation }: LoginScreenProps) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -32,22 +35,29 @@ const LoginScreen = ({ navigation }: any) => {
   const handleLogin = async () => {
     setErrorMessage('');
 
-    if (!email || !password) {
-      setErrorMessage('Please fill in all fields');
-      return;
-    }
+    // Validate and sanitize input
+    const { isValid, errors, sanitizedData } = validateAndSanitize(
+      { email, password },
+      {
+        email: { required: true, pattern: ValidationPatterns.email, maxLength: 254 },
+        password: { required: true, minLength: 1, maxLength: 128 },
+      }
+    );
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      setErrorMessage('Please enter a valid email address');
+    if (!isValid) {
+      const errorMsg = Object.values(errors)[0] || 'Please check your input';
+      setErrorMessage(errorMsg);
+      logger.warn('Login validation failed:', errors, 'LoginScreen');
       return;
     }
 
     setLoading(true);
     try {
-      await login(email, password);
+      await login(sanitizedData.email, sanitizedData.password);
+      logger.log('User logged in successfully', { email: sanitizedData.email }, 'LoginScreen');
     } catch (error: any) {
+      logger.error('Login error:', error, 'LoginScreen');
+
       // Extract more specific error messages
       let message = 'Login failed. Please try again.';
 
@@ -200,7 +210,9 @@ const LoginScreen = ({ navigation }: any) => {
       />
     </KeyboardAvoidingView>
   );
-};
+});
+
+LoginScreen.displayName = 'LoginScreen';
 
 const createStyles = (currentColors: any) => StyleSheet.create({
   container: {

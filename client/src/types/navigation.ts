@@ -13,6 +13,7 @@ import type { CompositeScreenProps } from '@react-navigation/native';
 // Root Stack (Auth flows)
 export type RootStackParamList = {
   Login: undefined;
+  Register: undefined;
   OAuthCallback: { token?: string; error?: string };
 };
 
@@ -183,6 +184,7 @@ export type CustomColorManagerScreenProps = StackScreenProps<
 
 // Auth screens
 export type LoginScreenProps = StackScreenProps<RootStackParamList, 'Login'>;
+export type RegisterScreenProps = StackScreenProps<RootStackParamList, 'Register'>;
 
 export type OAuthCallbackScreenProps = StackScreenProps<
   RootStackParamList,
