@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useMe
 import { ColorPalette, ColorPaletteName, colorPalettes } from '../theme/colorPalettes';
 import { settingsAPI } from '../services/api';
 import { useAuth } from './AuthContext';
+import { logger } from '../utils/logger';
+import { apiWithTimeout, TIMEOUT_DURATIONS } from '../utils/apiWithTimeout';
 
 interface CustomColorMapping {
   [section: string]: {
@@ -67,7 +69,7 @@ export const UnifiedColorProvider = ({ children }: { children: ReactNode }) => {
             // No user preference, use app-level default
             setSelectedPaletteState(defaultThemeResult.value.data.value);
           } else if (paletteResult.status === 'rejected' && paletteResult.reason?.response?.status !== 404) {
-            console.error('[UnifiedColor] Error loading palette:', paletteResult.reason);
+            logger.error('Error loading palette:', paletteResult.reason, 'UnifiedColorContext');
           }
 
           // Process custom mappings
@@ -75,19 +77,21 @@ export const UnifiedColorProvider = ({ children }: { children: ReactNode }) => {
             const customMappings = mappingsResult.value.data.value;
             setCustomColorMappings(customMappings);
             setIsUsingCustomTheme(Object.keys(customMappings).length > 0);
+            logger.log('Custom color mappings loaded successfully', { count: Object.keys(customMappings).length }, 'UnifiedColorContext');
           } else if (mappingsResult.status === 'rejected' && mappingsResult.reason?.response?.status !== 404) {
-            console.error('[UnifiedColor] Error loading custom mappings:', mappingsResult.reason);
+            logger.error('Error loading custom mappings:', mappingsResult.reason, 'UnifiedColorContext');
           }
 
           // Process planning colors
           if (planningColorsResult.status === 'fulfilled' && planningColorsResult.value?.data?.value) {
             setPlanningColors(planningColorsResult.value.data.value);
+            logger.log('Planning colors loaded successfully', {}, 'UnifiedColorContext');
           } else if (planningColorsResult.status === 'rejected' && planningColorsResult.reason?.response?.status !== 404) {
-            console.error('[UnifiedColor] Error loading planning colors:', planningColorsResult.reason);
+            logger.error('Error loading planning colors:', planningColorsResult.reason, 'UnifiedColorContext');
           }
         }
       } catch (error) {
-        console.error('[UnifiedColor] Error loading settings:', error);
+        logger.error('Error loading settings:', error, 'UnifiedColorContext');
       }
     };
 
@@ -158,14 +162,32 @@ export const UnifiedColorProvider = ({ children }: { children: ReactNode }) => {
   const setSelectedPalette = useCallback(async (paletteId: string) => {
     setSelectedPaletteState(paletteId);
     if (user) {
-      await settingsAPI.user.set('selected_color_palette', paletteId);
+      try {
+        await apiWithTimeout(
+          settingsAPI.user.set('selected_color_palette', paletteId),
+          TIMEOUT_DURATIONS.STANDARD
+        );
+        logger.log('Selected palette saved successfully', { paletteId }, 'UnifiedColorContext');
+      } catch (error) {
+        logger.error('Error saving selected palette:', error, 'UnifiedColorContext');
+        throw error;
+      }
     }
   }, [user]);
 
   const updatePlanningColors = useCallback(async (colors: PlanningColors) => {
     setPlanningColors(colors);
     if (user) {
-      await settingsAPI.user.set('planning_colors', colors);
+      try {
+        await apiWithTimeout(
+          settingsAPI.user.set('planning_colors', colors),
+          TIMEOUT_DURATIONS.STANDARD
+        );
+        logger.log('Planning colors updated successfully', {}, 'UnifiedColorContext');
+      } catch (error) {
+        logger.error('Error updating planning colors:', error, 'UnifiedColorContext');
+        throw error;
+      }
     }
   }, [user]);
 
@@ -189,7 +211,16 @@ export const UnifiedColorProvider = ({ children }: { children: ReactNode }) => {
     setIsUsingCustomTheme(Object.keys(newMappings).length > 0);
 
     if (user) {
-      await settingsAPI.user.set('custom_color_mappings', newMappings);
+      try {
+        await apiWithTimeout(
+          settingsAPI.user.set('custom_color_mappings', newMappings),
+          TIMEOUT_DURATIONS.STANDARD
+        );
+        logger.log('Custom color mapping updated successfully', { section, element }, 'UnifiedColorContext');
+      } catch (error) {
+        logger.error('Error updating custom color mapping:', error, 'UnifiedColorContext');
+        throw error;
+      }
     }
   }, [customColorMappings, user]);
 

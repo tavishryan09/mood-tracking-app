@@ -2,6 +2,8 @@ import React, { createContext, useContext, useState, useEffect, ReactNode, useMe
 import { settingsAPI } from '../services/api';
 import { useAuth } from './AuthContext';
 import { useCustomColorTheme } from './CustomColorThemeContext';
+import { logger } from '../utils/logger';
+import { apiWithTimeout, TIMEOUT_DURATIONS } from '../utils/apiWithTimeout';
 
 export interface PlanningColors {
   // Header colors
@@ -153,17 +155,20 @@ export const PlanningColorsProvider = ({ children }: { children: ReactNode }) =>
 
   const loadPlanningColors = useCallback(async () => {
     if (!user) {
-
       setPlanningColors(defaultColors);
       return;
     }
 
     try {
       // Try to load from database
-      const response = await settingsAPI.user.get('planning_colors');
+      const response = await apiWithTimeout(
+        settingsAPI.user.get('planning_colors'),
+        TIMEOUT_DURATIONS.QUICK
+      );
 
       if (response.data && response.data.value) {
         setPlanningColors(response.data.value);
+        logger.log('Planning colors loaded successfully', {}, 'PlanningColorsContext');
       } else {
         // No saved colors, use defaults
         setPlanningColors(defaultColors);
@@ -171,10 +176,9 @@ export const PlanningColorsProvider = ({ children }: { children: ReactNode }) =>
     } catch (error: any) {
       // If setting doesn't exist (404), use defaults
       if (error.response?.status === 404) {
-
         setPlanningColors(defaultColors);
       } else {
-        console.error('[PlanningColors] Error loading planning colors:', error);
+        logger.error('Error loading planning colors:', error, 'PlanningColorsContext');
         setPlanningColors(defaultColors);
       }
     }
@@ -189,11 +193,14 @@ export const PlanningColorsProvider = ({ children }: { children: ReactNode }) =>
     try {
       // Save to database
       const settingKey = asDefault ? 'planning_colors_default' : 'planning_colors';
-      await settingsAPI.user.set(settingKey, colors);
+      await apiWithTimeout(
+        settingsAPI.user.set(settingKey, colors),
+        TIMEOUT_DURATIONS.STANDARD
+      );
       setPlanningColors(colors);
-
+      logger.log('Planning colors saved successfully', { asDefault }, 'PlanningColorsContext');
     } catch (error) {
-      console.error('[PlanningColors] Error saving planning colors:', error);
+      logger.error('Error saving planning colors:', error, 'PlanningColorsContext');
       throw error;
     }
   }, []);
