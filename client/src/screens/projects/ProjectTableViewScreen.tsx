@@ -1463,7 +1463,7 @@ const ProjectTableViewScreen = React.memo(() => {
       />
     </View>
   );
-};
+});
 
 const getStyles = (currentColors: any) => StyleSheet.create({
   container: {
