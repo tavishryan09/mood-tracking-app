@@ -1,11 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { TextInput, Button, Title, SegmentedButtons } from 'react-native-paper';
 import { userManagementAPI } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import { CustomDialog } from '../../components/CustomDialog';
+import { InviteUserScreenProps } from '../../types/navigation';
+import { logger } from '../../utils/logger';
+import { validateAndSanitize, ValidationPatterns } from '../../utils/sanitize';
+import { apiWithTimeout, TIMEOUT_DURATIONS } from '../../utils/apiWithTimeout';
 
-const InviteUserScreen = ({ navigation }: any) => {
+const InviteUserScreen = React.memo(({ navigation }: InviteUserScreenProps) => {
   const { currentColors } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -20,42 +24,55 @@ const InviteUserScreen = ({ navigation }: any) => {
   const [errorMessage, setErrorMessage] = useState('');
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
-  const handleInviteUser = async () => {
-    if (!email || !password || !firstName || !lastName) {
-      setErrorMessage('Please fill in all required fields');
-      setShowErrorDialog(true);
-      return;
-    }
+  const handleInviteUser = useCallback(async () => {
+    // Validate and sanitize all fields
+    const { isValid, errors, sanitizedData } = validateAndSanitize(
+      { email, password, firstName, lastName, defaultHourlyRate },
+      {
+        email: { required: true, pattern: ValidationPatterns.email, maxLength: 254 },
+        password: { required: true, minLength: 6, maxLength: 128 },
+        firstName: { required: true, minLength: 2, maxLength: 50 },
+        lastName: { required: true, minLength: 2, maxLength: 50 },
+        defaultHourlyRate: { pattern: /^\d+(\.\d{1,2})?$/ }, // Optional numeric with 2 decimals
+      }
+    );
 
-    if (password.length < 6) {
-      setErrorMessage('Password must be at least 6 characters long');
+    if (!isValid) {
+      const errorMsg = Object.values(errors)[0] || 'Please check your input';
+      setErrorMessage(errorMsg);
       setShowErrorDialog(true);
+      logger.warn('User invite validation failed:', errors, 'InviteUserScreen');
       return;
     }
 
     setLoading(true);
     try {
       const data: any = {
-        email,
-        password,
-        firstName,
-        lastName,
+        email: sanitizedData.email,
+        password: sanitizedData.password,
+        firstName: sanitizedData.firstName,
+        lastName: sanitizedData.lastName,
         role,
       };
 
-      if (defaultHourlyRate) {
-        data.defaultHourlyRate = parseFloat(defaultHourlyRate);
+      if (sanitizedData.defaultHourlyRate) {
+        data.defaultHourlyRate = parseFloat(sanitizedData.defaultHourlyRate);
       }
 
-      await userManagementAPI.inviteUser(data);
+      await apiWithTimeout(userManagementAPI.inviteUser(data), TIMEOUT_DURATIONS.STANDARD);
+      logger.log('User invited successfully', { email: sanitizedData.email, role }, 'InviteUserScreen');
       setShowSuccessDialog(true);
     } catch (error: any) {
-      setErrorMessage(error.response?.data?.error || 'Failed to invite user');
+      logger.error('User invite error:', error, 'InviteUserScreen');
+      const message = error.message === 'Request timeout'
+        ? 'Unable to connect to server. Please check your connection.'
+        : error.response?.data?.error || 'Failed to invite user';
+      setErrorMessage(message);
       setShowErrorDialog(true);
     } finally {
       setLoading(false);
     }
-  };
+  }, [email, password, firstName, lastName, role, defaultHourlyRate]);
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: currentColors.background.bg700 }]}>
@@ -189,7 +206,9 @@ const InviteUserScreen = ({ navigation }: any) => {
       />
     </ScrollView>
   );
-};
+});
+
+InviteUserScreen.displayName = 'InviteUserScreen';
 
 const styles = StyleSheet.create({
   container: {
