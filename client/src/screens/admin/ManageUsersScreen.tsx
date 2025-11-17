@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, StyleSheet, ScrollView, Modal, TouchableOpacity, TextInput, Text } from 'react-native';
 import {
   FAB,
@@ -13,6 +13,9 @@ import { Search01Icon } from '@hugeicons/core-free-icons';
 import { userManagementAPI } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import { CustomDialog } from '../../components/CustomDialog';
+import { ManageUsersScreenProps } from '../../types/navigation';
+import { logger } from '../../utils/logger';
+import { apiWithTimeout, TIMEOUT_DURATIONS } from '../../utils/apiWithTimeout';
 
 interface User {
   id: string;
@@ -25,7 +28,7 @@ interface User {
   createdAt: string;
 }
 
-const ManageUsersScreen = ({ navigation }: any) => {
+const ManageUsersScreen = React.memo(({ navigation }: ManageUsersScreenProps) => {
   const { currentColors } = useTheme();
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
@@ -40,33 +43,27 @@ const ManageUsersScreen = ({ navigation }: any) => {
   const [dialogMessage, setDialogMessage] = useState('');
   const [dialogButtons, setDialogButtons] = useState<any[]>([]);
 
-  // DEBUG: Log to verify new code is loading
-
-  useEffect(() => {
-    loadUsers();
-  }, []);
-
-  useEffect(() => {
-    filterUsers();
-  }, [searchQuery, users]);
-
-  const loadUsers = async () => {
+  const loadUsers = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await userManagementAPI.getAllUsers();
+      const response = await apiWithTimeout(userManagementAPI.getAllUsers(), TIMEOUT_DURATIONS.QUICK) as any;
       setUsers(response.data);
+      logger.log('Users loaded successfully', { count: response.data.length }, 'ManageUsersScreen');
     } catch (error: any) {
-      console.error('Error loading users:', error);
+      logger.error('Error loading users:', error, 'ManageUsersScreen');
       setDialogTitle('Error');
-      setDialogMessage('Failed to load users');
+      const message = error.message === 'Request timeout'
+        ? 'Unable to connect to server. Please check your connection.'
+        : 'Failed to load users';
+      setDialogMessage(message);
       setDialogButtons([{ text: 'OK', onPress: () => {} }]);
       setDialogVisible(true);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const filterUsers = () => {
+  const filterUsers = useCallback(() => {
     if (!searchQuery) {
       setFilteredUsers(users);
       return;
@@ -80,16 +77,24 @@ const ManageUsersScreen = ({ navigation }: any) => {
         user.lastName.toLowerCase().includes(query)
     );
     setFilteredUsers(filtered);
-  };
+  }, [searchQuery, users]);
 
-  const toggleMenu = (userId: string) => {
+  useEffect(() => {
+    loadUsers();
+  }, [loadUsers]);
+
+  useEffect(() => {
+    filterUsers();
+  }, [filterUsers]);
+
+  const toggleMenu = useCallback((userId: string) => {
     setMenuVisible((prev) => ({
       ...prev,
       [userId]: !prev[userId],
     }));
-  };
+  }, []);
 
-  const getRoleColor = (role: string) => {
+  const getRoleColor = useCallback((role: string) => {
     switch (role) {
       case 'ADMIN':
         return '#d32f2f';
@@ -98,46 +103,59 @@ const ManageUsersScreen = ({ navigation }: any) => {
       default:
         return '#388e3c';
     }
-  };
+  }, []);
 
-  const handleDeleteClick = (userId: string) => {
+  const handleDeleteClick = useCallback((userId: string) => {
     setDeletingUserId(userId);
-  };
+  }, []);
 
-  const handleDeleteConfirm = async () => {
+  const handleDeleteConfirm = useCallback(async () => {
     if (!deletingUserId) return;
 
     try {
-      await userManagementAPI.deleteUser(deletingUserId);
+      await apiWithTimeout(userManagementAPI.deleteUser(deletingUserId), TIMEOUT_DURATIONS.STANDARD);
+      logger.log('User deleted successfully', { userId: deletingUserId }, 'ManageUsersScreen');
       setDeletingUserId(null);
       loadUsers();
     } catch (error: any) {
-      console.error('Delete user error:', error);
+      logger.error('Delete user error:', error, 'ManageUsersScreen');
       setDeletingUserId(null);
+      setDialogTitle('Error');
+      const message = error.message === 'Request timeout'
+        ? 'Unable to connect to server. Please check your connection.'
+        : error.response?.data?.error || 'Failed to delete user';
+      setDialogMessage(message);
+      setDialogButtons([{ text: 'OK', onPress: () => {} }]);
+      setDialogVisible(true);
     }
-  };
+  }, [deletingUserId, loadUsers]);
 
-  const handleDeleteCancel = () => {
+  const handleDeleteCancel = useCallback(() => {
     setDeletingUserId(null);
-  };
+  }, []);
 
-  const handleToggleActive = async (user: User) => {
+  const handleToggleActive = useCallback(async (user: User) => {
     try {
-      await userManagementAPI.updateUser(user.id, {
+      await apiWithTimeout(userManagementAPI.updateUser(user.id, {
         isActive: !user.isActive,
-      });
+      }), TIMEOUT_DURATIONS.STANDARD);
+      logger.log('User status updated', { userId: user.id, newStatus: !user.isActive }, 'ManageUsersScreen');
       setDialogTitle('Success');
       setDialogMessage(`User ${!user.isActive ? 'activated' : 'deactivated'} successfully`);
       setDialogButtons([{ text: 'OK', onPress: () => {} }]);
       setDialogVisible(true);
       loadUsers();
     } catch (error: any) {
+      logger.error('User status update error:', error, 'ManageUsersScreen');
       setDialogTitle('Error');
-      setDialogMessage(error.response?.data?.error || 'Failed to update user');
+      const message = error.message === 'Request timeout'
+        ? 'Unable to connect to server. Please check your connection.'
+        : error.response?.data?.error || 'Failed to update user';
+      setDialogMessage(message);
       setDialogButtons([{ text: 'OK', onPress: () => {} }]);
       setDialogVisible(true);
     }
-  };
+  }, [loadUsers]);
 
   if (loading) {
     return (
@@ -269,7 +287,9 @@ const ManageUsersScreen = ({ navigation }: any) => {
       />
     </View>
   );
-};
+});
+
+ManageUsersScreen.displayName = 'ManageUsersScreen';
 
 const styles = StyleSheet.create({
   container: {

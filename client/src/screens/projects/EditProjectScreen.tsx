@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, Platform, TouchableOpacity, FlatList, Text } from 'react-native';
 import { TextInput, Button, Title, List, ActivityIndicator, Card, Paragraph, Switch } from 'react-native-paper';
 import { projectsAPI, clientsAPI, usersAPI } from '../../services/api';
@@ -7,6 +7,7 @@ import { CustomDialog } from '../../components/CustomDialog';
 import { EditProjectScreenProps } from '../../types/navigation';
 import { logger } from '../../utils/logger';
 import { validateAndSanitize } from '../../utils/sanitize';
+import { apiWithTimeout, TIMEOUT_DURATIONS } from '../../utils/apiWithTimeout';
 
 const EditProjectScreen = React.memo(({ route, navigation }: EditProjectScreenProps) => {
   const { projectId } = route.params;
@@ -45,19 +46,17 @@ const EditProjectScreen = React.memo(({ route, navigation }: EditProjectScreenPr
   const [showUserPicker, setShowUserPicker] = useState(false);
   const [memberRates, setMemberRates] = useState<{ [key: string]: string }>({});
 
-  useEffect(() => {
-    loadData();
-  }, [projectId]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
 
-      const [projectResponse, clientsResponse, usersResponse] = await Promise.all([
+      const apiCalls = Promise.all([
         projectsAPI.getById(projectId),
         clientsAPI.getAll(),
         usersAPI.getAll(),
       ]);
+
+      const [projectResponse, clientsResponse, usersResponse] = await apiWithTimeout(apiCalls, TIMEOUT_DURATIONS.QUICK) as any;
 
       const project = projectResponse.data;
       setName(project.name);
@@ -97,9 +96,14 @@ const EditProjectScreen = React.memo(({ route, navigation }: EditProjectScreenPr
     } finally {
       setLoading(false);
     }
-  };
+  }, [projectId]);
 
-  const handleClientInputChange = (text: string) => {
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // Memoize filtered clients calculation
+  const handleClientInputChange = useCallback((text: string) => {
     setClientInput(text);
 
     // Filter clients based on input
@@ -108,17 +112,17 @@ const EditProjectScreen = React.memo(({ route, navigation }: EditProjectScreenPr
     );
     setFilteredClients(filtered);
     setShowClientSuggestions(true);
-  };
+  }, [clients]);
 
-  const handleSelectClient = (client: any) => {
+  const handleSelectClient = useCallback((client: any) => {
     setSelectedClient(client.id);
     setClientInput(client.name);
     setShowClientSuggestions(false);
-  };
+  }, []);
 
-  const handleCreateClient = async (clientName: string) => {
+  const handleCreateClient = useCallback(async (clientName: string) => {
     try {
-      const response = await clientsAPI.create({ name: clientName });
+      const response = await apiWithTimeout(clientsAPI.create({ name: clientName }), TIMEOUT_DURATIONS.STANDARD) as any;
       const newClient = response.data;
 
       setSelectedClient(newClient.id);
@@ -126,17 +130,20 @@ const EditProjectScreen = React.memo(({ route, navigation }: EditProjectScreenPr
       setShowClientSuggestions(false);
 
       // Reload clients
-      const clientsResponse = await clientsAPI.getAll();
+      const clientsResponse = await apiWithTimeout(clientsAPI.getAll(), TIMEOUT_DURATIONS.QUICK) as any;
       setClients(clientsResponse.data);
     } catch (error) {
       logger.error('Error creating client:', error, 'EditProjectScreen');
       setErrorDialogTitle('Error');
-      setErrorMessage('Failed to create client. Please try again.');
+      const message = error.message === 'Request timeout'
+        ? 'Unable to connect to server. Please check your connection.'
+        : 'Failed to create client. Please try again.';
+      setErrorMessage(message);
       setShowErrorDialog(true);
     }
-  };
+  }, []);
 
-  const handleUpdate = async () => {
+  const handleUpdate = useCallback(async () => {
     // Validate and sanitize form data
     const { isValid, errors, sanitizedData } = validateAndSanitize(
       { name, description, projectValue, standardHourlyRate },
@@ -183,7 +190,7 @@ const EditProjectScreen = React.memo(({ route, navigation }: EditProjectScreenPr
 
     setSaving(true);
     try {
-      await projectsAPI.update(projectId, {
+      await apiWithTimeout(projectsAPI.update(projectId, {
         name: sanitizedData.name,
         description: sanitizedData.description,
         projectValue: sanitizedData.projectValue ? parseFloat(sanitizedData.projectValue) : null,
@@ -191,11 +198,11 @@ const EditProjectScreen = React.memo(({ route, navigation }: EditProjectScreenPr
         status,
         useStandardRate,
         standardHourlyRate: sanitizedData.standardHourlyRate ? parseFloat(sanitizedData.standardHourlyRate) : null,
-      });
+      }), TIMEOUT_DURATIONS.STANDARD);
 
       // Update member rates if not using standard rate
       if (!useStandardRate) {
-        await Promise.all(
+        const memberUpdateCalls = Promise.all(
           teamMembers.map(async (member) => {
             const rate = memberRates[member.userId];
             if (rate) {
@@ -205,6 +212,7 @@ const EditProjectScreen = React.memo(({ route, navigation }: EditProjectScreenPr
             }
           })
         );
+        await apiWithTimeout(memberUpdateCalls, TIMEOUT_DURATIONS.LONG);
       }
 
       logger.log('Project updated successfully', { projectId, projectName: sanitizedData.name }, 'EditProjectScreen');
@@ -214,26 +222,32 @@ const EditProjectScreen = React.memo(({ route, navigation }: EditProjectScreenPr
     } catch (error: any) {
       logger.error('Failed to update project', error, 'EditProjectScreen');
       setErrorDialogTitle('Error');
-      setErrorMessage(error.response?.data?.error || 'Failed to update project');
+      const message = error.message === 'Request timeout'
+        ? 'Unable to connect to server. Please check your connection and try again.'
+        : error.response?.data?.error || 'Failed to update project';
+      setErrorMessage(message);
       setShowErrorDialog(true);
     } finally {
       setSaving(false);
     }
-  };
+  }, [name, description, projectValue, standardHourlyRate, selectedClient, status, useStandardRate, teamMembers, memberRates, projectId, navigation]);
 
-  const handleAddMember = async (userId: string) => {
+  const handleAddMember = useCallback(async (userId: string) => {
     try {
-      await projectsAPI.addMember(projectId, { userId });
+      await apiWithTimeout(projectsAPI.addMember(projectId, { userId }), TIMEOUT_DURATIONS.STANDARD);
       setShowUserPicker(false);
       await loadData(); // Reload to get updated members list
       setSuccessMessage('Team member added successfully');
       setShowSuccessDialog(true);
     } catch (error: any) {
       setErrorDialogTitle('Error');
-      setErrorMessage(error.response?.data?.error || 'Failed to add team member');
+      const message = error.message === 'Request timeout'
+        ? 'Unable to connect to server. Please check your connection.'
+        : error.response?.data?.error || 'Failed to add team member';
+      setErrorMessage(message);
       setShowErrorDialog(true);
     }
-  };
+  }, [projectId, loadData]);
 
   const handleRemoveMember = async (memberId: string) => {
     setConfirmationTitle('Remove Team Member');

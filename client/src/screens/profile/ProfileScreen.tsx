@@ -11,6 +11,7 @@ import { settingsAPI, userManagementAPI, outlookAPI, exportAPI } from '../../ser
 import axios from 'axios';
 import { ProfileScreenProps } from '../../types/navigation';
 import { logger } from '../../utils/logger';
+import { apiWithTimeout, TIMEOUT_DURATIONS } from '../../utils/apiWithTimeout';
 
 const ProfileScreen = React.memo(({ navigation, route }: ProfileScreenProps) => {
   const { user, logout, refreshUser, token } = useAuth();
@@ -670,17 +671,7 @@ const ProfileScreen = React.memo(({ navigation, route }: ProfileScreenProps) => 
         }
       };
 
-      const [
-        adminPageAccessValue,
-        adminDefaultPageValue,
-        adminDefaultProjectsTableValue,
-        managerPageAccessValue,
-        managerDefaultPageValue,
-        managerDefaultProjectsTableValue,
-        userPageAccessValue,
-        userDefaultPageValue,
-        userDefaultProjectsTableValue,
-      ] = await Promise.all([
+      const settingsPromises = Promise.all([
         loadSetting(SETTINGS_KEYS.ADMIN_PAGE_ACCESS),
         loadSetting(SETTINGS_KEYS.ADMIN_DEFAULT_PAGE),
         loadSetting(SETTINGS_KEYS.ADMIN_DEFAULT_PROJECTS_TABLE),
@@ -691,6 +682,18 @@ const ProfileScreen = React.memo(({ navigation, route }: ProfileScreenProps) => 
         loadSetting(SETTINGS_KEYS.USER_DEFAULT_PAGE),
         loadSetting(SETTINGS_KEYS.USER_DEFAULT_PROJECTS_TABLE),
       ]);
+
+      const [
+        adminPageAccessValue,
+        adminDefaultPageValue,
+        adminDefaultProjectsTableValue,
+        managerPageAccessValue,
+        managerDefaultPageValue,
+        managerDefaultProjectsTableValue,
+        userPageAccessValue,
+        userDefaultPageValue,
+        userDefaultProjectsTableValue,
+      ] = await apiWithTimeout(settingsPromises, TIMEOUT_DURATIONS.LONG) as any;
 
       if (adminPageAccessValue) setAdminPageAccess(adminPageAccessValue);
       if (adminDefaultPageValue) setAdminDefaultPage(adminDefaultPageValue);
@@ -752,7 +755,7 @@ const ProfileScreen = React.memo(({ navigation, route }: ProfileScreenProps) => 
       }
 
       // Save each setting as app-wide (team-wide) settings
-      await Promise.all([
+      const saveSettingsPromises = Promise.all([
         settingsAPI.app.set(SETTINGS_KEYS.ADMIN_PAGE_ACCESS, adminPageAccess),
         settingsAPI.app.set(SETTINGS_KEYS.ADMIN_DEFAULT_PAGE, adminDefaultPage),
         settingsAPI.app.set(SETTINGS_KEYS.ADMIN_DEFAULT_PROJECTS_TABLE, adminDefaultProjectsTable),
@@ -763,6 +766,7 @@ const ProfileScreen = React.memo(({ navigation, route }: ProfileScreenProps) => 
         settingsAPI.app.set(SETTINGS_KEYS.USER_DEFAULT_PAGE, userDefaultPage),
         settingsAPI.app.set(SETTINGS_KEYS.USER_DEFAULT_PROJECTS_TABLE, userDefaultProjectsTable),
       ]);
+      await apiWithTimeout(saveSettingsPromises, TIMEOUT_DURATIONS.VERY_LONG);
 
       setSavingTeamSettings(false);
       setShowTeamViewSettingsModal(false);

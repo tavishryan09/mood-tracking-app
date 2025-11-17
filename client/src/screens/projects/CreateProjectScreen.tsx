@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { TextInput, Button, Title, SegmentedButtons, Menu, Divider, Card, IconButton, Chip, Paragraph, List } from 'react-native-paper';
 import { HugeiconsIcon } from '@hugeicons/react-native';
@@ -33,11 +33,7 @@ const CreateProjectScreen = React.memo(({ navigation, route }: CreateProjectScre
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       const apiCalls = Promise.all([
         clientsAPI.getAll(),
@@ -53,26 +49,34 @@ const CreateProjectScreen = React.memo(({ navigation, route }: CreateProjectScre
       setClients([]);
       setAllUsers([]);
     }
-  };
+  }, []);
 
-  const handleAddMember = (userId: string) => {
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  const handleAddMember = useCallback((userId: string) => {
     setSelectedMembers([...selectedMembers, userId]);
     setShowUserPicker(false);
-  };
+  }, [selectedMembers]);
 
-  const handleRemoveMember = (userId: string) => {
+  const handleRemoveMember = useCallback((userId: string) => {
     setSelectedMembers(selectedMembers.filter(id => id !== userId));
-  };
+  }, [selectedMembers]);
 
-  // Get users that are not already selected as members
-  const availableUsers = allUsers.filter(
-    (user) => !selectedMembers.includes(user.id)
+  // Memoize available users calculation to prevent recalculation on every render
+  const availableUsers = useMemo(() =>
+    allUsers.filter((user) => !selectedMembers.includes(user.id)),
+    [allUsers, selectedMembers]
   );
 
-  // Get selected member objects for display
-  const selectedMemberObjects = allUsers.filter((user) => selectedMembers.includes(user.id));
+  // Memoize selected member objects for display
+  const selectedMemberObjects = useMemo(() =>
+    allUsers.filter((user) => selectedMembers.includes(user.id)),
+    [allUsers, selectedMembers]
+  );
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
     // Validate and sanitize form data
     const { isValid, errors, sanitizedData } = validateAndSanitize(
       { name, description, projectValue },
@@ -126,7 +130,7 @@ const CreateProjectScreen = React.memo(({ navigation, route }: CreateProjectScre
     } finally {
       setLoading(false);
     }
-  };
+  }, [name, description, projectValue, selectedClient, status, selectedMembers]);
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: currentColors.background.bg700 }]}>

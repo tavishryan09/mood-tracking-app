@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import { View, StyleSheet, FlatList, TouchableOpacity, Modal, Text } from 'react-native';
 import { Card, Title, Paragraph, FAB, ActivityIndicator, Searchbar, IconButton, Menu, Divider } from 'react-native-paper';
 import { useFocusEffect } from '@react-navigation/native';
@@ -15,17 +15,20 @@ const ClientsListScreen = React.memo(({ navigation, route }: ClientsListScreenPr
   const { currentColors } = useTheme();
   const { getColorForElement } = useCustomColorTheme();
 
-  // Get clients theme colors
-  const clientsBg = getColorForElement('clients', 'background');
-  const clientCardBg = getColorForElement('clients', 'clientCardBackground');
-  const clientCardText = getColorForElement('clients', 'clientCardText');
-  const clientCardBorder = getColorForElement('clients', 'clientCardBorder');
-  const addButtonBg = getColorForElement('clients', 'addButtonBackground');
-  const addButtonIcon = getColorForElement('clients', 'addButtonIcon');
-  const searchIconColor = getColorForElement('clients', 'searchIconColor');
-  const searchTextColor = getColorForElement('clients', 'searchTextColor');
-  const searchBarBg = getColorForElement('clients', 'searchBarBackground');
-  const searchSectionBg = getColorForElement('clients', 'searchSectionBackground');
+  // Memoize clients theme colors to prevent recalculation on every render
+  const themeColors = useMemo(() => ({
+    clientsBg: getColorForElement('clients', 'background'),
+    clientCardBg: getColorForElement('clients', 'clientCardBackground'),
+    clientCardText: getColorForElement('clients', 'clientCardText'),
+    clientCardBorder: getColorForElement('clients', 'clientCardBorder'),
+    addButtonBg: getColorForElement('clients', 'addButtonBackground'),
+    addButtonIcon: getColorForElement('clients', 'addButtonIcon'),
+    searchIconColor: getColorForElement('clients', 'searchIconColor'),
+    searchTextColor: getColorForElement('clients', 'searchTextColor'),
+    searchBarBg: getColorForElement('clients', 'searchBarBackground'),
+    searchSectionBg: getColorForElement('clients', 'searchSectionBackground'),
+  }), [getColorForElement]);
+
   const [clients, setClients] = useState<any[]>([]);
   const [filteredClients, setFilteredClients] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,17 +36,8 @@ const ClientsListScreen = React.memo(({ navigation, route }: ClientsListScreenPr
   const [menuVisible, setMenuVisible] = useState<string | null>(null);
   const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
 
-  useFocusEffect(
-    React.useCallback(() => {
-      loadClients();
-    }, [])
-  );
-
-  React.useEffect(() => {
-    filterClients();
-  }, [searchQuery, clients]);
-
-  const sortClients = (clientsList: any[]) => {
+  // Memoize sortClients function to prevent recreation on every render
+  const sortClients = useCallback((clientsList: any[]) => {
     return [...clientsList].sort((a, b) => {
       const nameA = (a.name || '').toLowerCase();
       const nameB = (b.name || '').toLowerCase();
@@ -67,9 +61,9 @@ const ClientsListScreen = React.memo(({ navigation, route }: ClientsListScreenPr
       // Normal alphabetical sort for all other clients
       return nameA.localeCompare(nameB);
     });
-  };
+  }, []);
 
-  const loadClients = async () => {
+  const loadClients = useCallback(async () => {
     try {
       setLoading(true);
       const response = await apiWithTimeout(clientsAPI.getAll(), TIMEOUT_DURATIONS.QUICK) as any;
@@ -83,9 +77,9 @@ const ClientsListScreen = React.memo(({ navigation, route }: ClientsListScreenPr
     } finally {
       setLoading(false);
     }
-  };
+  }, [sortClients]);
 
-  const filterClients = () => {
+  const filterClients = useCallback(() => {
     if (!searchQuery) {
       setFilteredClients(clients);
       return;
@@ -99,13 +93,23 @@ const ClientsListScreen = React.memo(({ navigation, route }: ClientsListScreenPr
     );
     const sortedFiltered = sortClients(filtered);
     setFilteredClients(sortedFiltered);
-  };
+  }, [searchQuery, clients, sortClients]);
 
-  const handleDeleteClick = (clientId: string) => {
+  useFocusEffect(
+    useCallback(() => {
+      loadClients();
+    }, [loadClients])
+  );
+
+  React.useEffect(() => {
+    filterClients();
+  }, [filterClients]);
+
+  const handleDeleteClick = useCallback((clientId: string) => {
     setDeletingClientId(clientId);
-  };
+  }, []);
 
-  const handleDeleteConfirm = async () => {
+  const handleDeleteConfirm = useCallback(async () => {
     if (!deletingClientId) return;
 
     try {
@@ -120,13 +124,13 @@ const ClientsListScreen = React.memo(({ navigation, route }: ClientsListScreenPr
         : error.response?.data?.error || 'Failed to delete client';
       // Error handling can be extended here if needed
     }
-  };
+  }, [deletingClientId, loadClients]);
 
-  const handleDeleteCancel = () => {
+  const handleDeleteCancel = useCallback(() => {
     setDeletingClientId(null);
-  };
+  }, []);
 
-  const renderClient = ({ item }: any) => {
+  const renderClient = useCallback(({ item }: any) => {
     const primaryContact = item.contacts?.find((c: any) => c.isPrimary);
 
     return (
@@ -134,11 +138,11 @@ const ClientsListScreen = React.memo(({ navigation, route }: ClientsListScreenPr
         onPress={() => navigation.navigate('EditClient', { clientId: item.id })}
         activeOpacity={0.7}
       >
-        <Card style={[styles.card, { backgroundColor: clientCardBg, borderColor: clientCardBorder, borderWidth: 1 }]}>
+        <Card style={[styles.card, { backgroundColor: themeColors.clientCardBg, borderColor: themeColors.clientCardBorder, borderWidth: 1 }]}>
           <Card.Content>
             <View style={styles.cardHeader}>
               <View style={styles.titleContainer}>
-                <Title style={{ color: clientCardText }}>{item.name}</Title>
+                <Title style={{ color: themeColors.clientCardText }}>{item.name}</Title>
                 {item.company && item.company !== item.name && (
                   <Paragraph style={[styles.company, { color: currentColors.textSecondary }]}>{item.company}</Paragraph>
                 )}
@@ -211,7 +215,7 @@ const ClientsListScreen = React.memo(({ navigation, route }: ClientsListScreenPr
         </Card>
       </TouchableOpacity>
     );
-  };
+  }, [navigation, themeColors, currentColors, menuVisible, handleDeleteClick]);
 
   if (loading) {
     return (
@@ -222,16 +226,16 @@ const ClientsListScreen = React.memo(({ navigation, route }: ClientsListScreenPr
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: clientsBg }]}>
-      <View style={{ backgroundColor: searchSectionBg }}>
+    <View style={[styles.container, { backgroundColor: themeColors.clientsBg }]}>
+      <View style={{ backgroundColor: themeColors.searchSectionBg }}>
         <Searchbar
           placeholder="Search clients..."
           onChangeText={setSearchQuery}
           value={searchQuery}
-          style={[styles.searchbar, { backgroundColor: searchBarBg }]}
-          inputStyle={{ color: searchTextColor }}
+          style={[styles.searchbar, { backgroundColor: themeColors.searchBarBg }]}
+          inputStyle={{ color: themeColors.searchTextColor }}
           placeholderTextColor={currentColors.textTertiary}
-          icon={() => <HugeiconsIcon icon={Search01Icon} size={24} color={searchIconColor} />}
+          icon={() => <HugeiconsIcon icon={Search01Icon} size={24} color={themeColors.searchIconColor} />}
         />
       </View>
 
@@ -251,10 +255,10 @@ const ClientsListScreen = React.memo(({ navigation, route }: ClientsListScreenPr
       )}
 
       <FAB
-        style={[styles.fab, { backgroundColor: addButtonBg }]}
-        icon={() => <HugeiconsIcon icon={AddCircleIcon} size={24} color={addButtonIcon} />}
+        style={[styles.fab, { backgroundColor: themeColors.addButtonBg }]}
+        icon={() => <HugeiconsIcon icon={AddCircleIcon} size={24} color={themeColors.addButtonIcon} />}
         label="New Client"
-        color={addButtonIcon}
+        color={themeColors.addButtonIcon}
         onPress={() => {
           navigation.navigate('CreateClient');
         }}
