@@ -232,6 +232,7 @@ const ClientsListScreen = () => {
         style={[styles.fab, { backgroundColor: addButtonBg }]}
         icon={() => <HugeiconsIcon icon={AddCircleIcon} size={24} color={addButtonIcon} />}
         label="New Client"
+        color={addButtonIcon}
         onPress={() => {
           (navigation as any).navigate('CreateClient');
         }}
