@@ -340,57 +340,58 @@ const TeamViewSettingsScreen = ({ navigation }: any) => {
               ? 'Only one page is enabled'
               : `Page to show when ${roleLabel}s log in (${availablePages.length} pages available)`}
           </Paragraph>
-          <Menu
-            visible={menuVisible}
-            onDismiss={() => {
-              console.log(`[TeamViewSettings] Menu dismissed for ${role}`);
-              setMenuVisible(false);
-            }}
-            contentStyle={{ backgroundColor: currentColors.background.bg300 }}
-            anchor={
-              <TouchableOpacity
-                onPress={() => {
-                  console.log(`[TeamViewSettings] TouchableOpacity pressed for ${role}, current menuVisible:`, menuVisible);
-                  setMenuVisible(true);
-                  console.log(`[TeamViewSettings] Called setMenuVisible(true) for ${role}`);
-                }}
-                disabled={availablePages.length === 0}
-                style={{
-                  alignSelf: 'flex-start',
-                  borderWidth: 1,
-                  borderColor: availablePages.length === 0 ? currentColors.textTertiary : currentColors.primary,
-                  borderRadius: 4,
-                  paddingHorizontal: 16,
-                  paddingVertical: 8,
-                  opacity: availablePages.length === 0 ? 0.5 : 1,
-                }}
-              >
-                <Text style={{ color: availablePages.length === 0 ? currentColors.textTertiary : currentColors.primary }}>
-                  {PAGES.find((p) => p.key === defaultPage)?.label || 'Select'}
-                </Text>
-              </TouchableOpacity>
-            }
-          >
-            {availablePages.length === 0 ? (
-              <Menu.Item
-                title="No pages available"
-                disabled
-              />
-            ) : (
-              availablePages.map((page) => (
+          <View>
+            <TouchableOpacity
+              onPress={() => {
+                console.log(`[TeamViewSettings] TouchableOpacity pressed for ${role}, current menuVisible:`, menuVisible);
+                setMenuVisible(!menuVisible);
+                console.log(`[TeamViewSettings] Called setMenuVisible(${!menuVisible}) for ${role}`);
+              }}
+              disabled={availablePages.length === 0}
+              style={{
+                alignSelf: 'flex-start',
+                borderWidth: 1,
+                borderColor: availablePages.length === 0 ? currentColors.textTertiary : currentColors.primary,
+                borderRadius: 4,
+                paddingHorizontal: 16,
+                paddingVertical: 8,
+                opacity: availablePages.length === 0 ? 0.5 : 1,
+              }}
+            >
+              <Text style={{ color: availablePages.length === 0 ? currentColors.textTertiary : currentColors.primary }}>
+                {PAGES.find((p) => p.key === defaultPage)?.label || 'Select'}
+              </Text>
+            </TouchableOpacity>
+            <Menu
+              visible={menuVisible}
+              onDismiss={() => {
+                console.log(`[TeamViewSettings] Menu dismissed for ${role}`);
+                setMenuVisible(false);
+              }}
+              contentStyle={{ backgroundColor: currentColors.background.bg300 }}
+              anchor={{ x: 0, y: 0 }}
+            >
+              {availablePages.length === 0 ? (
                 <Menu.Item
-                  key={page.key}
-                  onPress={() => {
-                    console.log(`[TeamViewSettings] Selected page:`, page.label);
-                    setDefaultPage(page.key);
-                    setMenuVisible(false);
-                  }}
-                  title={page.label}
-                  leadingIcon={page.key === defaultPage ? 'check' : undefined}
+                  title="No pages available"
+                  disabled
                 />
-              ))
-            )}
-          </Menu>
+              ) : (
+                availablePages.map((page) => (
+                  <Menu.Item
+                    key={page.key}
+                    onPress={() => {
+                      console.log(`[TeamViewSettings] Selected page:`, page.label);
+                      setDefaultPage(page.key);
+                      setMenuVisible(false);
+                    }}
+                    title={page.label}
+                    leadingIcon={page.key === defaultPage ? 'check' : undefined}
+                  />
+                ))
+              )}
+            </Menu>
+          </View>
         </View>
 
         {/* View Preferences */}
