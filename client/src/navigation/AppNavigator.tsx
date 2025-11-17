@@ -634,8 +634,23 @@ const AppNavigator = () => {
     };
   }, [isDesktop]);
 
+  // Debug: Log the current path and linking config
+  React.useEffect(() => {
+    if (Platform.OS === 'web') {
+      console.log('[AppNavigator] Current path:', window.location.pathname);
+      console.log('[AppNavigator] isDesktop:', isDesktop);
+      console.log('[AppNavigator] isAuthenticated:', isAuthenticated);
+    }
+  }, [isDesktop, isAuthenticated]);
+
   return (
-    <NavigationContainer linking={linking} independent={true}>
+    <NavigationContainer
+      linking={linking}
+      independent={true}
+      documentTitle={{
+        enabled: false
+      }}
+    >
       {!loading && isAuthenticated ? (
         isDesktop ? (
           Platform.OS === 'web' ? (
