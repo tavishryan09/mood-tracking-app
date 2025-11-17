@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { TextInput, Button, Title, SegmentedButtons, Card, IconButton, Chip, Paragraph, List } from 'react-native-paper';
 import { HugeiconsIcon } from '@hugeicons/react-native';
@@ -7,8 +7,12 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { eventsAPI, projectsAPI, clientsAPI, usersAPI } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import { CustomDialog } from '../../components/CustomDialog';
+import { CreateEventScreenProps } from '../../types/navigation';
+import { logger } from '../../utils/logger';
+import { validateAndSanitize } from '../../utils/sanitize';
+import { apiWithTimeout, TIMEOUT_DURATIONS } from '../../utils/apiWithTimeout';
 
-const CreateEventScreen = ({ navigation, route }: any) => {
+const CreateEventScreen = React.memo(({ navigation, route }: CreateEventScreenProps) => {
   const { currentColors } = useTheme();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -38,37 +42,42 @@ const CreateEventScreen = ({ navigation, route }: any) => {
     },
   };
 
+  const loadUsers = useCallback(async () => {
+    try {
+      const response = await apiWithTimeout(usersAPI.getAll(), TIMEOUT_DURATIONS.QUICK) as any;
+      setAllUsers(response.data);
+      logger.log('Users loaded successfully', { count: response.data.length }, 'CreateEventScreen');
+    } catch (error: any) {
+      logger.error('Error loading users:', error, 'CreateEventScreen');
+      setAllUsers([]);
+    }
+  }, []);
+
   // Load users
   useEffect(() => {
     loadUsers();
-  }, []);
+  }, [loadUsers]);
 
-  const loadUsers = async () => {
-    try {
-      const response = await usersAPI.getAll();
-      setAllUsers(response.data);
-    } catch (error) {
-      console.error('Error loading users:', error);
-      setAllUsers([]);
-    }
-  };
-
-  const handleAddAttendee = (userId: string) => {
+  const handleAddAttendee = useCallback((userId: string) => {
     setSelectedAttendees([...selectedAttendees, userId]);
     setShowUserPicker(false);
-  };
+  }, [selectedAttendees]);
 
-  const handleRemoveAttendee = (userId: string) => {
+  const handleRemoveAttendee = useCallback((userId: string) => {
     setSelectedAttendees(selectedAttendees.filter(id => id !== userId));
-  };
+  }, [selectedAttendees]);
 
   // Get users that are not already selected as attendees
-  const availableUsers = allUsers.filter(
-    (user) => !selectedAttendees.includes(user.id)
+  const availableUsers = useMemo(() =>
+    allUsers.filter((user) => !selectedAttendees.includes(user.id)),
+    [allUsers, selectedAttendees]
   );
 
   // Get selected attendee objects for display
-  const selectedAttendeeObjects = allUsers.filter((user) => selectedAttendees.includes(user.id));
+  const selectedAttendeeObjects = useMemo(() =>
+    allUsers.filter((user) => selectedAttendees.includes(user.id)),
+    [allUsers, selectedAttendees]
+  );
 
   // Get selected date from route params if available
   useEffect(() => {
@@ -135,40 +144,58 @@ const CreateEventScreen = ({ navigation, route }: any) => {
     }
   }, [route.params?.selectedDate, route.params?.endTime]);
 
-  const handleSubmit = async () => {
-    if (!title) {
-      setErrorMessage('Please enter an event title');
+  const handleSubmit = useCallback(async () => {
+    // Validate and sanitize inputs
+    const { isValid, errors, sanitizedData } = validateAndSanitize(
+      { title, description, location },
+      {
+        title: { required: true, minLength: 2, maxLength: 200 },
+        description: { maxLength: 1000 },
+        location: { maxLength: 200 },
+      }
+    );
+
+    if (!isValid) {
+      const errorMsg = Object.values(errors)[0] || 'Please check your input';
+      setErrorMessage(errorMsg);
       setShowErrorDialog(true);
+      logger.warn('Event creation validation failed:', errors, 'CreateEventScreen');
       return;
     }
 
     if (endDate <= startDate) {
       setErrorMessage('End time must be after start time');
       setShowErrorDialog(true);
+      logger.warn('Invalid date range: end time before start time', {}, 'CreateEventScreen');
       return;
     }
 
     setLoading(true);
     try {
-      await eventsAPI.create({
-        title,
-        description,
+      await apiWithTimeout(eventsAPI.create({
+        title: sanitizedData.title,
+        description: sanitizedData.description,
         eventType,
         startTime: startDate.toISOString(),
         endTime: endDate.toISOString(),
-        location,
+        location: sanitizedData.location,
         isAllDay: false,
         attendeeIds: selectedAttendees.length > 0 ? selectedAttendees : undefined,
-      });
+      }), TIMEOUT_DURATIONS.STANDARD);
 
+      logger.log('Event created successfully', { title: sanitizedData.title }, 'CreateEventScreen');
       setShowSuccessDialog(true);
     } catch (error: any) {
-      setErrorMessage(error.response?.data?.error || 'Failed to create event');
+      logger.error('Error creating event:', error, 'CreateEventScreen');
+      const message = error.message === 'Request timeout'
+        ? 'Unable to connect to server. Please check your connection.'
+        : error.response?.data?.error || 'Failed to create event';
+      setErrorMessage(message);
       setShowErrorDialog(true);
     } finally {
       setLoading(false);
     }
-  };
+  }, [title, description, location, eventType, startDate, endDate, selectedAttendees]);
 
   return (
     <ScrollView style={[styles.container, { backgroundColor: currentColors.background.bg700 }]}>
@@ -342,7 +369,9 @@ const CreateEventScreen = ({ navigation, route }: any) => {
       />
     </ScrollView>
   );
-};
+});
+
+CreateEventScreen.displayName = 'CreateEventScreen';
 
 const styles = StyleSheet.create({
   container: {
