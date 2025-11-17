@@ -53,7 +53,14 @@ const ThemedApp = () => {
   return (
     <QueryClientProvider client={queryClient}>
       <PaperProvider theme={theme}>
-        <View style={{ flex: 1, height: '100%', width: '100%', position: 'relative' }}>
+        <View style={{
+          flex: 1,
+          height: '100%',
+          width: '100%',
+          position: 'relative',
+          opacity: isInitializing ? 0 : 1,
+          transition: Platform.OS === 'web' ? 'opacity 0.2s ease-in-out' : undefined,
+        }}>
           <OfflineIndicator />
           <PlanningColorsProvider>
             <AppNavigator />
