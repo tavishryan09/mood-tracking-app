@@ -537,7 +537,7 @@ const styles = StyleSheet.create({
   sectionCard: {
     margin: 15,
     marginBottom: 10,
-    borderRadius:4,
+    borderRadius: 10,
   },
   deadlinesList: {
     marginTop: 10,
