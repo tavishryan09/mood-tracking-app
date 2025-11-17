@@ -13,8 +13,10 @@ import AppNavigator from './src/navigation/AppNavigator';
 import { createThemedIOSTheme } from './src/theme/iosTheme';
 import InstallPrompt from './src/components/InstallPrompt';
 import OfflineIndicator from './src/components/OfflineIndicator';
+import ErrorBoundary from './src/components/ErrorBoundary';
 import * as serviceWorkerRegistration from './src/utils/serviceWorkerRegistration';
 import { queryClient } from './src/config/queryClient';
+import { logger } from './src/utils/logger';
 
 // Inner component that uses the theme context
 const ThemedApp = () => {
@@ -27,7 +29,7 @@ const ThemedApp = () => {
 
   // Debug: Log the status bar color
   useEffect(() => {
-    console.log('[App] Status bar color:', statusBarColor);
+    logger.log('Status bar color:', statusBarColor, 'App');
   }, [statusBarColor]);
 
   // Set status bar color on mount and when theme changes
@@ -45,7 +47,7 @@ const ThemedApp = () => {
       const metaThemeColor = document.querySelector('meta[name="theme-color"]');
       if (metaThemeColor) {
         metaThemeColor.setAttribute('content', colorToUse);
-        console.log('[App] Updated meta theme-color to:', colorToUse, 'isInitializing:', isInitializing);
+        logger.log('Updated meta theme-color to:', { color: colorToUse, isInitializing }, 'App');
       }
     }
   }, [statusBarColor, isInitializing]);
@@ -128,7 +130,7 @@ export default function App() {
       // TEMPORARILY UNREGISTER service worker for development
       // This prevents aggressive caching during development
       serviceWorkerRegistration.unregister();
-      console.log('[PWA] Service Worker UNREGISTERED for development');
+      logger.log('Service Worker UNREGISTERED for development', null, 'PWA');
 
       // TODO: Re-enable for production by changing unregister() back to register()
       // serviceWorkerRegistration.register({
@@ -164,14 +166,22 @@ export default function App() {
   }
 
   return (
-    <SafeAreaProvider style={{ flex: 1, height: '100%', width: '100%' }}>
-      <AuthProvider>
-        <ThemeProvider>
-          <CustomColorThemeProvider>
-            <ThemedApp />
-          </CustomColorThemeProvider>
-        </ThemeProvider>
-      </AuthProvider>
-    </SafeAreaProvider>
+    <ErrorBoundary
+      onError={(error, errorInfo) => {
+        // TODO: Send to error monitoring service
+        // Example: Sentry.captureException(error, { contexts: { react: { componentStack: errorInfo.componentStack } } });
+        logger.error('Error caught by boundary:', error, 'App');
+      }}
+    >
+      <SafeAreaProvider style={{ flex: 1, height: '100%', width: '100%' }}>
+        <AuthProvider>
+          <ThemeProvider>
+            <CustomColorThemeProvider>
+              <ThemedApp />
+            </CustomColorThemeProvider>
+          </ThemeProvider>
+        </AuthProvider>
+      </SafeAreaProvider>
+    </ErrorBoundary>
   );
 }

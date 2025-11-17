@@ -7,6 +7,9 @@ import { clientsAPI } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useCustomColorTheme } from '../../contexts/CustomColorThemeContext';
 import { CustomDialog } from '../../components/CustomDialog';
+import { CreateClientScreenProps } from '../../types/navigation';
+import { logger } from '../../utils/logger';
+import { validateAndSanitize, ValidationPatterns } from '../../utils/sanitize';
 
 interface Contact {
   id: string;
@@ -16,7 +19,7 @@ interface Contact {
   phone: string;
 }
 
-const CreateClientScreen = ({ navigation }: any) => {
+const CreateClientScreen = ({ navigation, route }: CreateClientScreenProps) => {
   const { currentColors } = useTheme();
   const { getColorForElement } = useCustomColorTheme();
 
@@ -69,52 +72,82 @@ const CreateClientScreen = ({ navigation }: any) => {
   };
 
   const handleSubmit = async () => {
-    if (!businessName) {
-      setErrorMessage('Please enter a business name');
-      setShowErrorDialog(true);
-      return;
-    }
+    // Validate and sanitize primary contact data
+    const { isValid, errors, sanitizedData } = validateAndSanitize(
+      {
+        businessName,
+        address,
+        notes,
+        primaryContactName,
+        primaryContactTitle,
+        primaryContactEmail,
+        primaryContactPhone,
+      },
+      {
+        businessName: { required: true, minLength: 2, maxLength: 200 },
+        address: { maxLength: 500 },
+        notes: { maxLength: 1000 },
+        primaryContactName: { required: true, minLength: 2, maxLength: 100 },
+        primaryContactTitle: { maxLength: 100 },
+        primaryContactEmail: { pattern: ValidationPatterns.email },
+        primaryContactPhone: { pattern: ValidationPatterns.phone },
+      }
+    );
 
-    if (!primaryContactName) {
-      setErrorMessage('Please enter a primary contact name');
+    if (!isValid) {
+      const errorMsg = Object.values(errors)[0] || 'Please check your input';
+      setErrorMessage(errorMsg);
       setShowErrorDialog(true);
+      logger.warn('Validation failed:', errors, 'CreateClientScreen');
       return;
     }
 
     setLoading(true);
     try {
+      // Sanitize additional contacts
+      const sanitizedAdditionalContacts = additionalContacts
+        .filter(contact => contact.name.trim()) // Only include contacts with names
+        .map(contact => {
+          const { sanitizedData: contactData } = validateAndSanitize(
+            contact,
+            {
+              name: { required: true, maxLength: 100 },
+              title: { maxLength: 100 },
+              email: { pattern: ValidationPatterns.email },
+              phone: { pattern: ValidationPatterns.phone },
+            }
+          );
+          return {
+            name: contactData.name,
+            title: contactData.title || undefined,
+            email: contactData.email || undefined,
+            phone: contactData.phone || undefined,
+            isPrimary: false,
+          };
+        });
+
       // Prepare contacts array
       const contacts = [
         {
-          name: primaryContactName,
-          title: primaryContactTitle || undefined,
-          email: primaryContactEmail || undefined,
-          phone: primaryContactPhone || undefined,
+          name: sanitizedData.primaryContactName,
+          title: sanitizedData.primaryContactTitle || undefined,
+          email: sanitizedData.primaryContactEmail || undefined,
+          phone: sanitizedData.primaryContactPhone || undefined,
           isPrimary: true,
         },
-        ...additionalContacts
-          .filter(contact => contact.name.trim()) // Only include contacts with names
-          .map(contact => ({
-            name: contact.name,
-            title: contact.title || undefined,
-            email: contact.email || undefined,
-            phone: contact.phone || undefined,
-            isPrimary: false,
-          })),
+        ...sanitizedAdditionalContacts,
       ];
 
       const clientData = {
-        name: businessName, // Business name as the client name
-        company: businessName, // Keep company field for backwards compatibility
-        address: address || undefined,
-        notes: notes || undefined,
-        // Primary contact info at top level for backwards compatibility
-        email: primaryContactEmail || undefined,
-        phone: primaryContactPhone || undefined,
-        // All contacts in a structured format
+        name: sanitizedData.businessName,
+        company: sanitizedData.businessName,
+        address: sanitizedData.address || undefined,
+        notes: sanitizedData.notes || undefined,
+        email: sanitizedData.primaryContactEmail || undefined,
+        phone: sanitizedData.primaryContactPhone || undefined,
         contacts: contacts,
-        primaryContactName: primaryContactName,
-        primaryContactTitle: primaryContactTitle || undefined,
+        primaryContactName: sanitizedData.primaryContactName,
+        primaryContactTitle: sanitizedData.primaryContactTitle || undefined,
       };
 
       // Add timeout to API call
@@ -124,9 +157,10 @@ const CreateClientScreen = ({ navigation }: any) => {
 
       await Promise.race([clientsAPI.create(clientData), timeout]);
 
+      logger.log('Client created successfully', { clientName: sanitizedData.businessName }, 'CreateClientScreen');
       setShowSuccessDialog(true);
     } catch (error: any) {
-      console.error('Client creation error:', error);
+      logger.error('Client creation error:', error, 'CreateClientScreen');
 
       // Show detailed error message
       const message = error.message === 'Request timeout'

@@ -2,6 +2,7 @@ import React, { createContext, useState, useContext, useEffect, ReactNode, useMe
 import { ColorPaletteName, colorPalettes, ColorPalette } from '../theme/colorPalettes';
 import { settingsAPI } from '../services/api';
 import { useAuth } from './AuthContext';
+import { logger } from '../utils/logger';
 
 interface ThemeContextType {
   selectedPalette: ColorPaletteName | string;
@@ -47,7 +48,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       }
     } catch (error: any) {
       if (error?.response?.status !== 404) {
-        console.error('[ThemeContext] Error loading app default theme:', error);
+        logger.error('Error loading app default theme:', error, 'ThemeContext');
       } else {
 
       }
@@ -83,7 +84,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       }
     } catch (error: any) {
       if (error?.response?.status !== 404) {
-        console.error('[ThemeContext] Error loading custom palettes:', error);
+        logger.error('Error loading custom palettes:', error, 'ThemeContext');
       }
     }
   }, [user]);
@@ -117,7 +118,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       }
       // Otherwise keep the hardcoded default ('default')
     } catch (error: any) {
-      console.error('[ThemeContext] Error loading saved palette:', error);
+      logger.error('Error loading saved palette:', error, 'ThemeContext');
     }
   };
 
@@ -130,7 +131,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         await settingsAPI.user.set(SELECTED_PALETTE_KEY, palette);
       }
     } catch (error) {
-      console.error('[ThemeContext] Error saving palette:', error);
+      logger.error('Error saving palette:', error, 'ThemeContext');
       throw error;
     }
   }, [user]);

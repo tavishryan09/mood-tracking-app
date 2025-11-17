@@ -12,6 +12,8 @@ import { useCustomColorTheme } from '../../contexts/CustomColorThemeContext';
 import { colorPalettes } from '../../theme/colorPalettes';
 import DeadlineTaskModal, { DeadlineTask, DeadlineTaskData } from '../../components/DeadlineTaskModal';
 import { CustomDialog } from '../../components/CustomDialog';
+import { PlanningScreenProps } from '../../types/navigation';
+import { logger } from '../../utils/logger';
 
 const { width } = Dimensions.get('window');
 const WEEK_WIDTH = width > 1200 ? 1200 : width - 40; // Max width for week view
@@ -19,7 +21,7 @@ const DAY_CELL_WIDTH = 180; // Fixed width for each day column
 const USER_COLUMN_WIDTH = 100; // Fixed width for user names column
 const TIME_BLOCK_HEIGHT = 48; // Height for each 2-hour block
 
-const PlanningScreen = () => {
+const PlanningScreen = ({ navigation, route }: PlanningScreenProps) => {
   const { currentColors, selectedPalette } = useTheme();
   const { user } = useAuth();
   const { planningColors } = usePlanningColors();
@@ -481,7 +483,7 @@ const PlanningScreen = () => {
           }
         } catch (error: any) {
           if (error.response?.status !== 404) {
-            console.error('[PlanningScreen] Error loading user order:', error);
+            logger.error('Error loading user order:', error, 'PlanningScreen');
           }
         }
 
@@ -493,7 +495,7 @@ const PlanningScreen = () => {
           }
         } catch (error: any) {
           if (error.response?.status !== 404) {
-            console.error('[PlanningScreen] Error loading visible users:', error);
+            logger.error('Error loading visible users:', error, 'PlanningScreen');
           }
         }
 
@@ -540,12 +542,12 @@ const PlanningScreen = () => {
           setVisibleUserIds(loadedUsers.map((u: any) => u.id));
         }
       } catch (error) {
-        console.error('[PlanningScreen] Error loading preferences:', error);
+        logger.error('Error loading preferences:', error, 'PlanningScreen');
         // Fall back to defaults
         setVisibleUserIds(loadedUsers.map((u: any) => u.id));
       }
     } catch (error) {
-      console.error('[PlanningScreen] Error loading data:', error);
+      logger.error('Error loading data:', error, 'PlanningScreen');
       setUsers([]);
     } finally {
       setLoading(false);
@@ -862,7 +864,7 @@ const PlanningScreen = () => {
       });
 
     } catch (error) {
-      console.error('[DRAG TASK] Error moving task:', error);
+      logger.error('Error moving task:', error, 'PlanningScreen');
       setErrorMessage('Failed to move task');
       setShowErrorDialog(true);
       // Reload to restore correct state
@@ -951,7 +953,7 @@ const PlanningScreen = () => {
       setDeadlineTasks(updatedTasks);
 
     } catch (error) {
-      console.error('[DRAG DEADLINE] Error moving deadline task:', error);
+      logger.error('Error moving deadline task:', error, 'PlanningScreen');
       setErrorMessage('Failed to move deadline task');
       setShowErrorDialog(true);
     }
@@ -1241,7 +1243,7 @@ const PlanningScreen = () => {
             });
 
           } catch (error) {
-            console.error('[DRAG DEBUG] Failed to save span:', error);
+            logger.error('Failed to save span:', error, 'PlanningScreen');
             // Reload data to restore correct state
             await loadData();
           }
@@ -1467,7 +1469,7 @@ const PlanningScreen = () => {
             setShowSuccessDialog(true);
           }, 0);
         } catch (deleteError) {
-          console.error('[MOBILE PASTE] Error deleting source task:', deleteError);
+          logger.error('Error deleting source task:', deleteError, 'PlanningScreen');
           setWarningMessage('Task copied but original could not be deleted');
           setShowWarningDialog(true);
         }
@@ -1486,7 +1488,7 @@ const PlanningScreen = () => {
       setCopiedCell(null);
       setRepositionMode(false);
     } catch (error) {
-      console.error('[MOBILE PASTE] Error pasting:', error);
+      logger.error('Error pasting:', error, 'PlanningScreen');
       setErrorMessage('Failed to paste task');
       setShowErrorDialog(true);
     }
@@ -1620,7 +1622,7 @@ const PlanningScreen = () => {
             setShowSuccessDialog(true);
           }, 0);
         } catch (deleteError) {
-          console.error('[DEADLINE PASTE] Error deleting source task:', deleteError);
+          logger.error('Error deleting source deadline task:', deleteError, 'PlanningScreen');
           setWarningMessage('Task copied but original could not be deleted');
           setShowWarningDialog(true);
         }
@@ -1638,7 +1640,7 @@ const PlanningScreen = () => {
       setCopiedDeadlineTask(null);
       setRepositionDeadlineMode(false);
     } catch (error) {
-      console.error('[DEADLINE PASTE] Error pasting:', error);
+      logger.error('Error pasting deadline task:', error, 'PlanningScreen');
       setErrorMessage('Failed to paste deadline task');
       setShowErrorDialog(true);
     }
@@ -1670,7 +1672,7 @@ const PlanningScreen = () => {
       setSuccessMessage('Planning task deleted successfully');
       setShowSuccessDialog(true);
     } catch (error: any) {
-      console.error('Delete planning task error:', error);
+      logger.error('Delete planning task error:', error, 'PlanningScreen');
       setShowDeletePlanningDialog(false);
       setErrorMessage(error.response?.data?.error || 'Failed to delete planning task');
       setShowErrorDialog(true);
@@ -1697,7 +1699,7 @@ const PlanningScreen = () => {
       setSuccessMessage('Planning task deleted successfully');
       setShowSuccessDialog(true);
     } catch (error: any) {
-      console.error('Delete planning task error:', error);
+      logger.error('Delete planning task error:', error, 'PlanningScreen');
       setShowDeleteDialog(false);
       setDeleteTaskId(null);
       setDeleteTaskBlockKey(null);
@@ -1930,9 +1932,9 @@ const PlanningScreen = () => {
       // No need to reload - the UI has already been updated optimistically
       // The task is visible in blockAssignments state
     } catch (error: any) {
-      console.error('Save planning task error:', error);
-      console.error('Error response:', error.response?.data);
-      console.error('Error status:', error.response?.status);
+      logger.error('Save planning task error:', error, 'PlanningScreen');
+      logger.error('Error response:', error.response?.data, 'PlanningScreen');
+      logger.error('Error status:', error.response?.status, 'PlanningScreen');
       setErrorMessage(error.response?.data?.error || error.response?.data?.errors?.[0]?.msg || 'Failed to save planning task');
       setShowErrorDialog(true);
     }
@@ -2026,7 +2028,7 @@ const PlanningScreen = () => {
       setSelectedDeadlineSlot(null);
       setEditingDeadlineTask(null);
     } catch (error: any) {
-      console.error('Error saving deadline task:', error);
+      logger.error('Error saving deadline task:', error, 'PlanningScreen');
       setErrorMessage(error.response?.data?.error || 'Failed to save deadline task');
       setShowErrorDialog(true);
     }
@@ -2041,7 +2043,7 @@ const PlanningScreen = () => {
       setDeadlineTasks(deadlineTasks.filter((task) => task.id !== taskId));
 
     } catch (error: any) {
-      console.error('[PlanningScreen] Error deleting deadline task:', error);
+      logger.error('Error deleting deadline task:', error, 'PlanningScreen');
       setErrorMessage(error.response?.data?.error || 'Failed to delete deadline task');
       setShowErrorDialog(true);
     }
@@ -2062,7 +2064,7 @@ const PlanningScreen = () => {
       });
       setDeadlineTasks(deadlineTasksResponse.data);
     } catch (error: any) {
-      console.error('Error syncing project due dates:', error);
+      logger.error('Error syncing project due dates:', error, 'PlanningScreen');
       setErrorMessage(error.response?.data?.error || 'Failed to sync project due dates');
       setShowErrorDialog(true);
     }
@@ -2086,7 +2088,7 @@ const PlanningScreen = () => {
       // Close modal
       setShowManageModal(false);
     } catch (error) {
-      console.error('[PlanningScreen] Error saving settings:', error);
+      logger.error('Error saving settings:', error, 'PlanningScreen');
       setErrorMessage('Failed to save settings. Please try again.');
       setShowErrorDialog(true);
     }
@@ -2111,7 +2113,7 @@ const PlanningScreen = () => {
       setShowSuccessDialog(true);
       setShowManageModal(false);
     } catch (error) {
-      console.error('[PlanningScreen] Error saving default settings:', error);
+      logger.error('Error saving default settings:', error, 'PlanningScreen');
       setErrorMessage('Failed to save default settings. Please try again.');
       setShowErrorDialog(true);
     }
@@ -2323,7 +2325,7 @@ const PlanningScreen = () => {
           const match = selectedCell.match(datePattern);
 
           if (!match) {
-            console.error('[PASTE] Invalid cell key format:', selectedCell);
+            logger.error('Invalid cell key format:', selectedCell, 'PlanningScreen');
             return;
           }
 
@@ -2378,8 +2380,8 @@ const PlanningScreen = () => {
 
             // Note: We don't clear copiedCell, allowing multiple pastes
           } catch (error) {
-            console.error('[PASTE] Error pasting:', error);
-            console.error('[PASTE] Full error details:', JSON.stringify(error, null, 2));
+            logger.error('Error pasting:', error, 'PlanningScreen');
+            logger.error('Full error details:', JSON.stringify(error, null, 2), 'PlanningScreen');
             // Clear success state before showing error
             setShowSuccessDialog(false);
             setSuccessMessage('');

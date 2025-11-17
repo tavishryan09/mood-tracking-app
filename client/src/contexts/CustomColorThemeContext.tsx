@@ -4,6 +4,7 @@ import { useTheme } from './ThemeContext';
 import { createDefaultCustomTheme } from '../utils/createDefaultCustomTheme';
 import { settingsAPI } from '../services/api';
 import { useAuth } from './AuthContext';
+import { logger } from '../utils/logger';
 
 // Database keys for settings
 const CUSTOM_COLOR_PALETTES_KEY = 'custom_color_palettes';
@@ -116,8 +117,8 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
             } catch (error: any) {
               if (!isMounted) return;
 
-              console.error('[CustomColorTheme] Error in default theme loading:', error);
-              console.error('[CustomColorTheme] Error details:', {
+              logger.error('Error in default theme loading:', error, 'CustomColorThemeContext');
+              logger.error('Error details:', {
                 status: error.response?.status,
                 data: error.response?.data,
                 message: error.message
@@ -130,10 +131,10 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
                   await setActiveCustomTheme('default_theme', false, 'app');
 
                 } catch (err) {
-                  console.error('[CustomColorTheme] Error auto-activating built-in default theme:', err);
+                  logger.error('Error auto-activating built-in default theme:', err, 'CustomColorThemeContext');
                 }
               } else {
-                console.error('[CustomColorTheme] Non-404 error loading default theme:', error);
+                logger.error('Non-404 error loading default theme:', error, 'CustomColorThemeContext');
               }
             }
           } else if (hasUserTheme) {
@@ -147,7 +148,7 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
           setIsInitializing(false);
         }
       } catch (error) {
-        console.error('[CustomColorTheme] Error in initializeTheme:', error);
+        logger.error('Error in initializeTheme:', error, 'CustomColorThemeContext');
         if (isMounted) {
           setIsInitializing(false);
         }
@@ -173,7 +174,7 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
       }
     } catch (error: any) {
       if (error?.response?.status !== 404) {
-        console.error('[CustomColorTheme] Error loading custom color palettes:', error);
+        logger.error('Error loading custom color palettes:', error, 'CustomColorThemeContext');
       }
     }
   }, [user]);
@@ -233,7 +234,7 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
           try {
             await settingsAPI.user.delete(ACTIVE_CUSTOM_THEME_KEY);
           } catch (err) {
-            console.error('[CustomColorTheme] Error deleting stale theme setting:', err);
+            logger.error('Error deleting stale theme setting:', err, 'CustomColorThemeContext');
           }
         }
       }
@@ -243,7 +244,7 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
       return false;
     } catch (error: any) {
       if (error?.response?.status !== 404) {
-        console.error('[CustomColorTheme] Error loading active custom theme:', error);
+        logger.error('Error loading active custom theme:', error, 'CustomColorThemeContext');
       }
       setActiveCustomThemeState(null);
       setActivePalette(null);
@@ -305,8 +306,8 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
           source = 'shared';
 
         } else {
-          console.error('[CustomColorTheme] Could not find palette for ID:', paletteId);
-          console.error('[CustomColorTheme] App palettes data:', appPalettesResult.status === 'fulfilled' ? appPalettesResult.value?.data : 'rejected');
+          logger.error('Could not find palette for ID:', paletteId, 'CustomColorThemeContext');
+          logger.error('App palettes data:', appPalettesResult.status === 'fulfilled' ? appPalettesResult.value?.data : 'rejected', 'CustomColorThemeContext');
         }
 
         // Try user settings first for mapping
@@ -324,8 +325,8 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
           mapping = sharedMappingsResult.value.data.value[paletteId];
 
         } else {
-          console.error('[CustomColorTheme] Could not find mapping for ID:', paletteId);
-          console.error('[CustomColorTheme] App mappings data:', appMappingsResult.status === 'fulfilled' ? appMappingsResult.value?.data : 'rejected');
+          logger.error('Could not find mapping for ID:', paletteId, 'CustomColorThemeContext');
+          logger.error('App mappings data:', appMappingsResult.status === 'fulfilled' ? appMappingsResult.value?.data : 'rejected', 'CustomColorThemeContext');
         }
       }
 
@@ -354,7 +355,7 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
       setActivePalette(palette);
 
     } catch (error) {
-      console.error('[CustomColorTheme] Error setting active custom theme:', error);
+      logger.error('Error setting active custom theme:', error, 'CustomColorThemeContext');
       throw error;
     }
   }, [user]);
@@ -383,11 +384,11 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
         }
       } catch (error: any) {
         if (error?.response?.status !== 404) {
-          console.error('[CustomColorTheme] Error loading app default theme:', error);
+          logger.error('Error loading app default theme:', error, 'CustomColorThemeContext');
         }
       }
     } catch (error) {
-      console.error('[CustomColorTheme] Error disabling custom theme:', error);
+      logger.error('Error disabling custom theme:', error, 'CustomColorThemeContext');
       throw error;
     }
   }, [user, setActiveCustomTheme]);
@@ -412,7 +413,7 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
       }
 
     } catch (error) {
-      console.error('[CustomColorTheme] Error getting color for element:', error);
+      logger.error('Error getting color for element:', error, 'CustomColorThemeContext');
     }
 
     return getDefaultColorForElement(section, element, currentColors);
@@ -476,7 +477,7 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
           }
         } catch (error: any) {
           if (error?.response?.status !== 404) {
-            console.error('[CustomColorTheme] Error restoring admin default theme:', error);
+            logger.error('Error restoring admin default theme:', error, 'CustomColorThemeContext');
           }
         }
       }

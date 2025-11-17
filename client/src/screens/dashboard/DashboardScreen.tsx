@@ -4,13 +4,16 @@ import { Card, Title, Paragraph, Button, ActivityIndicator } from 'react-native-
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { CircleIcon, CheckmarkCircle01Icon } from '@hugeicons/core-free-icons';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { DashboardScreenProps } from '../../types/navigation';
+import { PlanningTask, DeadlineTask } from '../../types/api';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { usePlanningColors } from '../../contexts/PlanningColorsContext';
 import { useCustomColorTheme } from '../../contexts/CustomColorThemeContext';
 import { planningTasksAPI, deadlineTasksAPI } from '../../services/api';
+import { logger } from '../../utils/logger';
 
-const DashboardScreen = ({ navigation }: any) => {
+const DashboardScreen = ({ navigation, route }: DashboardScreenProps) => {
   const { user } = useAuth();
   const { currentColors } = useTheme();
   const { planningColors } = usePlanningColors();

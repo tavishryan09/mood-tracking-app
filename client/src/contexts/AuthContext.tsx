@@ -2,6 +2,7 @@ import React, { createContext, useState, useContext, useEffect, useMemo, useCall
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authAPI } from '../services/api';
+import { logger } from '../utils/logger';
 
 interface User {
   id: string;
@@ -44,7 +45,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(JSON.parse(storedUser));
       }
     } catch (error) {
-      console.error('Error loading stored auth:', error);
+      logger.error('Error loading stored auth:', error, 'AuthContext');
     } finally {
       setLoading(false);
     }
@@ -61,7 +62,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setToken(authToken);
       setUser(userData);
     } catch (error: any) {
-      console.error('[AuthContext] Login error:', error);
+      logger.error('Login error:', error, 'AuthContext');
 
       // Extract error message properly
       let errorMessage = 'Login failed';
@@ -96,7 +97,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await AsyncStorage.setItem('user', JSON.stringify(userData));
       setUser(userData);
     } catch (error: any) {
-      console.error('[AuthContext] Login with token error:', error);
+      logger.error('Login with token error:', error, 'AuthContext');
       // Clear invalid token
       await AsyncStorage.removeItem('authToken');
       setToken(null);
@@ -138,7 +139,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           window.localStorage.removeItem('user');
           window.localStorage.clear(); // Nuclear option
         } catch (e) {
-          console.error('[AuthContext] Error clearing localStorage:', e);
+          logger.error('Error clearing localStorage:', e, 'AuthContext');
         }
 
         // Give React time to update UI before reload
@@ -148,7 +149,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }, 200);
       }
     } catch (error) {
-      console.error('[AuthContext] Error during logout:', error);
+      logger.error('Error during logout:', error, 'AuthContext');
       // Even if there's an error, ensure state is cleared
       setToken(null);
       setUser(null);
@@ -165,7 +166,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       await AsyncStorage.setItem('user', JSON.stringify(userData));
       setUser(userData);
     } catch (error) {
-      console.error('Error refreshing user:', error);
+      logger.error('Error refreshing user:', error, 'AuthContext');
     }
   }, [token]);
 

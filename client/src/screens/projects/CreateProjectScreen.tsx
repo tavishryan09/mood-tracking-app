@@ -6,8 +6,11 @@ import { UserAdd02Icon, Delete02Icon } from '@hugeicons/core-free-icons';
 import { projectsAPI, clientsAPI, usersAPI } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import { CustomDialog } from '../../components/CustomDialog';
+import { CreateProjectScreenProps } from '../../types/navigation';
+import { logger } from '../../utils/logger';
+import { validateAndSanitize } from '../../utils/sanitize';
 
-const CreateProjectScreen = ({ navigation }: any) => {
+const CreateProjectScreen = ({ navigation, route }: CreateProjectScreenProps) => {
   const { currentColors } = useTheme();
   const [clients, setClients] = useState<any[]>([]);
   const [name, setName] = useState('');
@@ -49,7 +52,7 @@ const CreateProjectScreen = ({ navigation }: any) => {
       setClients(clientsResponse.data);
       setAllUsers(usersResponse.data);
     } catch (error) {
-      console.error('Error loading data:', error);
+      logger.error('Error loading data:', error, 'CreateProjectScreen');
       // Set empty data so UI still loads
       setClients([]);
       setAllUsers([]);
@@ -74,9 +77,21 @@ const CreateProjectScreen = ({ navigation }: any) => {
   const selectedMemberObjects = allUsers.filter((user) => selectedMembers.includes(user.id));
 
   const handleSubmit = async () => {
-    if (!name) {
-      setErrorMessage('Please enter a project name');
+    // Validate and sanitize form data
+    const { isValid, errors, sanitizedData } = validateAndSanitize(
+      { name, description, projectValue },
+      {
+        name: { required: true, minLength: 2, maxLength: 200 },
+        description: { maxLength: 1000 },
+        projectValue: { pattern: /^\d+(\.\d{1,2})?$/ }, // Optional numeric value with up to 2 decimals
+      }
+    );
+
+    if (!isValid) {
+      const errorMsg = Object.values(errors)[0] || 'Please check your input';
+      setErrorMessage(errorMsg);
       setShowErrorDialog(true);
+      logger.warn('Validation failed:', errors, 'CreateProjectScreen');
       return;
     }
 
@@ -89,9 +104,9 @@ const CreateProjectScreen = ({ navigation }: any) => {
     setLoading(true);
     try {
       const projectData = {
-        name,
-        description,
-        projectValue: projectValue ? parseFloat(projectValue) : undefined,
+        name: sanitizedData.name,
+        description: sanitizedData.description,
+        projectValue: sanitizedData.projectValue ? parseFloat(sanitizedData.projectValue) : undefined,
         clientId: selectedClient,
         status,
         memberIds: selectedMembers.length > 0 ? selectedMembers : undefined,
@@ -104,10 +119,11 @@ const CreateProjectScreen = ({ navigation }: any) => {
 
       await Promise.race([projectsAPI.create(projectData), timeout]);
 
+      logger.log('Project created successfully', { projectName: sanitizedData.name }, 'CreateProjectScreen');
       setSuccessMessage('Project created successfully');
       setShowSuccessDialog(true);
     } catch (error: any) {
-      console.error('Project creation error:', error);
+      logger.error('Project creation error:', error, 'CreateProjectScreen');
 
       // Show detailed error message
       const message = error.message === 'Request timeout'

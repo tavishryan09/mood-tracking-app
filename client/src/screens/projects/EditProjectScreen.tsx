@@ -4,8 +4,11 @@ import { TextInput, Button, Title, List, ActivityIndicator, Card, Paragraph, Swi
 import { projectsAPI, clientsAPI, usersAPI } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import { CustomDialog } from '../../components/CustomDialog';
+import { EditProjectScreenProps } from '../../types/navigation';
+import { logger } from '../../utils/logger';
+import { validateAndSanitize } from '../../utils/sanitize';
 
-const EditProjectScreen = ({ route, navigation }: any) => {
+const EditProjectScreen = ({ route, navigation }: EditProjectScreenProps) => {
   const { projectId } = route.params;
   const { currentColors } = useTheme();
   const [clients, setClients] = useState<any[]>([]);
@@ -83,7 +86,7 @@ const EditProjectScreen = ({ route, navigation }: any) => {
       setClients(clientsResponse.data);
       setAllUsers(usersResponse.data);
     } catch (error) {
-      console.error('Error loading project:', error);
+      logger.error('Error loading project:', error, 'EditProjectScreen');
       // Set empty data so UI still loads
       setClients([]);
       setAllUsers([]);
@@ -126,7 +129,7 @@ const EditProjectScreen = ({ route, navigation }: any) => {
       const clientsResponse = await clientsAPI.getAll();
       setClients(clientsResponse.data);
     } catch (error) {
-      console.error('Error creating client:', error);
+      logger.error('Error creating client:', error, 'EditProjectScreen');
       setErrorDialogTitle('Error');
       setErrorMessage('Failed to create client. Please try again.');
       setShowErrorDialog(true);
@@ -134,10 +137,23 @@ const EditProjectScreen = ({ route, navigation }: any) => {
   };
 
   const handleUpdate = async () => {
-    if (!name) {
-      setErrorDialogTitle('Error');
-      setErrorMessage('Please enter a project name');
+    // Validate and sanitize form data
+    const { isValid, errors, sanitizedData } = validateAndSanitize(
+      { name, description, projectValue, standardHourlyRate },
+      {
+        name: { required: true, minLength: 2, maxLength: 200 },
+        description: { maxLength: 1000 },
+        projectValue: { pattern: /^\d+(\.\d{1,2})?$/ },
+        standardHourlyRate: { pattern: /^\d+(\.\d{1,2})?$/ },
+      }
+    );
+
+    if (!isValid) {
+      const errorMsg = Object.values(errors)[0] || 'Please check your input';
+      setErrorDialogTitle('Validation Error');
+      setErrorMessage(errorMsg);
       setShowErrorDialog(true);
+      logger.warn('Validation failed:', errors, 'EditProjectScreen');
       return;
     }
 
@@ -168,13 +184,13 @@ const EditProjectScreen = ({ route, navigation }: any) => {
     setSaving(true);
     try {
       await projectsAPI.update(projectId, {
-        name,
-        description,
-        projectValue: projectValue ? parseFloat(projectValue) : null,
+        name: sanitizedData.name,
+        description: sanitizedData.description,
+        projectValue: sanitizedData.projectValue ? parseFloat(sanitizedData.projectValue) : null,
         clientId: selectedClient,
         status,
         useStandardRate,
-        standardHourlyRate: standardHourlyRate ? parseFloat(standardHourlyRate) : null,
+        standardHourlyRate: sanitizedData.standardHourlyRate ? parseFloat(sanitizedData.standardHourlyRate) : null,
       });
 
       // Update member rates if not using standard rate
@@ -191,10 +207,12 @@ const EditProjectScreen = ({ route, navigation }: any) => {
         );
       }
 
+      logger.log('Project updated successfully', { projectId, projectName: sanitizedData.name }, 'EditProjectScreen');
       setSuccessMessage('Project updated successfully');
       setShowSuccessDialog(true);
       setTimeout(() => navigation.goBack(), 500);
     } catch (error: any) {
+      logger.error('Failed to update project', error, 'EditProjectScreen');
       setErrorDialogTitle('Error');
       setErrorMessage(error.response?.data?.error || 'Failed to update project');
       setShowErrorDialog(true);
@@ -246,7 +264,7 @@ const EditProjectScreen = ({ route, navigation }: any) => {
       setShowDeleteConfirm(false);
       navigation.goBack();
     } catch (error: any) {
-      console.error('Delete project error:', error);
+      logger.error('Delete project error:', error, 'EditProjectScreen');
       setSaving(false);
       setShowDeleteConfirm(false);
     }

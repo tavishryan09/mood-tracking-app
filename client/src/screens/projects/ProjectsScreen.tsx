@@ -1,18 +1,20 @@
 import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { View, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
 import { Card, Title, Paragraph, Chip, FAB, ActivityIndicator, Searchbar, Button } from 'react-native-paper';
-import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { UserGroupIcon, TaskDaily01Icon, GridTableIcon, Search01Icon } from '@hugeicons/core-free-icons';
 import { projectsAPI, settingsAPI } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { ProjectsScreenProps } from '../../types/navigation';
+import { Project } from '../../types/api';
+import { logger } from '../../utils/logger';
 
-const ProjectsScreen = () => {
+const ProjectsScreen = ({ navigation, route }: ProjectsScreenProps) => {
   const { currentColors } = useTheme();
   const { user } = useAuth();
-  const navigation = useNavigation();
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
 
@@ -26,7 +28,7 @@ const ProjectsScreen = () => {
   }, [searchQuery]);
 
   // Use React Query to fetch projects with automatic caching
-  const { data: projects = [], isLoading: loading, refetch } = useQuery({
+  const { data: projects = [], isLoading: loading, refetch } = useQuery<Project[]>({
     queryKey: ['projects'],
     queryFn: async () => {
       const response = await projectsAPI.getAll();
@@ -50,7 +52,7 @@ const ProjectsScreen = () => {
             if (userPrefResponse.data?.value !== undefined) {
 
               if (userPrefResponse.data.value === true) {
-                (navigation as any).navigate('ProjectTableView');
+                navigation.navigate('ProjectTableView');
               }
               return;
             }
@@ -73,7 +75,7 @@ const ProjectsScreen = () => {
             if (roleDefaultResponse.data?.value !== undefined) {
 
               if (roleDefaultResponse.data.value === true) {
-                (navigation as any).navigate('ProjectTableView');
+                navigation.navigate('ProjectTableView');
               }
             }
           } catch (error: any) {
@@ -83,7 +85,7 @@ const ProjectsScreen = () => {
 
           }
         } catch (error) {
-          console.error('[ProjectsScreen] Error checking default view:', error);
+          logger.error('Error checking default view:', error, 'ProjectsScreen');
         }
       };
 
@@ -123,7 +125,7 @@ const ProjectsScreen = () => {
 
   const renderProject = ({ item }: any) => (
     <TouchableOpacity
-      onPress={() => (navigation as any).navigate('EditProject', { projectId: item.id })}
+      onPress={() => navigation.navigate('EditProject', { projectId: item.id })}
       activeOpacity={0.7}
     >
       <Card style={[styles.card, { backgroundColor: currentColors.background.bg500 }]}>
@@ -170,7 +172,7 @@ const ProjectsScreen = () => {
         <Button
           mode="outlined"
           icon={() => <HugeiconsIcon icon={UserGroupIcon} size={20} color={currentColors.primary} />}
-          onPress={() => (navigation as any).navigate('ClientsList')}
+          onPress={() => navigation.navigate('ClientsList')}
           style={styles.actionButton}
         >
           Manage Clients
@@ -178,7 +180,7 @@ const ProjectsScreen = () => {
         <Button
           mode="contained"
           icon={() => <HugeiconsIcon icon={GridTableIcon} size={20} color={currentColors.white} />}
-          onPress={() => (navigation as any).navigate('ProjectTableView')}
+          onPress={() => navigation.navigate('ProjectTableView')}
           style={styles.actionButton}
           buttonColor={currentColors.secondary}
         >
@@ -198,7 +200,7 @@ const ProjectsScreen = () => {
         icon="plus"
         label="New Project"
         onPress={() => {
-          (navigation as any).navigate('CreateProject');
+          navigation.navigate('CreateProject');
         }}
       />
     </View>
