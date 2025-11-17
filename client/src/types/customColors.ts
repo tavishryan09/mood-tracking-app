@@ -178,16 +178,6 @@ export interface ElementColorMapping {
     searchSectionBackground: string;
   };
 
-  // Events Screen
-  events: {
-    background: string;
-    eventCardBackground: string;
-    eventCardText: string;
-    eventCardBorder: string;
-    attendeeChipBackground: string;
-    attendeeChipText: string;
-  };
-
   // Profile Screen
   profile: {
     background: string;
@@ -198,22 +188,6 @@ export interface ElementColorMapping {
     menuItemIcon: string;
     logoutButtonBackground: string;
     logoutButtonText: string;
-  };
-
-  // Admin Screens
-  admin: {
-    background: string;
-    cardBackground: string;
-    cardText: string;
-    tableHeaderBackground: string;
-    tableHeaderText: string;
-    tableRowBackground: string;
-    tableRowText: string;
-    tableRowAlternateBackground: string;
-    actionButtonBackground: string;
-    actionButtonText: string;
-    deleteButtonBackground: string;
-    deleteButtonText: string;
   };
 }
 
@@ -394,17 +368,6 @@ export const ElementLabels = {
       searchSectionBackground: 'Search Section Background',
     },
   },
-  events: {
-    title: 'Events',
-    elements: {
-      background: 'Background',
-      eventCardBackground: 'Event Card Background',
-      eventCardText: 'Event Card Text',
-      eventCardBorder: 'Event Card Border',
-      attendeeChipBackground: 'Attendee Chip Background',
-      attendeeChipText: 'Attendee Chip Text',
-    },
-  },
   profile: {
     title: 'Profile',
     elements: {
@@ -416,23 +379,6 @@ export const ElementLabels = {
       menuItemIcon: 'Menu Item Icon',
       logoutButtonBackground: 'Logout Button Background',
       logoutButtonText: 'Logout Button Text',
-    },
-  },
-  admin: {
-    title: 'Admin',
-    elements: {
-      background: 'Background',
-      cardBackground: 'Card Background',
-      cardText: 'Card Text',
-      tableHeaderBackground: 'Table Header Background',
-      tableHeaderText: 'Table Header Text',
-      tableRowBackground: 'Table Row Background',
-      tableRowText: 'Table Row Text',
-      tableRowAlternateBackground: 'Table Row Alternate Background',
-      actionButtonBackground: 'Action Button Background',
-      actionButtonText: 'Action Button Text',
-      deleteButtonBackground: 'Delete Button Background',
-      deleteButtonText: 'Delete Button Text',
     },
   },
 };
