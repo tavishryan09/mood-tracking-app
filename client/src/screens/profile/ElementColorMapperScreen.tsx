@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Text, TouchableOpacity } from 'react-native';
 import { Button, Title, Menu, Divider, Chip, IconButton } from 'react-native-paper';
+import { HugeiconsIcon } from '@hugeicons/react-native';
+import { ArrowLeft02Icon } from '@hugeicons/core-free-icons';
 import { useTheme } from '../../contexts/ThemeContext';
 import { CustomColor, CustomColorPalette, ElementColorMapping, ElementLabels } from '../../types/customColors';
 import { CustomDialog } from '../../components/CustomDialog';
@@ -495,13 +497,9 @@ const ElementColorMapperScreen = ({ navigation, route }: any) => {
     <ScrollView style={[styles.container, { backgroundColor: currentColors.background.bg700 }]}>
       <View style={styles.content}>
         <View style={styles.header}>
-          <IconButton
-            icon="arrow-left"
-            size={24}
-            onPress={() => navigation.goBack()}
-            iconColor={currentColors.text}
-            style={styles.backButton}
-          />
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <HugeiconsIcon icon={ArrowLeft02Icon} size={28} color={currentColors.text} />
+          </TouchableOpacity>
           <Title style={[styles.title, { color: currentColors.text }]}>Map Colors to Elements</Title>
           <View style={styles.placeholder} />
         </View>

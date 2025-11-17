@@ -320,6 +320,16 @@ const CustomColorManagerScreen = ({ navigation, route }: any) => {
   return (
     <ScrollView style={[styles.container, { backgroundColor: currentColors.background.bg700 }]}>
       <View style={styles.content}>
+        {/* Custom Header with Back Button */}
+        <View style={styles.header}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
+            <HugeiconsIcon icon={ArrowLeft02Icon} size={28} color={currentColors.text} />
+          </TouchableOpacity>
+          <Text style={[styles.title, { color: currentColors.text }]}>
+            {isEditing ? 'Edit Color Palette' : 'Create Color Palette'}
+          </Text>
+        </View>
+
         <Text style={[styles.description, { color: currentColors.textSecondary }]}>
           Build your custom color palette by adding colors with custom names and hex codes.
           Select one color as primary and another as secondary.
