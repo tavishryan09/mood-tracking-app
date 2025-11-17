@@ -391,14 +391,14 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: 20,
   },
   modalContent: {
     borderRadius: 12,
-    padding: 20,
-    width: '100%',
-    maxWidth: 400,
+    padding: 24,
+    width: '90%',
+    maxWidth: 420,
     elevation: 8,
+    alignSelf: 'center',
   },
   modalHeader: {
     flexDirection: 'row',
