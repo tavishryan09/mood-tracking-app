@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { View, StyleSheet, ScrollView, Platform } from 'react-native';
 import { TextInput, Button, Title, SegmentedButtons, ActivityIndicator, Card, IconButton, Chip, Paragraph, List } from 'react-native-paper';
 import { HugeiconsIcon } from '@hugeicons/react-native';
@@ -6,8 +6,12 @@ import { UserAdd02Icon, Delete02Icon } from '@hugeicons/core-free-icons';
 import { eventsAPI, usersAPI } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import { CustomDialog } from '../../components/CustomDialog';
+import { EditEventScreenProps } from '../../types/navigation';
+import { logger } from '../../utils/logger';
+import { validateAndSanitize } from '../../utils/sanitize';
+import { apiWithTimeout, TIMEOUT_DURATIONS } from '../../utils/apiWithTimeout';
 
-const EditEventScreen = ({ navigation, route }: any) => {
+const EditEventScreen = React.memo(({ navigation, route }: EditEventScreenProps) => {
   const { currentColors } = useTheme();
   const { eventId } = route.params;
   const [loading, setLoading] = useState(true);
@@ -49,17 +53,15 @@ const EditEventScreen = ({ navigation, route }: any) => {
     },
   };
 
-  useEffect(() => {
-    loadEvent();
-  }, []);
-
-  const loadEvent = async () => {
+  const loadEvent = useCallback(async () => {
     try {
       setLoading(true);
-      const [eventResponse, usersResponse] = await Promise.all([
+      const apiCalls = Promise.all([
         eventsAPI.getById(eventId),
         usersAPI.getAll(),
       ]);
+
+      const [eventResponse, usersResponse] = await apiWithTimeout(apiCalls, TIMEOUT_DURATIONS.QUICK) as any;
 
       const event = eventResponse.data;
       setTitle(event.title);
@@ -70,113 +72,155 @@ const EditEventScreen = ({ navigation, route }: any) => {
       setLocation(event.location || '');
       setAttendees(event.attendees || []);
       setAllUsers(usersResponse.data);
-    } catch (error) {
-      console.error('Error loading event:', error);
+      logger.log('Event loaded successfully', { eventId }, 'EditEventScreen');
+    } catch (error: any) {
+      logger.error('Error loading event:', error, 'EditEventScreen');
       setAllUsers([]);
       setAttendees([]);
-      setErrorMessage('Failed to load event');
+      const message = error.message === 'Request timeout'
+        ? 'Unable to connect to server. Please check your connection.'
+        : 'Failed to load event';
+      setErrorMessage(message);
       setShowErrorDialog(true);
       setSuccessCallback(() => () => navigation.goBack());
     } finally {
       setLoading(false);
     }
-  };
+  }, [eventId, navigation]);
 
-  const handleUpdate = async () => {
-    if (!title) {
-      setValidationMessage('Please enter an event title');
+  useEffect(() => {
+    loadEvent();
+  }, [loadEvent]);
+
+  const handleUpdate = useCallback(async () => {
+    // Validate and sanitize inputs
+    const { isValid, errors, sanitizedData } = validateAndSanitize(
+      { title, description, location },
+      {
+        title: { required: true, minLength: 2, maxLength: 200 },
+        description: { maxLength: 1000 },
+        location: { maxLength: 200 },
+      }
+    );
+
+    if (!isValid) {
+      const errorMsg = Object.values(errors)[0] || 'Please check your input';
+      setValidationMessage(errorMsg);
       setShowValidationDialog(true);
+      logger.warn('Event update validation failed:', errors, 'EditEventScreen');
       return;
     }
 
     if (endDate <= startDate) {
       setValidationMessage('End time must be after start time');
       setShowValidationDialog(true);
+      logger.warn('Invalid date range: end time before start time', {}, 'EditEventScreen');
       return;
     }
 
     setSaving(true);
     try {
-      await eventsAPI.update(eventId, {
-        title,
-        description,
+      await apiWithTimeout(eventsAPI.update(eventId, {
+        title: sanitizedData.title,
+        description: sanitizedData.description,
         eventType,
         startTime: startDate.toISOString(),
         endTime: endDate.toISOString(),
-        location,
-      });
+        location: sanitizedData.location,
+      }), TIMEOUT_DURATIONS.STANDARD);
 
+      logger.log('Event updated successfully', { eventId }, 'EditEventScreen');
       setSuccessMessage('Event updated successfully');
       setShowSuccessDialog(true);
       setSuccessCallback(() => () => navigation.goBack());
     } catch (error: any) {
-      setErrorMessage(error.response?.data?.error || 'Failed to update event');
+      logger.error('Error updating event:', error, 'EditEventScreen');
+      const message = error.message === 'Request timeout'
+        ? 'Unable to connect to server. Please check your connection.'
+        : error.response?.data?.error || 'Failed to update event';
+      setErrorMessage(message);
       setShowErrorDialog(true);
     } finally {
       setSaving(false);
     }
-  };
+  }, [title, description, location, eventType, startDate, endDate, eventId, navigation]);
 
-  const handleDeleteClick = () => {
+  const handleDeleteClick = useCallback(() => {
     setShowDeleteConfirm(true);
-  };
+  }, []);
 
-  const handleDeleteConfirm = async () => {
+  const handleDeleteConfirm = useCallback(async () => {
     setShowDeleteConfirm(false);
     setSaving(true);
     try {
-      await eventsAPI.delete(eventId);
+      await apiWithTimeout(eventsAPI.delete(eventId), TIMEOUT_DURATIONS.STANDARD);
+      logger.log('Event deleted successfully', { eventId }, 'EditEventScreen');
       setSuccessMessage('Event deleted successfully');
       setShowSuccessDialog(true);
       setSuccessCallback(() => () => navigation.goBack());
     } catch (error: any) {
-      setErrorMessage(error.response?.data?.error || 'Failed to delete event');
+      logger.error('Error deleting event:', error, 'EditEventScreen');
+      const message = error.message === 'Request timeout'
+        ? 'Unable to connect to server. Please check your connection.'
+        : error.response?.data?.error || 'Failed to delete event';
+      setErrorMessage(message);
       setShowErrorDialog(true);
     } finally {
       setSaving(false);
     }
-  };
+  }, [eventId, navigation]);
 
-  const handleDeleteCancel = () => {
+  const handleDeleteCancel = useCallback(() => {
     setShowDeleteConfirm(false);
-  };
+  }, []);
 
-  const handleAddAttendee = async (userId: string) => {
+  const handleAddAttendee = useCallback(async (userId: string) => {
     try {
-      await eventsAPI.addAttendee(eventId, { userId });
+      await apiWithTimeout(eventsAPI.addAttendee(eventId, { userId }), TIMEOUT_DURATIONS.STANDARD);
+      logger.log('Attendee added successfully', { eventId, userId }, 'EditEventScreen');
       setShowUserPicker(false);
       await loadEvent();
       setSuccessMessage('Attendee added successfully');
       setShowSuccessDialog(true);
     } catch (error: any) {
-      setErrorMessage(error.response?.data?.error || 'Failed to add attendee');
+      logger.error('Error adding attendee:', error, 'EditEventScreen');
+      const message = error.message === 'Request timeout'
+        ? 'Unable to connect to server. Please check your connection.'
+        : error.response?.data?.error || 'Failed to add attendee';
+      setErrorMessage(message);
       setShowErrorDialog(true);
     }
-  };
+  }, [eventId, loadEvent]);
 
-  const handleRemoveAttendee = async (userId: string) => {
+  const handleRemoveAttendee = useCallback((userId: string) => {
     setRemoveAttendeeUserId(userId);
     setShowRemoveAttendeeDialog(true);
-  };
+  }, []);
 
-  const performRemoveAttendee = async () => {
+  const performRemoveAttendee = useCallback(async () => {
     if (!removeAttendeeUserId) return;
     setShowRemoveAttendeeDialog(false);
     try {
-      await eventsAPI.removeAttendee(eventId, removeAttendeeUserId);
+      await apiWithTimeout(eventsAPI.removeAttendee(eventId, removeAttendeeUserId), TIMEOUT_DURATIONS.STANDARD);
+      logger.log('Attendee removed successfully', { eventId, userId: removeAttendeeUserId }, 'EditEventScreen');
       await loadEvent();
       setSuccessMessage('Attendee removed successfully');
       setShowSuccessDialog(true);
     } catch (error: any) {
-      setErrorMessage(error.response?.data?.error || 'Failed to remove attendee');
+      logger.error('Error removing attendee:', error, 'EditEventScreen');
+      const message = error.message === 'Request timeout'
+        ? 'Unable to connect to server. Please check your connection.'
+        : error.response?.data?.error || 'Failed to remove attendee';
+      setErrorMessage(message);
       setShowErrorDialog(true);
     }
     setRemoveAttendeeUserId(null);
-  };
+  }, [removeAttendeeUserId, eventId, loadEvent]);
 
-  // Get users that are not already attendees
-  const availableUsers = allUsers.filter(
-    (user) => !attendees.some((attendee) => attendee.userId === user.id)
+  // Get users that are not already attendees - memoized to prevent recalculation
+  const availableUsers = useMemo(() =>
+    allUsers.filter((user) => !attendees.some((attendee) => attendee.userId === user.id)),
+    [allUsers, attendees]
   );
 
   if (loading) {
@@ -439,7 +483,9 @@ const EditEventScreen = ({ navigation, route }: any) => {
       />
     </ScrollView>
   );
-};
+});
+
+EditEventScreen.displayName = 'EditEventScreen';
 
 const styles = StyleSheet.create({
   container: {
