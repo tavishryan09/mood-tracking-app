@@ -174,6 +174,7 @@ const LoginScreen = ({ navigation }: any) => {
             loading={loading}
             disabled={loading}
             style={dynamicStyles.button}
+            buttonColor={currentColors.primary}
           >
             Sign In
           </Button>
@@ -183,6 +184,7 @@ const LoginScreen = ({ navigation }: any) => {
             onPress={handleForgotPassword}
             disabled={loading}
             style={dynamicStyles.forgotButton}
+            textColor={currentColors.primary}
           >
             Forgot Password?
           </Button>
