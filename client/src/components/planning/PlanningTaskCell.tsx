@@ -339,10 +339,13 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
               flex: 1,
               display: 'flex',
               flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center',
               gap: '2px',
               overflow: 'hidden',
               pointerEvents: 'auto',
               userSelect: 'none',
+              textAlign: 'center',
             }}
           >
             {/* Project name */}
