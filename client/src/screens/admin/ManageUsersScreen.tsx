@@ -149,16 +149,6 @@ const ManageUsersScreen = ({ navigation }: any) => {
 
   return (
     <View style={[styles.container, { backgroundColor: currentColors.background.bg700 }]}>
-      {/* DEBUG BANNER - REMOVE THIS WHEN CONFIRMED */}
-      <View style={{ backgroundColor: '#FF0000', padding: 20, alignItems: 'center' }}>
-        <Text style={{ color: '#FFFFFF', fontSize: 24, fontWeight: 'bold' }}>
-          ✓ NEW CODE LOADED - TEXT LABELS ACTIVE
-        </Text>
-        <Text style={{ color: '#FFFFFF', fontSize: 14, marginTop: 5 }}>
-          If you see this banner, the latest code is running
-        </Text>
-      </View>
-
       <View style={[styles.searchContainer, { backgroundColor: currentColors.background.bg300 }]}>
         <HugeiconsIcon icon={Search01Icon} size={20} color={currentColors.icon} />
         <TextInput
