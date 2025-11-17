@@ -375,10 +375,9 @@ function MainDrawer() {
     }
   };
 
-  // Don't render drawer until settings are loaded
-  if (!drawerLoaded) {
-    return null;
-  }
+  // Render drawer with all screens initially, even while settings are loading
+  // This allows deep linking to work while menu visibility is being determined
+  const screenList = drawerLoaded ? visibleMenuItems : allMenuItems;
 
   return (
     <Drawer.Navigator
@@ -406,7 +405,7 @@ function MainDrawer() {
         headerTintColor: '#FFFFFF',
       }}
     >
-      {visibleMenuItems.map((item) => (
+      {screenList.map((item) => (
         <Drawer.Screen
           key={item.name}
           name={item.name}
