@@ -670,7 +670,7 @@ const ProjectTableViewScreen = () => {
                 onPress={() => handleHeaderClick('projectNumber')}
                 activeOpacity={0.7}
               >
-                <View className="juana-font" style={styles.headerContent}>
+                <View style={styles.headerContent} {...({ className: 'juana-font' } as any)}>
                   <Text style={[styles.headerText, { color: tableHeaderText }]}>Project #</Text>
                   {renderSortIndicator('projectNumber')}
                 </View>
@@ -682,7 +682,7 @@ const ProjectTableViewScreen = () => {
                 onPress={() => handleHeaderClick('name')}
                 activeOpacity={0.7}
               >
-                <View className="juana-font" style={styles.headerContent}>
+                <View style={styles.headerContent} {...({ className: 'juana-font' } as any)}>
                   <Text style={[styles.headerText, { color: tableHeaderText }]}>Project Name</Text>
                   {renderSortIndicator('name')}
                 </View>
@@ -694,7 +694,7 @@ const ProjectTableViewScreen = () => {
                 onPress={() => handleHeaderClick('client')}
                 activeOpacity={0.7}
               >
-                <View className="juana-font" style={styles.headerContent}>
+                <View style={styles.headerContent} {...({ className: 'juana-font' } as any)}>
                   <Text style={[styles.headerText, { color: tableHeaderText }]}>Client</Text>
                   {renderSortIndicator('client')}
                 </View>
@@ -714,7 +714,7 @@ const ProjectTableViewScreen = () => {
                 onPress={() => handleHeaderClick('description')}
                 activeOpacity={0.7}
               >
-                <View className="juana-font" style={styles.headerContent}>
+                <View style={styles.headerContent} {...({ className: 'juana-font' } as any)}>
                   <Text style={[styles.headerText, { color: tableHeaderText }]}>Common Name</Text>
                   {renderSortIndicator('description')}
                 </View>
@@ -726,7 +726,7 @@ const ProjectTableViewScreen = () => {
                 onPress={() => handleHeaderClick('hours')}
                 activeOpacity={0.7}
               >
-                <View className="juana-font" style={styles.headerContent}>
+                <View style={styles.headerContent} {...({ className: 'juana-font' } as any)}>
                   <Text style={[styles.headerText, { color: tableHeaderText }]}>Hours</Text>
                   {renderSortIndicator('hours')}
                 </View>
@@ -738,7 +738,7 @@ const ProjectTableViewScreen = () => {
                 onPress={() => handleHeaderClick('hoursWeek')}
                 activeOpacity={0.7}
               >
-                <View className="juana-font" style={styles.headerContent}>
+                <View style={styles.headerContent} {...({ className: 'juana-font' } as any)}>
                   <Text style={[styles.headerText, { color: tableHeaderText }]}>This Week</Text>
                   {renderSortIndicator('hoursWeek')}
                 </View>
@@ -750,7 +750,7 @@ const ProjectTableViewScreen = () => {
                 onPress={() => handleHeaderClick('hoursMonth')}
                 activeOpacity={0.7}
               >
-                <View className="juana-font" style={styles.headerContent}>
+                <View style={styles.headerContent} {...({ className: 'juana-font' } as any)}>
                   <Text style={[styles.headerText, { color: tableHeaderText }]}>This Month</Text>
                   {renderSortIndicator('hoursMonth')}
                 </View>
@@ -762,7 +762,7 @@ const ProjectTableViewScreen = () => {
                 onPress={() => handleHeaderClick('hoursQuarter')}
                 activeOpacity={0.7}
               >
-                <View className="juana-font" style={styles.headerContent}>
+                <View style={styles.headerContent} {...({ className: 'juana-font' } as any)}>
                   <Text style={[styles.headerText, { color: tableHeaderText }]}>This Quarter</Text>
                   {renderSortIndicator('hoursQuarter')}
                 </View>
@@ -774,7 +774,7 @@ const ProjectTableViewScreen = () => {
                 onPress={() => handleHeaderClick('projectValue')}
                 activeOpacity={0.7}
               >
-                <View className="juana-font" style={styles.headerContent}>
+                <View style={styles.headerContent} {...({ className: 'juana-font' } as any)}>
                   <Text style={[styles.headerText, { color: tableHeaderText }]}>Project Value</Text>
                   {renderSortIndicator('projectValue')}
                 </View>
@@ -786,7 +786,7 @@ const ProjectTableViewScreen = () => {
                 onPress={() => handleHeaderClick('billableAmount')}
                 activeOpacity={0.7}
               >
-                <View className="juana-font" style={styles.headerContent}>
+                <View style={styles.headerContent} {...({ className: 'juana-font' } as any)}>
                   <Text style={[styles.headerText, { color: tableHeaderText }]}>Est. Billable</Text>
                   {renderSortIndicator('billableAmount')}
                 </View>
@@ -798,13 +798,13 @@ const ProjectTableViewScreen = () => {
                 onPress={() => handleHeaderClick('progress')}
                 activeOpacity={0.7}
               >
-                <View className="juana-font" style={styles.headerContent}>
+                <View style={styles.headerContent} {...({ className: 'juana-font' } as any)}>
                   <Text style={[styles.headerText, { color: tableHeaderText }]}>Progress %</Text>
                   {renderSortIndicator('progress')}
                 </View>
               </TouchableOpacity>
             )}
-            <View className="juana-font" style={[styles.headerCell, { width: ACTIONS_WIDTH }]}>
+            <View style={[styles.headerCell, { width: ACTIONS_WIDTH }]} {...({ className: 'juana-font' } as any)}>
               <Text style={[styles.headerText, { color: tableHeaderText }]}>Actions</Text>
             </View>
           </View>
