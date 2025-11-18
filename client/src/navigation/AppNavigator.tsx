@@ -552,11 +552,13 @@ const AppNavigator = () => {
   React.useEffect(() => {
     if (previousIsDesktop !== null && previousIsDesktop !== isDesktop) {
       // If switching to mobile and on ProjectTableView, redirect to home first
-      if (!isDesktop && Platform.OS === 'web' && window.location.pathname.includes('ProjectTableView')) {
-        window.history.replaceState({}, '', '/');
+      if (!isDesktop && Platform.OS === 'web' && window?.location?.pathname?.includes('ProjectTableView')) {
+        window.history?.replaceState({}, '', '/');
       }
-      // Layout changed - reload to reset navigation
-      window.location.reload();
+      // Layout changed - use setTimeout to allow current render to complete before reload
+      setTimeout(() => {
+        window.location.reload();
+      }, 100);
     }
     setPreviousIsDesktop(isDesktop);
   }, [isDesktop, previousIsDesktop]);
