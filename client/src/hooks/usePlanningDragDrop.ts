@@ -101,34 +101,43 @@ export const usePlanningDragDrop = ({
 
     // Create custom drag image that shows the full multi-cell task
     if (e.dataTransfer && Platform.OS === 'web') {
-      const dragElement = e.target.closest('[data-task-cell]');
-      if (dragElement) {
-        // Clone the element to create a drag preview
-        const clone = dragElement.cloneNode(true) as HTMLElement;
-        clone.style.position = 'absolute';
-        clone.style.top = '-9999px';
-        clone.style.left = '-9999px';
-        clone.style.width = dragElement.offsetWidth + 'px';
-        clone.style.height = dragElement.offsetHeight + 'px';
-        clone.style.pointerEvents = 'none';
-        clone.style.opacity = '1';
-        clone.style.transform = 'none';
-        document.body.appendChild(clone);
+      try {
+        // Get the inner content div (the one with data-task-cell attribute)
+        const dragElement = e.target.closest('[data-task-cell]');
 
-        // Calculate offset relative to the drag element
-        const rect = dragElement.getBoundingClientRect();
-        const offsetX = e.clientX - rect.left;
-        const offsetY = e.clientY - rect.top;
+        if (dragElement) {
+          // Clone the element to create a drag preview
+          const clone = dragElement.cloneNode(true) as HTMLElement;
 
-        // Set the custom drag image
-        e.dataTransfer.setDragImage(clone, offsetX, offsetY);
+          // Position off-screen but visible for rendering
+          clone.style.position = 'fixed';
+          clone.style.top = '-1000px';
+          clone.style.left = '-1000px';
+          clone.style.width = dragElement.offsetWidth + 'px';
+          clone.style.height = dragElement.offsetHeight + 'px';
+          clone.style.pointerEvents = 'none';
+          clone.style.opacity = '0.8';
+          clone.style.zIndex = '9999';
 
-        // Clean up after drag starts
-        setTimeout(() => {
-          if (document.body.contains(clone)) {
-            document.body.removeChild(clone);
-          }
-        }, 0);
+          document.body.appendChild(clone);
+
+          // Calculate offset - use center of element for better visual
+          const rect = dragElement.getBoundingClientRect();
+          const offsetX = rect.width / 2;
+          const offsetY = rect.height / 2;
+
+          // Set the custom drag image
+          e.dataTransfer.setDragImage(clone, offsetX, offsetY);
+
+          // Clean up after a delay to ensure browser has captured the image
+          setTimeout(() => {
+            if (document.body.contains(clone)) {
+              document.body.removeChild(clone);
+            }
+          }, 100);
+        }
+      } catch (error) {
+        console.error('Error creating drag preview:', error);
       }
     }
 

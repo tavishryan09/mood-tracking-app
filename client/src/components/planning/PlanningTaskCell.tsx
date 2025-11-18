@@ -308,7 +308,7 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
             : 'transparent',
           margin: assignment ? '5px' : '0',
           padding: assignment?.projectName === 'Unavailable' ? 0 : '4px',
-          borderRadius: assignment?.projectName === 'Unavailable' ? 0 : '10px',
+          borderRadius: isDragOver ? 0 : (assignment?.projectName === 'Unavailable' ? 0 : '10px'),
           // For drag-over merged outline: show borders only on outer edges
           ...(isDragOver ? {
             borderTop: isFirstInDragRange ? `2px solid ${currentColors.primary}` : 'none',
