@@ -48,7 +48,7 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
 
   // Memoize color lookup map for O(1) access instead of O(n) find operations
   const colorLookupMap = useMemo(() => {
-    if (!activePalette) return new Map<string, string>();
+    if (!activePalette?.colors) return new Map<string, string>();
     const map = new Map<string, string>();
     activePalette.colors.forEach(color => {
       map.set(color.id, color.hexCode);
