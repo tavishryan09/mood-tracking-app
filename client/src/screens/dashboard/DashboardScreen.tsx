@@ -172,7 +172,7 @@ const DashboardScreen = React.memo(({ navigation, route }: DashboardScreenProps)
     });
 
     return { today, thisWeek, thisMonth };
-  }, [planningTasksData, todayStr, startOfWeek, endOfWeek]);
+  }, [planningTasksData, todayStr, startOfWeek, endOfWeek, startOfMonth, endOfMonth]);
 
   const loading = deadlinesLoading || planningLoading;
   const refreshing = false;
