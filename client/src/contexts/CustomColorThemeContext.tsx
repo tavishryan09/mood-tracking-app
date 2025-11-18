@@ -519,11 +519,11 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
   ]);
 
   // Show loading screen while initializing to prevent flash of wrong theme
+  // Don't render children at all during initialization to prevent resize issues
   if (isInitializing) {
     return (
       <CustomColorThemeContext.Provider value={value}>
-        {/* Render nothing while initializing to prevent theme flash */}
-        <div style={{ display: 'none' }}>{children}</div>
+        {null}
       </CustomColorThemeContext.Provider>
     );
   }
