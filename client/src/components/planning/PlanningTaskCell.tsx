@@ -35,6 +35,7 @@ interface PlanningTaskCellProps {
   // Context
   currentQuarter: QuarterInfo;
   isLastUser: boolean;
+  weekIndex: number;
   dayIndex: number;
 
   // Handlers
@@ -139,6 +140,7 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
   draggedTask,
   currentQuarter,
   isLastUser,
+  weekIndex,
   dayIndex,
   handleTaskDragOver,
   handleTaskDrop,
@@ -242,7 +244,7 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
 
   return (
     <td
-      key={`day-${dayIndex}`}
+      key={`${weekIndex}-${dayIndex}`}
       rowSpan={span}
       onDragOver={(e) => handleTaskDragOver(e, userId, dateString, blockIndex)}
       onDrop={(e) => handleTaskDrop(e, userId, dateString, blockIndex)}
