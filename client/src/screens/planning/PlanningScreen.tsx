@@ -1788,6 +1788,8 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
                           maxWidth: `${DAY_CELL_WIDTH}px`,
                           height: '50px',
                           borderBottom: `5px solid ${headerBorderColor}`,
+                          borderLeft: `1px solid ${cellBorderColor}`,
+                          borderRight: `1px solid ${cellBorderColor}`,
                           backgroundColor: headerBg,
                           textAlign: 'center',
                           padding: '4px',

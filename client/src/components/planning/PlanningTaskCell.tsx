@@ -264,10 +264,7 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
         height: `${TIME_BLOCK_HEIGHT * span}px`,
         padding: 0,
         margin: 0,
-        borderTop: `1px solid ${cellBorderColor}`,
-        borderLeft: `1px solid ${cellBorderColor}`,
-        borderRight: `1px solid ${cellBorderColor}`,
-        borderBottom: (isLastBlockForUser && !isLastUser) ? `5px solid ${teamMemberBorderColor}` : `1px solid ${cellBorderColor}`,
+        borderBottom: (isLastBlockForUser && !isLastUser) ? `5px solid ${teamMemberBorderColor}` : 'none',
         backgroundColor: cellBgColor,
         opacity: isOutsideQuarter ? 0.4 : 1,
         position: 'relative',
@@ -309,6 +306,11 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
           margin: assignment ? '5px' : '0',
           padding: assignment?.projectName === 'Unavailable' ? 0 : '4px',
           borderRadius: isDragOver ? 0 : (assignment?.projectName === 'Unavailable' ? 0 : '10px'),
+          // Thin light borders on all sides (moved from <td>)
+          borderTop: `1px solid ${cellBorderColor}`,
+          borderLeft: `1px solid ${cellBorderColor}`,
+          borderRight: `1px solid ${cellBorderColor}`,
+          borderBottom: `1px solid ${cellBorderColor}`,
           // For drag-over merged outline: show borders only on outer edges
           ...(isDragOver ? {
             borderTop: isFirstInDragRange ? `2px solid ${currentColors.primary}` : 'none',
