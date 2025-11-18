@@ -218,8 +218,10 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
   // Last block check
   const isLastBlockForUser = (blockIndex + span - 1) === 3;
 
-  // Drag over detection - only highlight the FIRST cell (which spans all rows)
+  // Drag over detection
   let isDragOver = false;
+  let isFirstInDragRange = false;
+  let isLastInDragRange = false;
   if (dragOverCell && draggedTask) {
     const match = dragOverCell.match(/(\d{4}-\d{2}-\d{2})-(\d+)$/);
     if (match) {
@@ -228,9 +230,10 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
       const dragOverUserId = dragOverCell.substring(0, dragOverCell.length - match[0].length - 1);
 
       if (userId === dragOverUserId && dateString === dragOverDate) {
-        // Only set isDragOver for the FIRST cell in the range (which has rowSpan covering all cells)
-        if (blockIndex === dragOverBlockIndex) {
+        if (blockIndex >= dragOverBlockIndex && blockIndex < dragOverBlockIndex + draggedTask.span) {
           isDragOver = true;
+          isFirstInDragRange = blockIndex === dragOverBlockIndex;
+          isLastInDragRange = blockIndex === dragOverBlockIndex + draggedTask.span - 1;
         }
       }
     }
@@ -306,15 +309,21 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
           margin: assignment ? '5px' : '0',
           padding: assignment?.projectName === 'Unavailable' ? 0 : '4px',
           borderRadius: assignment?.projectName === 'Unavailable' ? 0 : '10px',
-          boxShadow: isHovered && assignment
+          // For drag-over merged outline: show borders only on outer edges
+          ...(isDragOver ? {
+            borderTop: isFirstInDragRange ? `2px solid ${currentColors.primary}` : 'none',
+            borderBottom: isLastInDragRange ? `2px solid ${currentColors.primary}` : 'none',
+            borderLeft: `2px solid ${currentColors.primary}`,
+            borderRight: `2px solid ${currentColors.primary}`,
+          } : {}),
+          // For other states use boxShadow
+          boxShadow: !isDragOver && (isHovered && assignment
             ? `0 0 0 2px ${currentColors.primary}`
             : isSelected
               ? `0 0 0 2px ${currentColors.selected}`
               : copiedCell && copiedCell.userId === userId && copiedCell.date === dateString && copiedCell.blockIndex === blockIndex
                 ? `0 0 0 2px ${currentColors.copied}`
-                : isDragOver
-                  ? `0 0 0 2px ${currentColors.primary}`
-                  : 'none',
+                : 'none'),
         }}
       >
         {/* Top edge resize handle */}

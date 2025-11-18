@@ -107,16 +107,27 @@ export const usePlanningDragDrop = ({
         const clone = dragElement.cloneNode(true) as HTMLElement;
         clone.style.position = 'absolute';
         clone.style.top = '-9999px';
+        clone.style.left = '-9999px';
         clone.style.width = dragElement.offsetWidth + 'px';
         clone.style.height = dragElement.offsetHeight + 'px';
+        clone.style.pointerEvents = 'none';
+        clone.style.opacity = '1';
+        clone.style.transform = 'none';
         document.body.appendChild(clone);
 
-        // Set the custom drag image
-        e.dataTransfer.setDragImage(clone, e.nativeEvent.offsetX, e.nativeEvent.offsetY);
+        // Calculate offset relative to the drag element
+        const rect = dragElement.getBoundingClientRect();
+        const offsetX = e.clientX - rect.left;
+        const offsetY = e.clientY - rect.top;
 
-        // Clean up after a short delay
+        // Set the custom drag image
+        e.dataTransfer.setDragImage(clone, offsetX, offsetY);
+
+        // Clean up after drag starts
         setTimeout(() => {
-          document.body.removeChild(clone);
+          if (document.body.contains(clone)) {
+            document.body.removeChild(clone);
+          }
         }, 0);
       }
     }
