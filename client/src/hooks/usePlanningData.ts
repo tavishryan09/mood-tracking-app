@@ -110,10 +110,6 @@ export const usePlanningData = (): UsePlanningDataReturn => {
       setProjects(projectsResponse.data);
       setFilteredProjects(projectsResponse.data);
 
-      // Set users immediately so UI can render while preferences load
-      setUsers(loadedUsers);
-      setVisibleUserIds(loadedUsers.map((u: any) => u.id));
-
       // Transform planning tasks into blockAssignments with span values
       const assignments: { [key: string]: BlockAssignment } = {};
 
@@ -162,6 +158,7 @@ export const usePlanningData = (): UsePlanningDataReturn => {
       setBlockAssignments(assignments);
 
       // Load user preferences: try database first, then global defaults
+      // Do this BEFORE setting users/visibleUserIds to prevent flash
       let userIds: string[] | null = null;
       let visibleIds: string[] | null = null;
 
@@ -221,17 +218,19 @@ export const usePlanningData = (): UsePlanningDataReturn => {
           });
 
           loadedUsers = orderedUsers;
-          // Update users with new order
-          setUsers(loadedUsers);
-        }
-
-        // Apply visible users if preferences exist
-        if (visibleIds) {
-          setVisibleUserIds(visibleIds);
         }
       } catch (error) {
         logger.error('Error loading preferences:', error, 'usePlanningData');
-        // Preferences already set to defaults above, no need to set again
+      }
+
+      // Set users and visibleUserIds together AFTER preferences are loaded
+      // This prevents the flash of all users before filtering
+      setUsers(loadedUsers);
+      if (visibleIds) {
+        setVisibleUserIds(visibleIds);
+      } else {
+        // If no preferences, show all users (first-time user)
+        setVisibleUserIds(loadedUsers.map((u: any) => u.id));
       }
     } catch (error) {
       logger.error('Error loading data:', error, 'usePlanningData');
