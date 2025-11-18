@@ -11,6 +11,9 @@ const CUSTOM_COLOR_PALETTES_KEY = 'custom_color_palettes';
 const ELEMENT_COLOR_MAPPING_KEY = 'element_color_mapping';
 const ACTIVE_CUSTOM_THEME_KEY = 'active_custom_theme';
 
+// Force bundle regeneration - v2025.11.18.001
+const BUNDLE_VERSION = '2025.11.18.001';
+
 interface CustomColorThemeContextType {
   customColorPalettes: Record<string, CustomColorPalette>;
   activeCustomTheme: CustomColorTheme | null;
@@ -47,12 +50,17 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
   const isReloadingRef = React.useRef(false);
 
   // Memoize color lookup map for O(1) access instead of O(n) find operations
+  // Fixed: Check both activePalette and colors array to prevent crash (2025-11-18)
   const colorLookupMap = useMemo(() => {
     if (!activePalette?.colors) return new Map<string, string>();
     const map = new Map<string, string>();
     activePalette.colors.forEach(color => {
       map.set(color.id, color.hexCode);
     });
+    // Bundle version tracking: BUNDLE_VERSION
+    if (process.env.NODE_ENV === 'development') {
+      console.log('[Theme] Bundle version:', BUNDLE_VERSION);
+    }
     return map;
   }, [activePalette]);
 
