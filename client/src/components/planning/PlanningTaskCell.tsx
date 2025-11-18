@@ -218,7 +218,7 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
   // Last block check
   const isLastBlockForUser = (blockIndex + span - 1) === 3;
 
-  // Drag over detection
+  // Drag over detection - only highlight the FIRST cell (which spans all rows)
   let isDragOver = false;
   if (dragOverCell && draggedTask) {
     const match = dragOverCell.match(/(\d{4}-\d{2}-\d{2})-(\d+)$/);
@@ -228,7 +228,8 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
       const dragOverUserId = dragOverCell.substring(0, dragOverCell.length - match[0].length - 1);
 
       if (userId === dragOverUserId && dateString === dragOverDate) {
-        if (blockIndex >= dragOverBlockIndex && blockIndex < dragOverBlockIndex + draggedTask.span) {
+        // Only set isDragOver for the FIRST cell in the range (which has rowSpan covering all cells)
+        if (blockIndex === dragOverBlockIndex) {
           isDragOver = true;
         }
       }
