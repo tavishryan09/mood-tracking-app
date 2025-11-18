@@ -518,15 +518,8 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
     isInitializing,
   ]);
 
-  // Show loading screen while initializing to prevent flash of wrong theme
-  // Don't render children at all during initialization to prevent resize issues
-  if (isInitializing) {
-    return (
-      <CustomColorThemeContext.Provider value={value}>
-        {null}
-      </CustomColorThemeContext.Provider>
-    );
-  }
+  // Always render children - contexts handle initialization state internally
+  // No need to block rendering, as components check isInitializing flag
 
   return (
     <CustomColorThemeContext.Provider value={value}>
