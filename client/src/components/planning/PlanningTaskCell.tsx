@@ -280,6 +280,8 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
         style={{
           width: '100%',
           height: '100%',
+          maxWidth: '-webkit-fill-available',
+          maxHeight: '-webkit-fill-available',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
