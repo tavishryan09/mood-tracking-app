@@ -1478,8 +1478,7 @@ const getStyles = (currentColors: any) => StyleSheet.create({
     flex: 1,
   },
   verticalScrollContent: {
-    paddingBottom: 50,
-    paddingRight: 50,
+    flexGrow: 1,
   },
   scrollableTable: {
     flex: 1,
@@ -1487,6 +1486,8 @@ const getStyles = (currentColors: any) => StyleSheet.create({
   tableContainer: {
     minWidth: TABLE_WIDTH,
     overflow: 'visible',
+    paddingBottom: 50,
+    paddingRight: 50,
   },
   headerRow: {
     flexDirection: 'row',
