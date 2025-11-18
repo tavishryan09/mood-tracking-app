@@ -1714,6 +1714,10 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
                 }
               `}
             </style>
+            <div style={{
+              paddingRight: '50px',
+              paddingBottom: '50px',
+            }}>
             <table style={{
               borderCollapse: 'collapse',
               backgroundColor: screenBackground,
@@ -2061,6 +2065,7 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
                 })}
             </tbody>
           </table>
+            </div>
           </div>
         ) : (
           // Fallback for non-web platforms - use View-based layout
