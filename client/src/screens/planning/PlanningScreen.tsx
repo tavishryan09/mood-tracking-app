@@ -447,28 +447,28 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
 
   }, [planningColors]);
 
-  // Initial data load on mount - v2 force rebuild
+  // Initial data load on mount - v3 use console.log for production debugging
   useEffect(() => {
-    logger.log('🚀 PlanningScreen mounted - triggering initial data load', { currentQuarter }, 'PlanningScreen');
+    console.log('🚀 [PlanningScreen] Component mounted - triggering initial data load', { currentQuarter });
     hookLoadData(currentQuarter);
   }, [hookLoadData, currentQuarter]);
 
   // Debug: Log when data changes
   useEffect(() => {
-    logger.log('📊 Planning data state changed', {
+    console.log('📊 [PlanningScreen] Data state changed', {
       usersCount: users.length,
       projectsCount: projects.length,
       assignmentsCount: Object.keys(blockAssignments).length,
       deadlinesCount: deadlineTasks.length,
       visibleUsersCount: visibleUserIds.length,
       loading,
-    }, 'PlanningScreen');
+    });
   }, [users, projects, blockAssignments, deadlineTasks, visibleUserIds, loading]);
 
   // Reload data when screen gains focus (navigation)
   useFocusEffect(
     React.useCallback(() => {
-      logger.log('🔄 PlanningScreen focused - reloading data', { currentQuarter }, 'PlanningScreen');
+      console.log('🔄 [PlanningScreen] Screen focused - reloading data', { currentQuarter });
       setHasScrolled(false);
       hookLoadData(currentQuarter);
     }, [currentQuarter, hookLoadData])
