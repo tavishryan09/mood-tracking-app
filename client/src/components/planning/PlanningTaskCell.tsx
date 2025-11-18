@@ -282,6 +282,8 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
           height: '100%',
           display: 'flex',
           flexDirection: 'column',
+          justifyContent: 'center',
+          alignItems: 'center',
           position: 'relative',
           cursor: assignment ? 'pointer' : 'default',
           backgroundColor: assignment
@@ -295,8 +297,9 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
                 timeOffBg
               )
             : 'transparent',
+          margin: assignment ? '5px' : '0',
           padding: assignment?.projectName === 'Unavailable' ? 0 : '4px',
-          borderRadius: assignment?.projectName === 'Unavailable' ? 0 : '4px',
+          borderRadius: assignment?.projectName === 'Unavailable' ? 0 : '10px',
           boxShadow: isHovered && assignment
             ? `0 0 0 2px ${currentColors.primary}`
             : isSelected

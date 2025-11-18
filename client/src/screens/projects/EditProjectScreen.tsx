@@ -43,6 +43,7 @@ const EditProjectScreen = React.memo(({ route, navigation }: EditProjectScreenPr
   // Team members state
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
+  const [originalTeamMembers, setOriginalTeamMembers] = useState<any[]>([]); // Track original state for comparison
   const [showUserPicker, setShowUserPicker] = useState(false);
   const [memberRates, setMemberRates] = useState<{ [key: string]: string }>({});
 
@@ -72,6 +73,7 @@ const EditProjectScreen = React.memo(({ route, navigation }: EditProjectScreenPr
       setUseStandardRate(project.useStandardRate !== false);
       setStandardHourlyRate(project.standardHourlyRate?.toString() || '');
       setTeamMembers(project.members || []);
+      setOriginalTeamMembers(project.members || []); // Store original for comparison on save
 
       // Load existing member rates
       const rates: { [key: string]: string } = {};
@@ -200,6 +202,26 @@ const EditProjectScreen = React.memo(({ route, navigation }: EditProjectScreenPr
         standardHourlyRate: sanitizedData.standardHourlyRate ? parseFloat(sanitizedData.standardHourlyRate) : null,
       }), TIMEOUT_DURATIONS.STANDARD);
 
+      // Sync team member changes (additions and removals)
+      const originalMemberIds = originalTeamMembers.map(m => m.userId);
+      const currentMemberIds = teamMembers.map(m => m.userId);
+
+      // Find members to add (in current but not in original)
+      const membersToAdd = currentMemberIds.filter(id => !originalMemberIds.includes(id));
+
+      // Find members to remove (in original but not in current)
+      const membersToRemove = originalMemberIds.filter(id => !currentMemberIds.includes(id));
+
+      // Add new members
+      for (const userId of membersToAdd) {
+        await projectsAPI.addMember(projectId, { userId });
+      }
+
+      // Remove members
+      for (const userId of membersToRemove) {
+        await projectsAPI.removeMember(projectId, userId);
+      }
+
       // Update member rates if not using standard rate
       if (!useStandardRate) {
         const memberUpdateCalls = Promise.all(
@@ -230,53 +252,50 @@ const EditProjectScreen = React.memo(({ route, navigation }: EditProjectScreenPr
     } finally {
       setSaving(false);
     }
-  }, [name, description, projectValue, standardHourlyRate, selectedClient, status, useStandardRate, teamMembers, memberRates, projectId, navigation]);
+  }, [name, description, projectValue, standardHourlyRate, selectedClient, status, useStandardRate, teamMembers, memberRates, originalTeamMembers, projectId, navigation]);
 
-  const handleAddMember = useCallback(async (userId: string) => {
-    try {
-      await apiWithTimeout(projectsAPI.addMember(projectId, { userId }), TIMEOUT_DURATIONS.STANDARD);
+  const handleAddMember = useCallback((userId: string) => {
+    // Find the user to add
+    const user = allUsers.find(u => u.id === userId);
+    if (!user) return;
 
-      // If using individual rates, auto-populate the user's default hourly rate
-      if (!useStandardRate) {
-        const user = allUsers.find(u => u.id === userId);
-        if (user?.defaultHourlyRate) {
-          setMemberRates(prev => ({
-            ...prev,
-            [userId]: user.defaultHourlyRate.toString()
-          }));
-        }
-      }
-
-      setShowUserPicker(false);
-      await loadData(); // Reload to get updated members list
-      setSuccessMessage('Team member added successfully');
-      setShowSuccessDialog(true);
-    } catch (error: any) {
+    // Check if user is already in team
+    if (teamMembers.some(m => m.userId === userId)) {
       setErrorDialogTitle('Error');
-      const message = error.message === 'Request timeout'
-        ? 'Unable to connect to server. Please check your connection.'
-        : error.response?.data?.error || 'Failed to add team member';
-      setErrorMessage(message);
+      setErrorMessage('This user is already a team member');
       setShowErrorDialog(true);
+      return;
     }
-  }, [projectId, loadData, useStandardRate, allUsers]);
 
-  const handleRemoveMember = async (memberId: string) => {
-    setConfirmationTitle('Remove Team Member');
-    setConfirmationMessage('Are you sure you want to remove this team member from the project?');
-    setConfirmationAction(() => async () => {
-      try {
-        await projectsAPI.removeMember(projectId, memberId);
-        await loadData(); // Reload to get updated members list
-        setSuccessMessage('Team member removed successfully');
-        setShowSuccessDialog(true);
-      } catch (error: any) {
-        setErrorDialogTitle('Error');
-        setErrorMessage(error.response?.data?.error || 'Failed to remove team member');
-        setShowErrorDialog(true);
+    // Add to local team members state (will be saved when user clicks Save button)
+    setTeamMembers(prev => [
+      ...prev,
+      {
+        userId: userId,
+        user: user,
+        customHourlyRate: null
       }
+    ]);
+
+    // If using individual rates, auto-populate the user's default hourly rate
+    if (!useStandardRate && user.defaultHourlyRate) {
+      setMemberRates(prev => ({
+        ...prev,
+        [userId]: user.defaultHourlyRate.toString()
+      }));
+    }
+  }, [allUsers, teamMembers, useStandardRate]);
+
+  const handleRemoveMember = (memberId: string) => {
+    // Remove from local team members state (will be saved when user clicks Save button)
+    setTeamMembers(prev => prev.filter(m => m.userId !== memberId));
+
+    // Also remove from member rates
+    setMemberRates(prev => {
+      const updated = { ...prev };
+      delete updated[memberId];
+      return updated;
     });
-    setShowConfirmationDialog(true);
   };
 
   const handleDeleteClick = () => {
