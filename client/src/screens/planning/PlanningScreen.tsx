@@ -1717,6 +1717,8 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
             <div style={{
               paddingRight: '50px',
               paddingBottom: '50px',
+              display: 'inline-block',
+              minWidth: '100%',
             }}>
             <table style={{
               borderCollapse: 'collapse',
