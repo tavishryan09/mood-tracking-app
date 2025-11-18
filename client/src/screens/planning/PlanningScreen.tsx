@@ -465,14 +465,11 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
     });
   }, [users, projects, blockAssignments, deadlineTasks, visibleUserIds, loading]);
 
-  // Reload data when screen gains focus (navigation)
-  useFocusEffect(
-    React.useCallback(() => {
-      console.log('🔄 [PlanningScreen] Screen focused - reloading data', { currentQuarter });
-      setHasScrolled(false);
-      hookLoadData(currentQuarter);
-    }, [currentQuarter, hookLoadData])
-  );
+  // Note: Removed useFocusEffect data reload - it was causing:
+  // 1. Unnecessary API calls on every navigation
+  // 2. Resetting hasScrolled, which broke auto-scroll
+  // 3. Loading spinner flashes
+  // Data loads on mount via useEffect, which is sufficient
 
   // Handle managing team members visibility
   const handleManageTeamMembers = () => {
