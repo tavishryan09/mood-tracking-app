@@ -1,3 +1,4 @@
+// Dashboard Screen - Updated 2025-11-18
 import React, { useMemo, useCallback } from 'react';
 import { View, StyleSheet, ScrollView, RefreshControl, Text, Platform, TouchableOpacity } from 'react-native';
 import { Card, Title, Paragraph, Button, ActivityIndicator } from 'react-native-paper';
