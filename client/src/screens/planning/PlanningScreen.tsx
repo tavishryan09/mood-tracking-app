@@ -1714,16 +1714,13 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
                 }
               `}
             </style>
-            <div style={{
-              paddingRight: '50px',
-              paddingBottom: '50px',
-              display: 'inline-block',
-              minWidth: '100%',
-            }}>
+            <div>
             <table style={{
               borderCollapse: 'collapse',
               backgroundColor: screenBackground,
               position: 'relative',
+              marginRight: '50px',
+              marginBottom: '50px',
             }}>
               <thead>
                 <tr>
