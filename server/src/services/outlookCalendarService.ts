@@ -881,18 +881,32 @@ class OutlookCalendarService {
       let foundAndDeleted = false;
 
       // First, try to search for existing events by TaskID (for new events)
+      // Fetch events for the task's date and manually filter by TaskID in body
       try {
-        const searchQuery = `TaskID: ${task.id}`;
-        const existingEvents = await client
+        const taskDate = new Date(task.date);
+        taskDate.setUTCHours(0, 0, 0, 0);
+        const startDate = new Date(taskDate);
+        startDate.setDate(startDate.getDate() - 1); // Include day before to catch any timezone issues
+        const endDate = new Date(taskDate);
+        endDate.setDate(endDate.getDate() + 2); // Include day after
+
+        const allEvents = await client
           .api(`/me/calendars/${calendarId}/events`)
-          .filter(`contains(body/content, '${searchQuery}')`)
-          .select('id')
+          .filter(`start/dateTime ge '${startDate.toISOString()}' and start/dateTime le '${endDate.toISOString()}'`)
+          .select('id,body')
           .get();
 
-        // Delete all existing events for this task
-        if (existingEvents?.value && existingEvents.value.length > 0) {
+        // Manually filter events that contain this TaskID
+        const matchingEvents = allEvents?.value?.filter((event: any) => {
+          const bodyContent = event.body?.content || '';
+          return bodyContent.includes(`TaskID: ${task.id}`);
+        }) || [];
+
+        // Delete all matching events
+        if (matchingEvents.length > 0) {
+          console.log(`[Outlook] Found ${matchingEvents.length} existing events for task ${task.id}, deleting...`);
           foundAndDeleted = true;
-          for (const existingEvent of existingEvents.value) {
+          for (const existingEvent of matchingEvents) {
             try {
               await client.api(`/me/calendars/${calendarId}/events/${existingEvent.id}`).delete();
             } catch (deleteError: any) {
