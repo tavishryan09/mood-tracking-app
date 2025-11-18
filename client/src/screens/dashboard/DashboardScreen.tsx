@@ -1,5 +1,4 @@
-// Dashboard Screen - Cache-bust v2
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, RefreshControl, Text, Platform, TouchableOpacity } from 'react-native';
 import { Card, Title, Paragraph, Button, ActivityIndicator } from 'react-native-paper';
 import { HugeiconsIcon } from '@hugeicons/react-native';
