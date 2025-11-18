@@ -1562,7 +1562,7 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
         }, 500);
       }
     }
-  }, [hasScrolled, quarterWeeks]);
+  }, [hasScrolled, quarterWeeks, loading]);
 
   // Add scroll listener to update visible week index
   useEffect(() => {
