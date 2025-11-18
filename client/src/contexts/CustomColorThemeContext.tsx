@@ -11,8 +11,8 @@ const CUSTOM_COLOR_PALETTES_KEY = 'custom_color_palettes';
 const ELEMENT_COLOR_MAPPING_KEY = 'element_color_mapping';
 const ACTIVE_CUSTOM_THEME_KEY = 'active_custom_theme';
 
-// Force bundle regeneration - v2025.11.18.001
-const BUNDLE_VERSION = '2025.11.18.001';
+// Force bundle regeneration - v2025.11.18.002 - Fixed palette.colors null safety in loadActiveCustomTheme and setActiveCustomTheme
+const BUNDLE_VERSION = '2025.11.18.002';
 
 interface CustomColorThemeContextType {
   customColorPalettes: Record<string, CustomColorPalette>;
@@ -224,7 +224,8 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
           mapping = sharedMappingsResult.value?.data?.value?.[activeThemeId];
         }
 
-        if (palette && mapping) {
+        // Safety check: ensure palette has colors array before using it
+        if (palette && mapping && palette.colors && Array.isArray(palette.colors)) {
           const theme: CustomColorTheme = {
             paletteId: activeThemeId,
             paletteName: palette.name,
@@ -337,7 +338,8 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
         }
       }
 
-      if (!palette || !mapping) {
+      // Safety check: ensure palette has colors array before using it
+      if (!palette || !mapping || !palette.colors || !Array.isArray(palette.colors)) {
         throw new Error('Palette or mapping not found for ID: ' + paletteId);
       }
 
