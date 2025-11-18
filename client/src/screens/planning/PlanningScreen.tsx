@@ -1462,16 +1462,27 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
 
   // Auto-scroll to the current week when component mounts or week changes
   useEffect(() => {
+    console.log('🔍 [PlanningScreen] Auto-scroll effect triggered', {
+      hasScrolled,
+      quarterWeeksLength: quarterWeeks.length,
+      loading,
+      platform: Platform.OS
+    });
+
     if (!hasScrolled && quarterWeeks.length > 0 && Platform.OS === 'web') {
+      console.log('✅ [PlanningScreen] Conditions met, attempting scroll...');
 
       // Try multiple approaches to ensure scroll works
       const attemptScroll = () => {
+        console.log('🎯 [PlanningScreen] Inside attemptScroll function');
+
         // Find the scroll container first
         const scrollContainer = document.querySelector('[data-planning-scroll]') as HTMLDivElement;
         if (!scrollContainer) {
-
+          console.error('❌ [PlanningScreen] Scroll container not found!');
           return false;
         }
+        console.log('✅ [PlanningScreen] Scroll container found');
 
         // Determine which week to scroll to
         let targetWeekIndex = -1;
@@ -1479,7 +1490,7 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
         // Approach 1: Try using the ref
         if (currentWeekRef.current) {
           targetWeekIndex = parseInt(currentWeekRef.current.id.replace('week-', ''), 10);
-
+          console.log('📍 [PlanningScreen] Found via ref, targetWeekIndex:', targetWeekIndex);
         }
 
         // Approach 2: Try finding by data attribute
@@ -1487,7 +1498,7 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
           const currentWeekElement = document.querySelector('[data-current-week="true"]') as HTMLElement;
           if (currentWeekElement) {
             targetWeekIndex = parseInt(currentWeekElement.id.replace('week-', ''), 10);
-
+            console.log('📍 [PlanningScreen] Found via data attribute, targetWeekIndex:', targetWeekIndex);
           }
         }
 
@@ -1495,59 +1506,37 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
         if (targetWeekIndex === -1) {
           const today = new Date();
           today.setHours(0, 0, 0, 0);
+          console.log('🗓️ [PlanningScreen] Today:', today.toISOString());
+          console.log('📅 [PlanningScreen] Quarter weeks:', quarterWeeks.map((w, i) => ({
+            index: i,
+            start: w.toISOString().split('T')[0],
+            end: new Date(w.getTime() + 6 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+          })));
+
           targetWeekIndex = quarterWeeks.findIndex((weekStart) => {
             const weekEnd = new Date(weekStart);
             weekEnd.setDate(weekStart.getDate() + 6);
-            return today >= weekStart && today <= weekEnd;
+            const isMatch = today >= weekStart && today <= weekEnd;
+            console.log(`🔎 [PlanningScreen] Week ${quarterWeeks.indexOf(weekStart)}: ${weekStart.toISOString().split('T')[0]} to ${weekEnd.toISOString().split('T')[0]}, match: ${isMatch}`);
+            return isMatch;
           });
 
+          console.log('📍 [PlanningScreen] Manual calculation, targetWeekIndex:', targetWeekIndex);
         }
 
         // If we found a valid week index, scroll to it
         if (targetWeekIndex !== -1) {
-          // Calculate scroll position to position Monday as the first visible column
-          // The key insight: We want Monday to appear immediately after the sticky user column
-          // Since the user column is sticky and USER_COLUMN_WIDTH wide, we need to ensure
-          // that the scrollable content positions Monday where the user column ends
-          //
-          // However, scrollLeft positions content in the scrollable area, not the visible viewport
-          // The user column overlays the scrollable area, so:
-          // - If we want Monday at visual position USER_COLUMN_WIDTH from left edge
-          // - And scrollLeft=0 shows column 0 at visual position USER_COLUMN_WIDTH (under sticky column)
-          // - Then we want Monday's actual position (targetWeekIndex * 7 * DAY_CELL_WIDTH)
-          //   to be at the left edge of the scrollable area (scrollLeft position 0)
-          //
-          // But that's not quite right either. Let me think through the geometry:
-          // - The sticky user column is 250px wide and overlays the left side
-          // - When scrollLeft=0, the first day column (week 0, day 0 = Monday) starts at x=0 in scroll content
-          // - Due to sticky overlay, it appears UNDER the user column
-          // - The visible part of day columns starts at x=250 in the viewport
-          //
-          // For week N:
-          // - Week N's Monday is at position: N * 7 * 180 in the scroll content
-          // - We want it visible just after the user column (at viewport x=250)
-          // - To do this, we need scrollLeft = (N * 7 * 180) - 250
-          //   Wait no, that would make Monday appear 250px to the RIGHT
-          //
-          // Actually: scrollLeft is how much we've scrolled, content moves LEFT
-          // - scrollLeft=0: content position 0 is at viewport position 0 (under user column)
-          // - scrollLeft=X: content position X is at viewport position 0 (under user column)
-          // - To see content position X at viewport position 250 (after user column):
-          //   scrollLeft = X - 250... no wait
-          //
-          // Let me reconsider: CSS scroll-snap-align START means the element's start edge
-          // aligns with the scroll container's start edge. With scrollPaddingLeft, the
-          // "start edge" is offset. So scroll-snap should work, but it's not.
-          //
-          // Calculate scroll position - scroll to the week's Monday position
           const mondayPosition = targetWeekIndex * 7 * DAY_CELL_WIDTH;
+          console.log('🎯 [PlanningScreen] Scrolling to week', targetWeekIndex, 'at position', mondayPosition, 'px');
 
-          // Set scroll position and let CSS scroll-snap handle the alignment
           scrollContainer.scrollLeft = mondayPosition;
           scrollContainerRef.current = scrollContainer;
           setVisibleWeekIndex(targetWeekIndex);
           setHasScrolled(true);
+          console.log('✅ [PlanningScreen] Scroll completed successfully');
           return true;
+        } else {
+          console.error('❌ [PlanningScreen] Could not determine target week index!');
         }
 
         return false;
