@@ -415,65 +415,68 @@ export const usePlanningDragDrop = ({
     };
 
     const handleMouseUp = async (e: MouseEvent) => {
-      if (draggingEdge) {
-        const { userId, date, blockIndex, edge, initialSpan } = draggingEdge;
+      if (!draggingEdge) return;
 
-        // For top edge drag, the task may have moved to a different blockIndex
-        // Find the assignment by looking through all blockIndices
-        let assignment = null;
-        let finalBlockIndex = blockIndex;
+      // IMMEDIATELY stop drag state to prevent further mouse movements from affecting the task
+      // Capture the data we need BEFORE clearing the state
+      const { userId, date, blockIndex, edge, initialSpan } = draggingEdge;
 
-        // Search for the assignment (it may have moved if top edge was dragged)
-        for (let i = 0; i < 4; i++) {
-          const testKey = `${userId}-${date}-${i}`;
-          if (blockAssignments[testKey]?.id) {
-            // Check if this assignment was originally at blockIndex
-            const testAssignment = blockAssignments[testKey];
-            // If we're dragging the top edge and this block contains an assignment with an ID,
-            // and there's no assignment at the original blockIndex, this is likely our moved task
-            if (edge === 'top') {
-              const originalKey = `${userId}-${date}-${blockIndex}`;
-              if (!blockAssignments[originalKey]) {
-                assignment = testAssignment;
-                finalBlockIndex = i;
-                break;
-              }
+      // Clear drag state immediately - this prevents handleMouseMove from running
+      isDraggingEdgeRef.current = false;
+      setDraggingEdge(null);
+
+      // For top edge drag, the task may have moved to a different blockIndex
+      // Find the assignment by looking through all blockIndices
+      let assignment = null;
+      let finalBlockIndex = blockIndex;
+
+      // Search for the assignment (it may have moved if top edge was dragged)
+      for (let i = 0; i < 4; i++) {
+        const testKey = `${userId}-${date}-${i}`;
+        if (blockAssignments[testKey]?.id) {
+          // Check if this assignment was originally at blockIndex
+          const testAssignment = blockAssignments[testKey];
+          // If we're dragging the top edge and this block contains an assignment with an ID,
+          // and there's no assignment at the original blockIndex, this is likely our moved task
+          if (edge === 'top') {
+            const originalKey = `${userId}-${date}-${blockIndex}`;
+            if (!blockAssignments[originalKey]) {
+              assignment = testAssignment;
+              finalBlockIndex = i;
+              break;
             }
           }
         }
+      }
 
-        // Fallback: check original position
-        if (!assignment) {
-          const originalKey = `${userId}-${date}-${blockIndex}`;
-          assignment = blockAssignments[originalKey];
-          finalBlockIndex = blockIndex;
-        }
+      // Fallback: check original position
+      if (!assignment) {
+        const originalKey = `${userId}-${date}-${blockIndex}`;
+        assignment = blockAssignments[originalKey];
+        finalBlockIndex = blockIndex;
+      }
 
-        if (assignment && assignment.id) {
-          const newSpan = assignment.span;
-          const blockIndexChanged = finalBlockIndex !== blockIndex;
+      if (assignment && assignment.id) {
+        const newSpan = assignment.span;
+        const blockIndexChanged = finalBlockIndex !== blockIndex;
 
-          if (newSpan !== initialSpan || blockIndexChanged) {
-            try {
-              const updateData: any = { span: newSpan };
+        if (newSpan !== initialSpan || blockIndexChanged) {
+          try {
+            const updateData: any = { span: newSpan };
 
-              // If blockIndex changed (top edge drag), also update blockIndex
-              if (blockIndexChanged) {
-                updateData.blockIndex = finalBlockIndex;
-              }
-
-              await planningTasksAPI.update(assignment.id, updateData);
-
-              invalidateDashboardQueries();
-            } catch (error) {
-              logger.error('Failed to save span/blockIndex:', error, 'usePlanningDragDrop');
-              await hookLoadData(currentQuarter);
+            // If blockIndex changed (top edge drag), also update blockIndex
+            if (blockIndexChanged) {
+              updateData.blockIndex = finalBlockIndex;
             }
+
+            await planningTasksAPI.update(assignment.id, updateData);
+
+            invalidateDashboardQueries();
+          } catch (error) {
+            logger.error('Failed to save span/blockIndex:', error, 'usePlanningDragDrop');
+            await hookLoadData(currentQuarter);
           }
         }
-
-        isDraggingEdgeRef.current = false;
-        setDraggingEdge(null);
       }
     };
 
