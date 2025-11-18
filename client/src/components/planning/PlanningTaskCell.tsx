@@ -264,7 +264,10 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
         height: `${TIME_BLOCK_HEIGHT * span}px`,
         padding: 0,
         margin: 0,
-        borderBottom: (isLastBlockForUser && !isLastUser) ? `5px solid ${teamMemberBorderColor}` : 'none',
+        borderTop: `1px solid ${cellBorderColor}`,
+        borderLeft: `1px solid ${cellBorderColor}`,
+        borderRight: `1px solid ${cellBorderColor}`,
+        borderBottom: (isLastBlockForUser && !isLastUser) ? `5px solid ${teamMemberBorderColor}` : `1px solid ${cellBorderColor}`,
         backgroundColor: cellBgColor,
         opacity: isOutsideQuarter ? 0.4 : 1,
         position: 'relative',
@@ -306,44 +309,6 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
           margin: assignment ? '3px' : '0',
           padding: assignment?.projectName === 'Unavailable' ? 0 : '4px',
           borderRadius: assignment ? '5px' : '0',
-          // Thin light borders on all sides (moved from <td>)
-          // When assignment exists, border color matches task background
-          borderTop: assignment ? `1px solid ${getTaskBackgroundColor(
-            assignment,
-            projectTaskBg,
-            adminTaskBg,
-            marketingTaskBg,
-            outOfOfficeBg,
-            unavailableBg,
-            timeOffBg
-          )}` : `1px solid ${cellBorderColor}`,
-          borderLeft: assignment ? `1px solid ${getTaskBackgroundColor(
-            assignment,
-            projectTaskBg,
-            adminTaskBg,
-            marketingTaskBg,
-            outOfOfficeBg,
-            unavailableBg,
-            timeOffBg
-          )}` : `1px solid ${cellBorderColor}`,
-          borderRight: assignment ? `1px solid ${getTaskBackgroundColor(
-            assignment,
-            projectTaskBg,
-            adminTaskBg,
-            marketingTaskBg,
-            outOfOfficeBg,
-            unavailableBg,
-            timeOffBg
-          )}` : `1px solid ${cellBorderColor}`,
-          borderBottom: assignment ? `1px solid ${getTaskBackgroundColor(
-            assignment,
-            projectTaskBg,
-            adminTaskBg,
-            marketingTaskBg,
-            outOfOfficeBg,
-            unavailableBg,
-            timeOffBg
-          )}` : `1px solid ${cellBorderColor}`,
           // For drag-over merged outline: show borders only on outer edges
           ...(isDragOver ? {
             borderTop: isFirstInDragRange ? `2px solid ${currentColors.primary}` : 'none',
