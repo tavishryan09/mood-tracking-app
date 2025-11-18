@@ -364,46 +364,109 @@ export const usePlanningDragDrop = ({
 
       const { userId, date, blockIndex, edge, initialSpan } = draggingEdge;
       let newSpan = initialSpan;
+      let newBlockIndex = blockIndex;
 
       if (edge === 'bottom') {
+        // Dragging bottom edge: adjust span downward
         newSpan = Math.max(1, Math.min(4 - blockIndex, initialSpan + deltaBlocks));
       } else {
-        newSpan = Math.max(1, Math.min(4, initialSpan - deltaBlocks));
+        // Dragging top edge: adjust blockIndex AND span
+        // Negative deltaBlocks means dragging up (extending upward)
+        const blockShift = -deltaBlocks; // How many blocks to shift up
+        newBlockIndex = Math.max(0, blockIndex - blockShift); // Can't go below block 0
+
+        // Calculate new span to maintain bottom edge position
+        const bottomBlock = blockIndex + initialSpan - 1;
+        newSpan = bottomBlock - newBlockIndex + 1;
+
+        // Ensure span stays within valid range (1-4 total blocks)
+        newSpan = Math.max(1, Math.min(4, newSpan));
+
+        // Recalculate blockIndex based on constrained span
+        newBlockIndex = bottomBlock - newSpan + 1;
       }
 
       // Update local state optimistically
-      const blockKey = `${userId}-${date}-${blockIndex}`;
-      const assignment = blockAssignments[blockKey];
+      const oldBlockKey = `${userId}-${date}-${blockIndex}`;
+      const newBlockKey = `${userId}-${date}-${newBlockIndex}`;
+      const assignment = blockAssignments[oldBlockKey];
 
-      if (assignment && newSpan !== assignment.span) {
-        setBlockAssignments(prev => ({
-          ...prev,
-          [blockKey]: {
-            ...prev[blockKey],
-            span: newSpan,
-          },
-        }));
+      if (assignment) {
+        // If blockIndex changed (top edge drag), need to move the assignment
+        if (newBlockIndex !== blockIndex || newSpan !== assignment.span) {
+          setBlockAssignments(prev => {
+            const updated = { ...prev };
+
+            // Remove from old position if blockIndex changed
+            if (newBlockIndex !== blockIndex) {
+              delete updated[oldBlockKey];
+            }
+
+            // Add to new position with new span
+            updated[newBlockKey] = {
+              ...assignment,
+              span: newSpan,
+            };
+
+            return updated;
+          });
+        }
       }
     };
 
     const handleMouseUp = async (e: MouseEvent) => {
       if (draggingEdge) {
-        const { userId, date, blockIndex, initialSpan } = draggingEdge;
-        const blockKey = `${userId}-${date}-${blockIndex}`;
-        const assignment = blockAssignments[blockKey];
+        const { userId, date, blockIndex, edge, initialSpan } = draggingEdge;
+
+        // For top edge drag, the task may have moved to a different blockIndex
+        // Find the assignment by looking through all blockIndices
+        let assignment = null;
+        let finalBlockIndex = blockIndex;
+
+        // Search for the assignment (it may have moved if top edge was dragged)
+        for (let i = 0; i < 4; i++) {
+          const testKey = `${userId}-${date}-${i}`;
+          if (blockAssignments[testKey]?.id) {
+            // Check if this assignment was originally at blockIndex
+            const testAssignment = blockAssignments[testKey];
+            // If we're dragging the top edge and this block contains an assignment with an ID,
+            // and there's no assignment at the original blockIndex, this is likely our moved task
+            if (edge === 'top') {
+              const originalKey = `${userId}-${date}-${blockIndex}`;
+              if (!blockAssignments[originalKey]) {
+                assignment = testAssignment;
+                finalBlockIndex = i;
+                break;
+              }
+            }
+          }
+        }
+
+        // Fallback: check original position
+        if (!assignment) {
+          const originalKey = `${userId}-${date}-${blockIndex}`;
+          assignment = blockAssignments[originalKey];
+          finalBlockIndex = blockIndex;
+        }
 
         if (assignment && assignment.id) {
           const newSpan = assignment.span;
+          const blockIndexChanged = finalBlockIndex !== blockIndex;
 
-          if (newSpan !== initialSpan) {
+          if (newSpan !== initialSpan || blockIndexChanged) {
             try {
-              await planningTasksAPI.update(assignment.id, {
-                span: newSpan,
-              });
+              const updateData: any = { span: newSpan };
+
+              // If blockIndex changed (top edge drag), also update blockIndex
+              if (blockIndexChanged) {
+                updateData.blockIndex = finalBlockIndex;
+              }
+
+              await planningTasksAPI.update(assignment.id, updateData);
 
               invalidateDashboardQueries();
             } catch (error) {
-              logger.error('Failed to save span:', error, 'usePlanningDragDrop');
+              logger.error('Failed to save span/blockIndex:', error, 'usePlanningDragDrop');
               await hookLoadData(currentQuarter);
             }
           }
