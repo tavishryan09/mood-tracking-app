@@ -458,7 +458,6 @@ const EditProjectScreen = React.memo(({ route, navigation }: EditProjectScreenPr
               <View>
                 {allUsers.map((user) => {
                   const isMember = teamMembers.some((member) => member.userId === user.id);
-                  const memberId = teamMembers.find((member) => member.userId === user.id)?.id;
                   const hasRate = memberRates[user.id] && memberRates[user.id].trim() !== '';
                   const needsRate = isMember && !useStandardRate;
 
@@ -470,11 +469,11 @@ const EditProjectScreen = React.memo(({ route, navigation }: EditProjectScreenPr
                         right={() => (
                           <Switch
                             value={isMember}
-                            onValueChange={async (value) => {
+                            onValueChange={(value) => {
                               if (value) {
-                                await handleAddMember(user.id);
-                              } else if (memberId) {
-                                await handleRemoveMember(memberId);
+                                handleAddMember(user.id);
+                              } else {
+                                handleRemoveMember(user.id);
                               }
                             }}
                           />
