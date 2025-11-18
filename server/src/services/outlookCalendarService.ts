@@ -878,8 +878,9 @@ class OutlookCalendarService {
       const event = this.buildDeadlineTaskEvent(task);
       if (!event) return false;
 
-      // Search for existing events for this task ID in this user's calendar
-      // This handles the case where deadline tasks sync to all users but we only store one eventId
+      let foundAndDeleted = false;
+
+      // First, try to search for existing events by TaskID (for new events)
       try {
         const searchQuery = `TaskID: ${task.id}`;
         const existingEvents = await client
@@ -890,6 +891,7 @@ class OutlookCalendarService {
 
         // Delete all existing events for this task
         if (existingEvents?.value && existingEvents.value.length > 0) {
+          foundAndDeleted = true;
           for (const existingEvent of existingEvents.value) {
             try {
               await client.api(`/me/calendars/${calendarId}/events/${existingEvent.id}`).delete();
@@ -903,7 +905,19 @@ class OutlookCalendarService {
         }
       } catch (searchError) {
         console.error(`[Outlook] Error searching for existing events:`, searchError);
-        // Continue anyway - we'll create a new event
+        // Continue with fallback
+      }
+
+      // Fallback: If no events found by TaskID, try using stored outlookEventId (for old events)
+      if (!foundAndDeleted && task.outlookEventId) {
+        try {
+          await client.api(`/me/calendars/${calendarId}/events/${task.outlookEventId}`).delete();
+        } catch (deleteError: any) {
+          // Event not found is fine
+          if (deleteError.statusCode !== 404) {
+            console.error(`[Outlook] Error deleting event by stored ID:`, deleteError);
+          }
+        }
       }
 
       // Create new event
