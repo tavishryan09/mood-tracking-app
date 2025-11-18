@@ -105,10 +105,17 @@ export const createDeadlineTask = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    // Sync to ALL users' Outlook calendars (non-blocking)
-    outlookCalendarService.syncDeadlineTaskToAllUsers(deadlineTask.id).catch((error) => {
-      console.error('[Outlook] Failed to sync deadline task to all users:', error);
-    });
+    // Sync to ALL users' Outlook calendars (with timeout, same as planning tasks)
+    try {
+      const syncPromise = outlookCalendarService.syncDeadlineTaskToAllUsers(deadlineTask.id);
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Outlook sync timeout')), 8000) // 8 second timeout
+      );
+      await Promise.race([syncPromise, timeoutPromise]);
+    } catch (error) {
+      console.error('[Outlook] Failed to sync deadline task to all users (non-fatal):', error);
+      // Don't fail the request - task was saved successfully
+    }
 
     res.status(201).json(deadlineTask);
   } catch (error) {
@@ -154,10 +161,17 @@ export const updateDeadlineTask = async (req: AuthRequest, res: Response) => {
       },
     });
 
-    // Sync to ALL users' Outlook calendars (non-blocking)
-    outlookCalendarService.syncDeadlineTaskToAllUsers(deadlineTask.id).catch((error) => {
-      console.error('[Outlook] Failed to sync deadline task to all users:', error);
-    });
+    // Sync to ALL users' Outlook calendars (with timeout, same as planning tasks)
+    try {
+      const syncPromise = outlookCalendarService.syncDeadlineTaskToAllUsers(deadlineTask.id);
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Outlook sync timeout')), 8000) // 8 second timeout
+      );
+      await Promise.race([syncPromise, timeoutPromise]);
+    } catch (error) {
+      console.error('[Outlook] Failed to sync updated deadline task to all users (non-fatal):', error);
+      // Don't fail the request - task was saved successfully
+    }
 
     res.json(deadlineTask);
   } catch (error) {
@@ -182,12 +196,18 @@ export const deleteDeadlineTask = async (req: AuthRequest, res: Response) => {
       where: { id },
     });
 
-    // Delete from ALL users' Outlook calendars (non-blocking)
+    // Delete from ALL users' Outlook calendars (with timeout, same as planning tasks)
     if (task) {
-      // Outlook calendar sync
-      outlookCalendarService.deleteDeadlineTaskFromAllUsers(id).catch((error) => {
-        console.error('[Outlook] Failed to delete deadline task from all users:', error);
-      });
+      try {
+        const syncPromise = outlookCalendarService.deleteDeadlineTaskFromAllUsers(id);
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Outlook sync timeout')), 8000) // 8 second timeout
+        );
+        await Promise.race([syncPromise, timeoutPromise]);
+      } catch (error) {
+        console.error('[Outlook] Failed to delete deadline task from all users (non-fatal):', error);
+        // Don't fail the request - task was deleted successfully
+      }
     }
 
     res.json({ message: 'Deadline task deleted successfully' });
@@ -269,10 +289,16 @@ export const syncProjectDueDates = async (req: AuthRequest, res: Response) => {
               },
             });
 
-            // Sync updated deadline to ALL users' Outlook calendars (non-blocking)
-            outlookCalendarService.syncDeadlineTaskToAllUsers(existing.id).catch((error) => {
-              console.error('[Outlook] Failed to sync updated auto-generated deadline to all users:', error);
-            });
+            // Sync updated deadline to ALL users' Outlook calendars (with timeout)
+            try {
+              const syncPromise = outlookCalendarService.syncDeadlineTaskToAllUsers(existing.id);
+              const timeoutPromise = new Promise((_, reject) =>
+                setTimeout(() => reject(new Error('Outlook sync timeout')), 8000)
+              );
+              await Promise.race([syncPromise, timeoutPromise]);
+            } catch (error) {
+              console.error('[Outlook] Failed to sync updated auto-generated deadline to all users (non-fatal):', error);
+            }
           } else {
             errors.push(`No available slot for project: ${project.name}`);
           }
@@ -328,10 +354,16 @@ export const syncProjectDueDates = async (req: AuthRequest, res: Response) => {
         },
       });
 
-      // Sync to ALL users' Outlook calendars (non-blocking)
-      outlookCalendarService.syncDeadlineTaskToAllUsers(deadlineTask.id).catch((error) => {
-        console.error('[Outlook] Failed to sync auto-generated deadline task to all users:', error);
-      });
+      // Sync to ALL users' Outlook calendars (with timeout)
+      try {
+        const syncPromise = outlookCalendarService.syncDeadlineTaskToAllUsers(deadlineTask.id);
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Outlook sync timeout')), 8000)
+        );
+        await Promise.race([syncPromise, timeoutPromise]);
+      } catch (error) {
+        console.error('[Outlook] Failed to sync auto-generated deadline task to all users (non-fatal):', error);
+      }
 
       createdTasks.push(deadlineTask);
     }

@@ -14,6 +14,7 @@ export enum FeatureFlag {
   // Performance Features
   PERFORMANCE_MONITORING = 'performance_monitoring',
   OPTIMISTIC_UPDATES = 'optimistic_updates',
+  PERSISTENT_CACHE = 'persistent_cache',
 
   // UI Features
   DARK_MODE = 'dark_mode',
@@ -49,6 +50,10 @@ const FEATURE_FLAG_CONFIG: Record<FeatureFlag, FeatureFlagConfig> = {
   [FeatureFlag.OPTIMISTIC_UPDATES]: {
     defaultValue: false,
     description: 'Enable optimistic UI updates for mutations',
+  },
+  [FeatureFlag.PERSISTENT_CACHE]: {
+    defaultValue: false,
+    description: 'Enable persistent caching to localStorage (survives app restarts)',
   },
   [FeatureFlag.DARK_MODE]: {
     defaultValue: true,

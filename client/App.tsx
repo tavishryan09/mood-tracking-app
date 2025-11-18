@@ -15,7 +15,7 @@ import InstallPrompt from './src/components/InstallPrompt';
 import OfflineIndicator from './src/components/OfflineIndicator';
 import ErrorBoundary from './src/components/ErrorBoundary';
 import * as serviceWorkerRegistration from './src/utils/serviceWorkerRegistration';
-import { queryClient } from './src/config/queryClient';
+import { queryClient, initializePersistence } from './src/config/queryClient';
 import { logger } from './src/utils/logger';
 
 // Inner component that uses the theme context
@@ -126,6 +126,9 @@ export default function App() {
         }
       `;
       document.head.appendChild(style);
+
+      // Initialize React Query persistent cache (controlled by feature flag)
+      initializePersistence();
 
       // TEMPORARILY UNREGISTER service worker for development
       // This prevents aggressive caching during development
