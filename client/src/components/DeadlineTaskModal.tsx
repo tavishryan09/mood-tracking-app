@@ -199,14 +199,18 @@ const DeadlineTaskModal: React.FC<DeadlineTaskModalProps> = ({
       clientId = selectedProject.clientId;
     }
 
+    // Set loading state and close modal immediately
+    // The save operation will complete in the background (non-blocking for UI)
+    setLoading(true);
+    onDismiss();
+
+    // Execute save in background
     onSave({
       clientId,
       projectId: selectedProjectId || undefined,
       description: description.trim() || undefined,
       deadlineType,
     });
-
-    onDismiss();
   };
 
   const handleDeleteClick = () => {
@@ -219,10 +223,17 @@ const DeadlineTaskModal: React.FC<DeadlineTaskModalProps> = ({
     if (onDelete) {
       try {
         setLoading(true);
-        await onDelete();
 
+        // Close modal immediately - don't wait for Outlook sync (8 second timeout)
+        // The delete operation will complete in the background
         setShowDeleteConfirm(false);
         onDismiss();
+
+        // Execute delete in background (non-blocking for UI)
+        onDelete().catch((error) => {
+          console.error('[DeadlineTaskModal] Delete failed:', error);
+        });
+
       } catch (error) {
         console.error('[DeadlineTaskModal] Delete failed:', error);
         setLoading(false);
