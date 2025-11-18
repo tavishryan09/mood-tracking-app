@@ -129,6 +129,7 @@ const DashboardScreen = React.memo(({ navigation, route }: DashboardScreenProps)
 
   // Organize planning tasks by period
   const tasksByPeriod = useMemo(() => {
+    console.log('[Dashboard] Computing tasksByPeriod with safe null checks - v2025.11.18');
     if (!planningTasksData) return { today: [], thisWeek: [], thisMonth: [] };
 
     const today: any[] = [];
