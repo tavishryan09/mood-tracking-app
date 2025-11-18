@@ -1715,12 +1715,20 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
   }, [selectedCell, blockAssignments, copiedCell]);
 
   if (loading) {
+    console.log('⏸️ [PlanningScreen] Showing loading spinner');
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" />
       </View>
     );
   }
+
+  console.log('🎨 [PlanningScreen] Rendering with data:', {
+    usersCount: users.length,
+    visibleUsersCount: visibleUserIds.length,
+    assignmentsCount: Object.keys(blockAssignments).length,
+    deadlinesCount: deadlineTasks.length,
+  });
 
   return (
     <View style={[styles.container, { backgroundColor: screenBackground }]}>
