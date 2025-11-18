@@ -867,22 +867,24 @@ class OutlookCalendarService {
       let eventId = task.outlookEventId;
 
       if (eventId) {
-        // Try to update existing event
+        // Delete the old event and create a new one (instead of updating)
+        // This ensures Outlook properly refreshes the calendar view
         try {
-          await client.api(`/me/calendars/${calendarId}/events/${eventId}`).update(event);
-          return true;
+          await client.api(`/me/calendars/${calendarId}/events/${eventId}`).delete();
         } catch (error: any) {
-          // Event not found - create new one
-          if (error.statusCode === 404) {
-            const createdEvent = await client.api(`/me/calendars/${calendarId}/events`).post(event);
-            await prisma.deadlineTask.update({
-              where: { id: task.id },
-              data: { outlookEventId: createdEvent.id }
-            });
-            return true;
+          // Event not found (404) is fine - we'll create a new one
+          if (error.statusCode !== 404) {
+            console.error(`[Outlook] Error deleting old deadline event ${eventId}:`, error);
           }
-          throw error;
         }
+
+        // Create new event
+        const createdEvent = await client.api(`/me/calendars/${calendarId}/events`).post(event);
+        await prisma.deadlineTask.update({
+          where: { id: task.id },
+          data: { outlookEventId: createdEvent.id }
+        });
+        return true;
       } else {
         // Create new event
         const createdEvent = await client.api(`/me/calendars/${calendarId}/events`).post(event);
