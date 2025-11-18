@@ -1824,11 +1824,11 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
                   </th>
 
                 {/* Day headers */}
-                {quarterWeeks.map((weekStart, weekIndex) => {
+                {(() => {
                   const weekDays = [];
                   for (let i = 0; i < 7; i++) {
-                    const day = new Date(weekStart);
-                    day.setDate(weekStart.getDate() + i);
+                    const day = new Date(visibleWeekStart);
+                    day.setDate(visibleWeekStart.getDate() + i);
                     weekDays.push(day);
                   }
 
@@ -1842,7 +1842,7 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
                     const isToday = dateString === todayString;
 
                     // Check if this is the current week
-                    const isCurrentWeek = today >= weekStart && today <= new Date(weekStart.getTime() + 6 * 24 * 60 * 60 * 1000);
+                    const isCurrentWeek = today >= visibleWeekStart && today <= new Date(visibleWeekStart.getTime() + 6 * 24 * 60 * 60 * 1000);
 
                     // Check if this is a weekend day (Saturday or Sunday)
                     const isWeekend = day.getDay() === 0 || day.getDay() === 6;
@@ -1853,8 +1853,8 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
 
                     return (
                       <th
-                        key={`${weekIndex}-${dayIndex}`}
-                        id={dayIndex === 0 ? `week-${weekIndex}` : undefined}
+                        key={`day-${dayIndex}`}
+                        id={dayIndex === 0 ? `week-${visibleWeekIndex}` : undefined}
                         ref={dayIndex === 0 && isCurrentWeek ? currentWeekRef : undefined}
                         data-week-start={dayIndex === 0 ? 'true' : undefined}
                         data-current-week={dayIndex === 0 && isCurrentWeek ? 'true' : undefined}
@@ -1883,7 +1883,7 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
                       </th>
                     );
                   });
-                })}
+                })()}
               </tr>
             </thead>
             <tbody>
@@ -1921,15 +1921,15 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
                   )}
 
                   {/* Day cells for deadline slots */}
-                  {quarterWeeks.map((weekStart, weekIndex) => {
+                  {(() => {
                     const weekDays = [];
                     for (let i = 0; i < 7; i++) {
-                      const day = new Date(weekStart);
-                      day.setDate(weekStart.getDate() + i);
+                      const day = new Date(visibleWeekStart);
+                      day.setDate(visibleWeekStart.getDate() + i);
                       weekDays.push(day);
                     }
 
-                    return weekDays.map((day) => {
+                    return weekDays.map((day, dayIndex) => {
                       const dateString = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
 
                       // Find deadline task for this day and slot
@@ -2025,7 +2025,7 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
                         </td>
                       );
                     });
-                  })}
+                  })()}
                 </tr>
               ))}
 
@@ -2068,11 +2068,11 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
                         )}
 
                         {/* Day cells for this block */}
-                        {quarterWeeks.map((weekStart, weekIndex) => {
+                        {(() => {
                           const weekDays = [];
                           for (let i = 0; i < 7; i++) {
-                            const day = new Date(weekStart);
-                            day.setDate(weekStart.getDate() + i);
+                            const day = new Date(visibleWeekStart);
+                            day.setDate(visibleWeekStart.getDate() + i);
                             weekDays.push(day);
                           }
 
@@ -2082,7 +2082,7 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
 
                             return (
                               <PlanningTaskCell
-                                key={`${weekIndex}-${dayIndex}`}
+                                key={`day-${dayIndex}`}
                                 userId={user.id}
                                 date={day}
                                 dateString={dateString}
@@ -2096,7 +2096,6 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
                                 draggedTask={draggedTask}
                                 currentQuarter={currentQuarter}
                                 isLastUser={isLastUser}
-                                weekIndex={weekIndex}
                                 dayIndex={dayIndex}
                                 handleTaskDragOver={handleTaskDragOver}
                                 handleTaskDrop={handleTaskDrop}
@@ -2130,7 +2129,7 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
                               />
                             );
                           });
-                        })}
+                        })()}
                       </tr>
                     );
                   });
