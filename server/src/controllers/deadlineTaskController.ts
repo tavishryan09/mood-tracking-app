@@ -186,29 +186,31 @@ export const deleteDeadlineTask = async (req: AuthRequest, res: Response) => {
     const { id } = req.params;
     const userId = req.user?.userId;
 
-    // Get task before deleting (to get createdBy for Outlook sync)
+    // Get task before deleting (to get date for Outlook sync)
     const task = await prisma.deadlineTask.findUnique({
       where: { id },
-      select: { createdBy: true }
+      select: { createdBy: true, date: true }
     });
 
-    await prisma.deadlineTask.delete({
-      where: { id },
-    });
-
-    // Delete from ALL users' Outlook calendars (with timeout, same as planning tasks)
+    // Delete from ALL users' Outlook calendars BEFORE deleting from database
+    // This ensures we have the task date for searching Outlook events
     if (task) {
       try {
-        const syncPromise = outlookCalendarService.deleteDeadlineTaskFromAllUsers(id);
+        const syncPromise = outlookCalendarService.deleteDeadlineTaskFromAllUsers(id, task.date);
         const timeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Outlook sync timeout')), 8000) // 8 second timeout
         );
         await Promise.race([syncPromise, timeoutPromise]);
       } catch (error) {
         console.error('[Outlook] Failed to delete deadline task from all users (non-fatal):', error);
-        // Don't fail the request - task was deleted successfully
+        // Don't fail the request - continue to delete from database
       }
     }
+
+    // Now delete from database after Outlook sync
+    await prisma.deadlineTask.delete({
+      where: { id },
+    });
 
     res.json({ message: 'Deadline task deleted successfully' });
   } catch (error) {

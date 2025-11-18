@@ -361,7 +361,7 @@ class OutlookCalendarService {
   /**
    * Delete a deadline task from Outlook calendar
    */
-  async deleteDeadlineTask(taskId: string, userId: string): Promise<boolean> {
+  async deleteDeadlineTask(taskId: string, userId: string, taskDate: Date): Promise<boolean> {
     try {
       const client = await this.getGraphClient(userId);
       if (!client) return false;
@@ -370,18 +370,32 @@ class OutlookCalendarService {
       const calendarId = await this.getMoodTrackerCalendar(client);
       if (!calendarId) return false;
 
-      // Search for existing events with this task ID
+      // Search for existing events with this task ID using date range + manual filtering
+      // This is more reliable than contains() filter
       try {
-        const searchQuery = `TaskID: ${taskId}`;
-        const existingEvents = await client
+        const date = new Date(taskDate);
+        date.setUTCHours(0, 0, 0, 0);
+        const startDate = new Date(date);
+        startDate.setDate(startDate.getDate() - 1); // Include day before to catch any timezone issues
+        const endDate = new Date(date);
+        endDate.setDate(endDate.getDate() + 2); // Include day after
+
+        const allEvents = await client
           .api(`/me/calendars/${calendarId}/events`)
-          .filter(`contains(body/content, '${searchQuery}')`)
-          .select('id')
+          .filter(`start/dateTime ge '${startDate.toISOString()}' and start/dateTime le '${endDate.toISOString()}'`)
+          .select('id,body')
           .get();
 
-        // Delete all found events
-        if (existingEvents?.value && existingEvents.value.length > 0) {
-          for (const event of existingEvents.value) {
+        // Manually filter events that contain this TaskID
+        const matchingEvents = allEvents?.value?.filter((event: any) => {
+          const bodyContent = event.body?.content || '';
+          return bodyContent.includes(`TaskID: ${taskId}`);
+        }) || [];
+
+        // Delete all matching events
+        if (matchingEvents.length > 0) {
+          console.log(`[Outlook] Found ${matchingEvents.length} events to delete for task ${taskId} for user ${userId}`);
+          for (const event of matchingEvents) {
             try {
               await client.api(`/me/calendars/${calendarId}/events/${event.id}`).delete();
             } catch (deleteError: any) {
@@ -390,6 +404,8 @@ class OutlookCalendarService {
               }
             }
           }
+        } else {
+          console.log(`[Outlook] No events found for task ${taskId} for user ${userId}`);
         }
 
         return true;
@@ -480,7 +496,7 @@ class OutlookCalendarService {
   /**
    * Delete a deadline task from ALL users' Outlook calendars
    */
-  async deleteDeadlineTaskFromAllUsers(taskId: string): Promise<void> {
+  async deleteDeadlineTaskFromAllUsers(taskId: string, taskDate: Date): Promise<void> {
     try {
 
       // Get all users with Outlook enabled
@@ -491,7 +507,7 @@ class OutlookCalendarService {
 
       // Delete from each user's calendar
       for (const user of users) {
-        await this.deleteDeadlineTask(taskId, user.id);
+        await this.deleteDeadlineTask(taskId, user.id, taskDate);
       }
 
     } catch (error) {
