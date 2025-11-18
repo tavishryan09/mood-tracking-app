@@ -1788,22 +1788,31 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
                           maxWidth: `${DAY_CELL_WIDTH}px`,
                           height: '50px',
                           borderBottom: `5px solid ${headerBorderColor}`,
-                          borderLeft: `1px solid ${cellBorderColor}`,
-                          borderRight: `1px solid ${cellBorderColor}`,
                           backgroundColor: headerBg,
                           textAlign: 'center',
-                          padding: '4px',
+                          padding: '0',
                           position: 'sticky',
                           top: 0,
                           boxSizing: 'border-box',
                           zIndex: 18,
                         }}
                       >
-                        <div style={{ fontWeight: 'bold', fontSize: '11px', color: headerFont }}>
-                          {dayName}
-                        </div>
-                        <div style={{ fontSize: '10px', color: headerFont }}>
-                          {day.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        <div style={{
+                          height: '100%',
+                          padding: '4px',
+                          borderLeft: `1px solid ${cellBorderColor}`,
+                          borderRight: `1px solid ${cellBorderColor}`,
+                          boxSizing: 'border-box',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          justifyContent: 'center',
+                        }}>
+                          <div style={{ fontWeight: 'bold', fontSize: '11px', color: headerFont }}>
+                            {dayName}
+                          </div>
+                          <div style={{ fontSize: '10px', color: headerFont }}>
+                            {day.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                          </div>
                         </div>
                       </th>
                     );
@@ -1910,7 +1919,6 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
                             minWidth: `${DAY_CELL_WIDTH}px`,
                             maxWidth: `${DAY_CELL_WIDTH}px`,
                             height: slotIndex === 1 ? `${TIME_BLOCK_HEIGHT / 2 + 6.5}px` : `${TIME_BLOCK_HEIGHT / 2}px`,
-                            borderRight: `1px solid ${cellBorderColor}`,
                             borderBottom: slotIndex === 1 ? `5px solid ${headerBorderColor}` : `1px solid ${cellBorderColor}`,
                             backgroundColor: isDragOver
                               ? currentColors.primary + '40' // Highlight when dragging over
@@ -1918,7 +1926,7 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
                               ? colors?.bg
                               : emptyDeadlineCellBg,
                             cursor: deadlineTask ? 'move' : 'pointer',
-                            padding: '4px',
+                            padding: '0',
                             fontSize: '10px',
                             verticalAlign: 'middle',
                             textAlign: 'center',
@@ -1929,24 +1937,34 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
                             WebkitTapHighlightColor: 'transparent',
                           }}
                         >
-                          {deadlineTask && (
-                            <div style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '2px', height: '100%', justifyContent: 'center', pointerEvents: 'none' }}>
-                              {deadlineTask.project && (
-                                <div style={{ fontWeight: '700', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                  {deadlineTask.project.description || deadlineTask.project.name}
-                                </div>
-                              )}
-                              {deadlineTask.description && (
-                                <div style={{ fontSize: '10px', opacity: 0.95, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                  {deadlineTask.description}
-                                </div>
-                              )}
-                              {!deadlineTask.project && !deadlineTask.description && (
-                                <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                  {deadlineTask.client?.name || 'Unknown'}</div>
-                              )}
-                            </div>
-                          )}
+                          <div style={{
+                            height: '100%',
+                            padding: '4px',
+                            borderRight: `1px solid ${cellBorderColor}`,
+                            boxSizing: 'border-box',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            justifyContent: 'center',
+                          }}>
+                            {deadlineTask && (
+                              <div style={{ overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: '2px', height: '100%', justifyContent: 'center', pointerEvents: 'none' }}>
+                                {deadlineTask.project && (
+                                  <div style={{ fontWeight: '700', fontSize: '11px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {deadlineTask.project.description || deadlineTask.project.name}
+                                  </div>
+                                )}
+                                {deadlineTask.description && (
+                                  <div style={{ fontSize: '10px', opacity: 0.95, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {deadlineTask.description}
+                                  </div>
+                                )}
+                                {!deadlineTask.project && !deadlineTask.description && (
+                                  <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {deadlineTask.client?.name || 'Unknown'}</div>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </td>
                       );
                     });
