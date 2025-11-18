@@ -530,7 +530,6 @@ const MainStack = () => {
 const AppNavigator = () => {
   const authContext = useAuth();
   const { width } = useWindowDimensions();
-  const [previousIsDesktop, setPreviousIsDesktop] = React.useState<boolean | null>(null);
 
   // Explicitly convert to booleans to avoid type issues
   // Also directly check token and user to ensure we react to state changes
@@ -541,27 +540,12 @@ const AppNavigator = () => {
   const isDesktop = Platform.OS === 'web' && width >= 768;
 
   // Clear ProjectTableView URL if on mobile (safety check for bookmarks/history)
+  // No reload needed - just update URL
   React.useEffect(() => {
     if (!isDesktop && Platform.OS === 'web' && window.location.pathname.includes('ProjectTableView')) {
       window.history.replaceState({}, '', '/');
-      window.location.reload();
     }
   }, [isDesktop]);
-
-  // Track when layout changes and reload page to reset navigation state
-  React.useEffect(() => {
-    if (previousIsDesktop !== null && previousIsDesktop !== isDesktop) {
-      // If switching to mobile and on ProjectTableView, redirect to home first
-      if (!isDesktop && Platform.OS === 'web' && window?.location?.pathname?.includes('ProjectTableView')) {
-        window.history?.replaceState({}, '', '/');
-      }
-      // Layout changed - use setTimeout to allow current render to complete before reload
-      setTimeout(() => {
-        window.location.reload();
-      }, 100);
-    }
-    setPreviousIsDesktop(isDesktop);
-  }, [isDesktop, previousIsDesktop]);
 
   // Don't block rendering while auth is loading - show auth screen instead
   // This prevents the infinite loading issue on web
