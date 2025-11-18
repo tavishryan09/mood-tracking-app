@@ -275,6 +275,7 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
     >
       {/* Inner content */}
       <div
+        data-task-cell="true"
         onClick={() => handleBlockClick(userId, dateString, blockIndex)}
         onTouchStart={(e) => handleMobileLongPressStart(userId, dateString, blockIndex, e)}
         onTouchEnd={handleMobileLongPressEnd}

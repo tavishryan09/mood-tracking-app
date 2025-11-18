@@ -99,6 +99,28 @@ export const usePlanningDragDrop = ({
       return;
     }
 
+    // Create custom drag image that shows the full multi-cell task
+    if (e.dataTransfer && Platform.OS === 'web') {
+      const dragElement = e.target.closest('[data-task-cell]');
+      if (dragElement) {
+        // Clone the element to create a drag preview
+        const clone = dragElement.cloneNode(true) as HTMLElement;
+        clone.style.position = 'absolute';
+        clone.style.top = '-9999px';
+        clone.style.width = dragElement.offsetWidth + 'px';
+        clone.style.height = dragElement.offsetHeight + 'px';
+        document.body.appendChild(clone);
+
+        // Set the custom drag image
+        e.dataTransfer.setDragImage(clone, e.nativeEvent.offsetX, e.nativeEvent.offsetY);
+
+        // Clean up after a short delay
+        setTimeout(() => {
+          document.body.removeChild(clone);
+        }, 0);
+      }
+    }
+
     setDraggedTask({
       id: assignment.id,
       userId,
