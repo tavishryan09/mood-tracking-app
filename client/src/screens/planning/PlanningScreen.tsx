@@ -2718,8 +2718,11 @@ const styles = StyleSheet.create({
   timeBlock: {
     height: TIME_BLOCK_HEIGHT,
     borderBottomWidth: 1,
+    margin: 5,
     padding: 4,
+    borderRadius: 10,
     justifyContent: 'center',
+    alignItems: 'center',
     position: 'relative',
     ...(Platform.OS === 'web' && { userSelect: 'none' as any }),
   },
