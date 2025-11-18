@@ -472,7 +472,7 @@ const DashboardScreen = React.memo(({ navigation, route }: DashboardScreenProps)
       <Card style={[styles.sectionCard, { backgroundColor: upcomingDeadlinesCardBg }]}>
         <Card.Content>
           <Title style={{ color: upcomingDeadlinesCardTextColor }}>Upcoming Deadlines / Milestones</Title>
-          {deadlinesData && deadlinesData.length > 0 ? (
+          {deadlinesData?.length ? (
             <View style={styles.deadlinesList}>
               {deadlinesData.slice(0, 5).map(renderDeadlineItem)}
             </View>
@@ -488,7 +488,7 @@ const DashboardScreen = React.memo(({ navigation, route }: DashboardScreenProps)
       <Card style={[styles.sectionCard, { backgroundColor: todaysTasksCardBg }]}>
         <Card.Content>
           <Title style={{ color: todaysTasksCardTextColor }}>Today's Tasks</Title>
-          {tasksByPeriod.today.length > 0 ? (
+          {tasksByPeriod?.today?.length ? (
             <View style={styles.tasksList}>
               {tasksByPeriod.today.map((task) => renderTaskItem(task, true))}
             </View>
@@ -504,7 +504,7 @@ const DashboardScreen = React.memo(({ navigation, route }: DashboardScreenProps)
       <Card style={[styles.sectionCard, { backgroundColor: thisWeeksTasksCardBg }]}>
         <Card.Content>
           <Title style={{ color: thisWeeksTasksCardTextColor }}>This Week's Tasks</Title>
-          {tasksByPeriod.thisWeek.length > 0 ? (
+          {tasksByPeriod?.thisWeek?.length ? (
             <View style={styles.tasksList}>
               {tasksByPeriod.thisWeek.map((task) => renderTaskItem(task, true))}
             </View>
