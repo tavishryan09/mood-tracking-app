@@ -1788,7 +1788,7 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
                           maxWidth: `${DAY_CELL_WIDTH}px`,
                           height: '50px',
                           borderBottom: `5px solid ${headerBorderColor}`,
-                          borderRight: `1px solid ${cellBorderColor}`,
+                          borderRight: dayIndex === 6 ? `5px solid ${headerBorderColor}` : 'none',
                           borderLeft: dayIndex === 0 ? `5px solid ${headerBorderColor}` : 'none',
                           backgroundColor: headerBg,
                           textAlign: 'center',
@@ -2633,7 +2633,6 @@ const styles = StyleSheet.create({
   // Static left column
   staticColumn: {
     width: USER_COLUMN_WIDTH,
-    borderRightWidth: 1,
   },
   staticHeaderCell: {
     height: 50,
