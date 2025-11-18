@@ -78,7 +78,6 @@ export const usePlanningData = (): UsePlanningDataReturn => {
 
   const loadData = useCallback(async (currentQuarter: QuarterInfo) => {
     try {
-      console.log('⏳ [usePlanningData] Loading planning data...', { quarter: currentQuarter });
       setLoading(true);
 
       // Calculate quarter range for loading planning tasks
@@ -89,11 +88,6 @@ export const usePlanningData = (): UsePlanningDataReturn => {
 
       const quarterEnd = new Date(year, startMonth + 3, 0);
       quarterEnd.setHours(23, 59, 59, 999);
-
-      console.log('📡 [usePlanningData] Fetching data...', {
-        startDate: quarterStart.toISOString(),
-        endDate: quarterEnd.toISOString()
-      });
 
       // Load users, projects, planning tasks, and deadline tasks for the entire quarter
       const [usersResponse, projectsResponse, planningTasksResponse, deadlineTasksResponse] = await Promise.all([
@@ -108,13 +102,6 @@ export const usePlanningData = (): UsePlanningDataReturn => {
           endDate: quarterEnd.toISOString(),
         }),
       ]);
-
-      console.log('✅ [usePlanningData] Data fetched successfully', {
-        users: usersResponse.data.length,
-        projects: projectsResponse.data.length,
-        planningTasks: planningTasksResponse.data.length,
-        deadlineTasks: deadlineTasksResponse.data.length,
-      });
 
       // Set deadline tasks
       setDeadlineTasks(deadlineTasksResponse.data);
@@ -246,12 +233,6 @@ export const usePlanningData = (): UsePlanningDataReturn => {
         logger.error('Error loading preferences:', error, 'usePlanningData');
         // Preferences already set to defaults above, no need to set again
       }
-
-      console.log('🎉 [usePlanningData] Planning data loaded successfully', {
-        totalUsers: loadedUsers.length,
-        visibleUsers: visibleIds?.length || loadedUsers.length,
-        totalAssignments: Object.keys(assignments).length,
-      });
     } catch (error) {
       logger.error('Error loading data:', error, 'usePlanningData');
       setUsers([]);

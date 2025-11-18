@@ -447,23 +447,11 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
 
   }, [planningColors]);
 
-  // Initial data load on mount - v3 use console.log for production debugging
+  // Initial data load on mount
   useEffect(() => {
-    console.log('🚀 [PlanningScreen] Component mounted - triggering initial data load', { currentQuarter });
     hookLoadData(currentQuarter);
   }, [hookLoadData, currentQuarter]);
 
-  // Debug: Log when data changes
-  useEffect(() => {
-    console.log('📊 [PlanningScreen] Data state changed', {
-      usersCount: users.length,
-      projectsCount: projects.length,
-      assignmentsCount: Object.keys(blockAssignments).length,
-      deadlinesCount: deadlineTasks.length,
-      visibleUsersCount: visibleUserIds.length,
-      loading,
-    });
-  }, [users, projects, blockAssignments, deadlineTasks, visibleUserIds, loading]);
 
   // Note: Removed useFocusEffect data reload - it was causing:
   // 1. Unnecessary API calls on every navigation
@@ -1457,95 +1445,59 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
   const year = visibleWeekStart.getFullYear();
   const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-  // Auto-scroll to the current week when component mounts or week changes
+  // Auto-scroll to the current week when component mounts
   useEffect(() => {
-    console.log('🔍 [PlanningScreen] Auto-scroll effect triggered', {
-      hasScrolled,
-      quarterWeeksLength: quarterWeeks.length,
-      loading,
-      platform: Platform.OS
-    });
-
     if (!hasScrolled && quarterWeeks.length > 0 && Platform.OS === 'web') {
-      console.log('✅ [PlanningScreen] Conditions met, attempting scroll...');
-
-      // Try multiple approaches to ensure scroll works
       const attemptScroll = () => {
-        console.log('🎯 [PlanningScreen] Inside attemptScroll function');
-
-        // Find the scroll container first
         const scrollContainer = document.querySelector('[data-planning-scroll]') as HTMLDivElement;
         if (!scrollContainer) {
-          console.error('❌ [PlanningScreen] Scroll container not found!');
           return false;
         }
-        console.log('✅ [PlanningScreen] Scroll container found');
 
         // Determine which week to scroll to
         let targetWeekIndex = -1;
 
-        // Approach 1: Try using the ref
+        // Try using the ref
         if (currentWeekRef.current) {
           targetWeekIndex = parseInt(currentWeekRef.current.id.replace('week-', ''), 10);
-          console.log('📍 [PlanningScreen] Found via ref, targetWeekIndex:', targetWeekIndex);
         }
 
-        // Approach 2: Try finding by data attribute
+        // Try finding by data attribute
         if (targetWeekIndex === -1) {
           const currentWeekElement = document.querySelector('[data-current-week="true"]') as HTMLElement;
           if (currentWeekElement) {
             targetWeekIndex = parseInt(currentWeekElement.id.replace('week-', ''), 10);
-            console.log('📍 [PlanningScreen] Found via data attribute, targetWeekIndex:', targetWeekIndex);
           }
         }
 
-        // Approach 3: Calculate manually
+        // Calculate manually as fallback
         if (targetWeekIndex === -1) {
           const today = new Date();
           today.setHours(0, 0, 0, 0);
-          console.log('🗓️ [PlanningScreen] Today:', today.toISOString());
-          console.log('📅 [PlanningScreen] Quarter weeks:', quarterWeeks.map((w, i) => ({
-            index: i,
-            start: w.toISOString().split('T')[0],
-            end: new Date(w.getTime() + 6 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-          })));
 
           targetWeekIndex = quarterWeeks.findIndex((weekStart) => {
             const weekEnd = new Date(weekStart);
             weekEnd.setDate(weekStart.getDate() + 6);
-            const isMatch = today >= weekStart && today <= weekEnd;
-            console.log(`🔎 [PlanningScreen] Week ${quarterWeeks.indexOf(weekStart)}: ${weekStart.toISOString().split('T')[0]} to ${weekEnd.toISOString().split('T')[0]}, match: ${isMatch}`);
-            return isMatch;
+            return today >= weekStart && today <= weekEnd;
           });
-
-          console.log('📍 [PlanningScreen] Manual calculation, targetWeekIndex:', targetWeekIndex);
         }
 
-        // If we found a valid week index, scroll to it
+        // Scroll to the target week
         if (targetWeekIndex !== -1) {
           const mondayPosition = targetWeekIndex * 7 * DAY_CELL_WIDTH;
-          console.log('🎯 [PlanningScreen] Scrolling to week', targetWeekIndex, 'at position', mondayPosition, 'px');
-
           scrollContainer.scrollLeft = mondayPosition;
           scrollContainerRef.current = scrollContainer;
           setVisibleWeekIndex(targetWeekIndex);
           setHasScrolled(true);
-          console.log('✅ [PlanningScreen] Scroll completed successfully');
           return true;
-        } else {
-          console.error('❌ [PlanningScreen] Could not determine target week index!');
         }
 
         return false;
       };
 
-      // Try immediately
+      // Try immediately, with fallback after delay
       if (!attemptScroll()) {
-        // Try after a delay if immediate attempt fails
-        setTimeout(() => {
-
-          attemptScroll();
-        }, 500);
+        setTimeout(attemptScroll, 500);
       }
     }
   }, [hasScrolled, quarterWeeks, loading]);
@@ -1703,7 +1655,6 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
   // Only show loading spinner on initial mount with no data
   // Once we've scrolled or have users, never show spinner (preserves scroll position)
   if (loading && users.length === 0 && !hasScrolled) {
-    console.log('⏸️ [PlanningScreen] Showing loading spinner (initial load)');
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" />
@@ -1711,21 +1662,6 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
     );
   }
 
-  console.log('🎨 [PlanningScreen] Rendering with data:', {
-    usersCount: users.length,
-    visibleUsersCount: visibleUserIds.length,
-    assignmentsCount: Object.keys(blockAssignments).length,
-    deadlinesCount: deadlineTasks.length,
-    visibleWeekStart: visibleWeekStart?.toISOString(),
-    weekTitle,
-    quarterWeeksCount: quarterWeeks.length,
-  });
-
-  // Log a sample of block assignments to see what dates they have
-  if (Object.keys(blockAssignments).length > 0) {
-    const sampleKeys = Object.keys(blockAssignments).slice(0, 5);
-    console.log('📝 [PlanningScreen] Sample assignment keys:', sampleKeys);
-  }
 
   return (
     <View style={[styles.container, { backgroundColor: screenBackground }]}>
