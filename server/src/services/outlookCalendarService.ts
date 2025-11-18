@@ -366,23 +366,36 @@ class OutlookCalendarService {
       const client = await this.getGraphClient(userId);
       if (!client) return false;
 
-      const task = await prisma.deadlineTask.findUnique({
-        where: { id: taskId },
-        select: { outlookEventId: true }
-      });
+      // Get the Mood Tracker calendar
+      const calendarId = await this.getMoodTrackerCalendar(client);
+      if (!calendarId) return false;
 
-      if (!task?.outlookEventId) return true; // Nothing to delete
-
+      // Search for existing events with this task ID
       try {
-        await client.api(`/me/events/${task.outlookEventId}`).delete();
+        const searchQuery = `TaskID: ${taskId}`;
+        const existingEvents = await client
+          .api(`/me/calendars/${calendarId}/events`)
+          .filter(`contains(body/content, '${searchQuery}')`)
+          .select('id')
+          .get();
+
+        // Delete all found events
+        if (existingEvents?.value && existingEvents.value.length > 0) {
+          for (const event of existingEvents.value) {
+            try {
+              await client.api(`/me/calendars/${calendarId}/events/${event.id}`).delete();
+            } catch (deleteError: any) {
+              if (deleteError.statusCode !== 404) {
+                console.error('[Outlook] Error deleting event:', deleteError);
+              }
+            }
+          }
+        }
 
         return true;
       } catch (error: any) {
-        // If event doesn't exist (404), that's fine
-        if (error.statusCode === 404) {
-          return true;
-        }
-        throw error;
+        console.error('[Outlook] Error searching/deleting deadline task:', error);
+        return false;
       }
     } catch (error) {
       console.error('[Outlook] Error deleting deadline task:', error);
@@ -648,6 +661,7 @@ class OutlookCalendarService {
             task.project ? `Project: ${task.project.description || task.project.name}` : null,
             task.description ? `Description: ${task.description}` : null,
             '',
+            `TaskID: ${task.id}`,  // Add task ID for identification
             'Added by MoodTracker'
           ].filter(line => line !== null).join('\n')
         },
@@ -864,36 +878,44 @@ class OutlookCalendarService {
       const event = this.buildDeadlineTaskEvent(task);
       if (!event) return false;
 
-      let eventId = task.outlookEventId;
+      // Search for existing events for this task ID in this user's calendar
+      // This handles the case where deadline tasks sync to all users but we only store one eventId
+      try {
+        const searchQuery = `TaskID: ${task.id}`;
+        const existingEvents = await client
+          .api(`/me/calendars/${calendarId}/events`)
+          .filter(`contains(body/content, '${searchQuery}')`)
+          .select('id')
+          .get();
 
-      if (eventId) {
-        // Delete the old event and create a new one (instead of updating)
-        // This ensures Outlook properly refreshes the calendar view
-        try {
-          await client.api(`/me/calendars/${calendarId}/events/${eventId}`).delete();
-        } catch (error: any) {
-          // Event not found (404) is fine - we'll create a new one
-          if (error.statusCode !== 404) {
-            console.error(`[Outlook] Error deleting old deadline event ${eventId}:`, error);
+        // Delete all existing events for this task
+        if (existingEvents?.value && existingEvents.value.length > 0) {
+          for (const existingEvent of existingEvents.value) {
+            try {
+              await client.api(`/me/calendars/${calendarId}/events/${existingEvent.id}`).delete();
+            } catch (deleteError: any) {
+              // Event already deleted is fine
+              if (deleteError.statusCode !== 404) {
+                console.error(`[Outlook] Error deleting existing deadline event:`, deleteError);
+              }
+            }
           }
         }
-
-        // Create new event
-        const createdEvent = await client.api(`/me/calendars/${calendarId}/events`).post(event);
-        await prisma.deadlineTask.update({
-          where: { id: task.id },
-          data: { outlookEventId: createdEvent.id }
-        });
-        return true;
-      } else {
-        // Create new event
-        const createdEvent = await client.api(`/me/calendars/${calendarId}/events`).post(event);
-        await prisma.deadlineTask.update({
-          where: { id: task.id },
-          data: { outlookEventId: createdEvent.id }
-        });
-        return true;
+      } catch (searchError) {
+        console.error(`[Outlook] Error searching for existing events:`, searchError);
+        // Continue anyway - we'll create a new event
       }
+
+      // Create new event
+      const createdEvent = await client.api(`/me/calendars/${calendarId}/events`).post(event);
+
+      // Store the event ID (this only stores one, but at least it's the latest)
+      await prisma.deadlineTask.update({
+        where: { id: task.id },
+        data: { outlookEventId: createdEvent.id }
+      });
+
+      return true;
     } catch (error) {
       console.error(`[Outlook] Error syncing deadline task ${task.id}:`, error);
       return false;

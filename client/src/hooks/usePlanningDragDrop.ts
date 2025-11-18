@@ -288,9 +288,10 @@ export const usePlanningDragDrop = ({
     try {
       const targetDateString = targetDate.toISOString().split('T')[0];
 
-      // Update the deadline task
+      // Update the deadline task (both date AND slotIndex)
       await deadlineTasksAPI.update(draggedDeadlineTask.id, {
         date: targetDateString,
+        slotIndex: targetSlotIndex,
       });
 
       // Update state
@@ -300,6 +301,7 @@ export const usePlanningDragDrop = ({
             return {
               ...task,
               date: targetDateString,
+              slotIndex: targetSlotIndex,
             };
           }
           return task;
