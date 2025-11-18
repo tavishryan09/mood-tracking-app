@@ -129,48 +129,59 @@ const DashboardScreen = React.memo(({ navigation, route }: DashboardScreenProps)
 
   // Organize planning tasks by period
   const tasksByPeriod = useMemo(() => {
-    console.log('[Dashboard] Computing tasksByPeriod with safe null checks - v2025.11.18');
-    if (!planningTasksData) return { today: [], thisWeek: [], thisMonth: [] };
+    console.log('[Dashboard] Computing tasksByPeriod with safe null checks - v2025.11.18.2');
+    if (!planningTasksData || !Array.isArray(planningTasksData)) {
+      return { today: [], thisWeek: [], thisMonth: [] };
+    }
 
     const today: any[] = [];
     const thisWeek: any[] = [];
     const thisMonth: any[] = [];
 
-    planningTasksData.forEach((task: any) => {
-      // Skip tasks with no date or invalid date
-      if (!task.date) {
-        return;
-      }
+    try {
+      planningTasksData.forEach((task: any) => {
+        // Skip invalid tasks or tasks with no date
+        if (!task || !task.date || typeof task.date !== 'string') {
+          return;
+        }
 
-      // Parse date - handle both formats: 'YYYY-MM-DD' and 'YYYY-MM-DDTHH:mm:ss.sssZ'
-      let taskDate: Date;
-      if (task.date.includes('T')) {
-        // ISO timestamp - extract date part only and treat as local
-        const datePart = task.date.split('T')[0]; // Get 'YYYY-MM-DD'
-        taskDate = new Date(datePart + 'T00:00:00');
-      } else {
-        // Date-only string, treat as local midnight
-        taskDate = new Date(task.date + 'T00:00:00');
-      }
+        // Parse date - handle both formats: 'YYYY-MM-DD' and 'YYYY-MM-DDTHH:mm:ss.sssZ'
+        let taskDate: Date;
+        try {
+          if (task.date.includes('T')) {
+            // ISO timestamp - extract date part only and treat as local
+            const datePart = task.date.split('T')[0]; // Get 'YYYY-MM-DD'
+            taskDate = new Date(datePart + 'T00:00:00');
+          } else {
+            // Date-only string, treat as local midnight
+            taskDate = new Date(task.date + 'T00:00:00');
+          }
 
-      // Check if date is valid
-      if (isNaN(taskDate.getTime())) {
-        return;
-      }
+          // Check if date is valid
+          if (isNaN(taskDate.getTime())) {
+            return;
+          }
+        } catch (dateError) {
+          // Skip tasks with date parsing errors
+          return;
+        }
 
-      // Get local date string without timezone conversion
-      const taskDateStr = `${taskDate.getFullYear()}-${String(taskDate.getMonth() + 1).padStart(2, '0')}-${String(taskDate.getDate()).padStart(2, '0')}`;
+        // Get local date string without timezone conversion
+        const taskDateStr = `${taskDate.getFullYear()}-${String(taskDate.getMonth() + 1).padStart(2, '0')}-${String(taskDate.getDate()).padStart(2, '0')}`;
 
-      if (taskDateStr === todayStr) {
-        today.push(task);
-      } else if (taskDate >= startOfWeek && taskDate <= endOfWeek) {
-        // Only add to "This Week" if it's NOT today
-        thisWeek.push(task);
-      }
-      if (taskDate >= startOfMonth && taskDate <= endOfMonth) {
-        thisMonth.push(task);
-      }
-    });
+        if (taskDateStr === todayStr) {
+          today.push(task);
+        } else if (taskDate >= startOfWeek && taskDate <= endOfWeek) {
+          // Only add to "This Week" if it's NOT today
+          thisWeek.push(task);
+        }
+        if (taskDate >= startOfMonth && taskDate <= endOfMonth) {
+          thisMonth.push(task);
+        }
+      });
+    } catch (error) {
+      logger.error('[Dashboard] Error processing planning tasks:', error, 'DashboardScreen');
+    }
 
     return { today, thisWeek, thisMonth };
   }, [planningTasksData, todayStr, startOfWeek, endOfWeek, startOfMonth, endOfMonth]);
