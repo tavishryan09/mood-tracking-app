@@ -553,48 +553,52 @@ const AppNavigator = () => {
   // Linking configuration for URL routing
   // Disable linking for desktop since the nested navigator structure makes it complex
   // Instead we'll handle URL navigation manually in DesktopNavigator
-  const linking = isDesktop ? undefined : useMemo(() => ({
-    prefixes: ['http://localhost:8081', 'http://localhost:3000', 'https://lightingbymood-tracker.vercel.app'],
-    config: {
-      screens: {
-        // Auth screens
-        'Auth': {
-          path: 'auth',
-          screens: {
-            'Login': 'login',
-            'OAuthCallback': 'callback',
+  const linking = useMemo(() => {
+    if (isDesktop) return undefined;
+
+    return {
+      prefixes: ['http://localhost:8081', 'http://localhost:3000', 'https://lightingbymood-tracker.vercel.app'],
+      config: {
+        screens: {
+          // Auth screens
+          'Auth': {
+            path: 'auth',
+            screens: {
+              'Login': 'login',
+              'OAuthCallback': 'callback',
+            },
           },
-        },
-        // Mobile: MainTabs with paths
-        'MainTabs': {
-          path: '',
-          screens: {
-            'Dashboard': '',
-            'Planning': 'planning',
-            'Projects': 'projects',
-            'Profile': 'profile',
-            'Clients': 'clients',
+          // Mobile: MainTabs with paths
+          'MainTabs': {
+            path: '',
+            screens: {
+              'Dashboard': '',
+              'Planning': 'planning',
+              'Projects': 'projects',
+              'Profile': 'profile',
+              'Clients': 'clients',
+            },
           },
+          // Mobile stack screens at top level
+          'CreateEvent': 'events/create',
+          'EditEvent': 'events/edit/:eventId',
+          'CreateProject': 'projects/create',
+          'EditProject': 'projects/edit/:projectId',
+          'CreateClient': 'clients/create',
+          'EditClient': 'clients/edit/:clientId',
+          'ManageUsers': 'admin/users',
+          'InviteUser': 'admin/users/invite',
+          'EditUser': 'admin/users/edit/:userId',
+          'TeamViewSettings': 'admin/settings/team-view',
+          'UserRates': 'admin/users/rates',
+          'PlanningColors': 'profile/planning-colors',
+          'CustomColorManager': 'profile/colors/manager',
+          'ElementColorMapper': 'profile/colors/mapper',
+          'ManageCustomThemes': 'profile/colors/themes',
         },
-        // Mobile stack screens at top level
-        'CreateEvent': 'events/create',
-        'EditEvent': 'events/edit/:eventId',
-        'CreateProject': 'projects/create',
-        'EditProject': 'projects/edit/:projectId',
-        'CreateClient': 'clients/create',
-        'EditClient': 'clients/edit/:clientId',
-        'ManageUsers': 'admin/users',
-        'InviteUser': 'admin/users/invite',
-        'EditUser': 'admin/users/edit/:userId',
-        'TeamViewSettings': 'admin/settings/team-view',
-        'UserRates': 'admin/users/rates',
-        'PlanningColors': 'profile/planning-colors',
-        'CustomColorManager': 'profile/colors/manager',
-        'ElementColorMapper': 'profile/colors/mapper',
-        'ManageCustomThemes': 'profile/colors/themes',
       },
-    },
-  }), []);
+    };
+  }, [isDesktop]);
 
   // Debug: Log the current path and linking config
   React.useEffect(() => {
