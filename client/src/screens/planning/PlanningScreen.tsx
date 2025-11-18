@@ -1697,8 +1697,8 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
 
                 /* Make user column borders thicker and more prominent */
                 [data-planning-scroll] .user-column-cell {
-                  border-right-width: 3px !important;
-                  border-bottom-width: 3px !important;
+                  border-right-width: 5px !important;
+                  border-bottom-width: 5px !important;
                 }
 
                 /* Remove any hover effects or overlays on deadline cells */
@@ -1787,8 +1787,9 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
                           minWidth: `${DAY_CELL_WIDTH}px`,
                           maxWidth: `${DAY_CELL_WIDTH}px`,
                           height: '50px',
-                          borderBottom: `3px solid ${headerBorderColor}`,
+                          borderBottom: `5px solid ${headerBorderColor}`,
                           borderRight: `1px solid ${cellBorderColor}`,
+                          borderLeft: dayIndex === 0 ? `5px solid ${headerBorderColor}` : 'none',
                           backgroundColor: headerBg,
                           textAlign: 'center',
                           padding: '4px',

@@ -1478,7 +1478,8 @@ const getStyles = (currentColors: any) => StyleSheet.create({
     flex: 1,
   },
   verticalScrollContent: {
-    paddingBottom: 0,
+    paddingBottom: 50,
+    paddingRight: 50,
   },
   scrollableTable: {
     flex: 1,

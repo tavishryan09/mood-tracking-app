@@ -222,12 +222,18 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
       }
 
       // Update member rates if not using standard rate
+      // Only update rates for members who are NOT newly added (to avoid race conditions)
       if (!useStandardRate) {
+        // Filter to only update existing members (not newly added ones)
+        const existingMemberIds = teamMembers
+          .map(m => m.userId)
+          .filter(id => !membersToAdd.includes(id));
+
         await Promise.all(
-          teamMembers.map(async (member) => {
-            const rate = memberRates[member.userId];
+          existingMemberIds.map(async (userId) => {
+            const rate = memberRates[userId];
             if (rate) {
-              await projectsAPI.updateMember(projectId, member.userId, {
+              await projectsAPI.updateMember(projectId, userId, {
                 customHourlyRate: parseFloat(rate),
               });
             }
