@@ -1688,8 +1688,6 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
               overflow: 'auto',
               position: 'relative',
               backgroundColor: screenBackground,
-              padding: '0 50px 50px 0',
-              boxSizing: 'content-box',
             }}>
             <style>
               {`
