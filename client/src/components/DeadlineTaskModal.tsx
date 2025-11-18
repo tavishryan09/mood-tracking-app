@@ -76,6 +76,10 @@ const DeadlineTaskModal: React.FC<DeadlineTaskModalProps> = ({
 
   useEffect(() => {
     if (visible) {
+      // Reset loading state when modal opens
+      setLoading(false);
+      setShowDeleteConfirm(false);
+
       loadProjects();
       loadClients();
 
