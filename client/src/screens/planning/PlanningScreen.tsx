@@ -1728,7 +1728,16 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
     visibleUsersCount: visibleUserIds.length,
     assignmentsCount: Object.keys(blockAssignments).length,
     deadlinesCount: deadlineTasks.length,
+    visibleWeekStart: visibleWeekStart?.toISOString(),
+    weekTitle,
+    quarterWeeksCount: quarterWeeks.length,
   });
+
+  // Log a sample of block assignments to see what dates they have
+  if (Object.keys(blockAssignments).length > 0) {
+    const sampleKeys = Object.keys(blockAssignments).slice(0, 5);
+    console.log('📝 [PlanningScreen] Sample assignment keys:', sampleKeys);
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: screenBackground }]}>
