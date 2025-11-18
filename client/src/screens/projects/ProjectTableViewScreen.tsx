@@ -1488,6 +1488,7 @@ const getStyles = (currentColors: any) => StyleSheet.create({
     overflow: 'visible',
     paddingBottom: 50,
     paddingRight: 50,
+    backgroundColor: currentColors.background.bg300,
   },
   headerRow: {
     flexDirection: 'row',
