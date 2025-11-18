@@ -1,5 +1,5 @@
 {
-  "buildCommand": "npm install --prefix api && npm install --prefix client && rm -rf client/.expo && npx --prefix client expo export --platform web --clear",
+  "buildCommand": "npm install --prefix api && npm install --prefix client && npm run --prefix client export:web",
   "outputDirectory": "client/dist",
   "framework": null,
   "functions": {
