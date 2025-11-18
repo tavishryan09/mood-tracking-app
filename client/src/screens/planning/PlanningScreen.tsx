@@ -1729,7 +1729,7 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
                       minWidth: `${USER_COLUMN_WIDTH}px`,
                       maxWidth: `${USER_COLUMN_WIDTH}px`,
                       height: '50px',
-                      borderBottom: `3px solid ${headerBorderColor}`,
+                      borderBottom: `5px solid ${headerBorderColor}`,
                       borderRight: '0px',
                       backgroundColor: dateCellBg,
                       color: dateCellText,
@@ -1824,7 +1824,7 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
                         minWidth: `${USER_COLUMN_WIDTH}px`,
                         maxWidth: `${USER_COLUMN_WIDTH}px`,
                         height: `${TIME_BLOCK_HEIGHT}px`,
-                        borderBottom: `3px solid ${headerBorderColor}`,
+                        borderBottom: `5px solid ${headerBorderColor}`,
                         borderRight: '0px',
                         backgroundColor: deadlinesRowBg,
                         color: deadlinesRowText,
@@ -1910,7 +1910,7 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
                             maxWidth: `${DAY_CELL_WIDTH}px`,
                             height: slotIndex === 1 ? `${TIME_BLOCK_HEIGHT / 2 + 6.5}px` : `${TIME_BLOCK_HEIGHT / 2}px`,
                             borderRight: `1px solid ${cellBorderColor}`,
-                            borderBottom: slotIndex === 1 ? `3px solid ${headerBorderColor}` : `1px solid ${cellBorderColor}`,
+                            borderBottom: slotIndex === 1 ? `5px solid ${headerBorderColor}` : `1px solid ${cellBorderColor}`,
                             backgroundColor: isDragOver
                               ? currentColors.primary + '40' // Highlight when dragging over
                               : deadlineTask
@@ -1971,7 +1971,7 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
                               minWidth: `${USER_COLUMN_WIDTH}px`,
                               maxWidth: `${USER_COLUMN_WIDTH}px`,
                               height: `${TIME_BLOCK_HEIGHT * 4}px`,
-                              borderBottom: isLastUser ? '0px' : `3px solid ${teamMemberBorderColor}`,
+                              borderBottom: isLastUser ? '0px' : `5px solid ${teamMemberBorderColor}`,
                               borderRight: '0px',
                               backgroundColor: teamMemberColBg,
                               color: teamMemberColText,
