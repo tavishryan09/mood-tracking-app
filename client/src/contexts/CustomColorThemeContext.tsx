@@ -52,15 +52,14 @@ export const CustomColorThemeProvider: React.FC<{ children: ReactNode }> = ({ ch
   // Memoize color lookup map for O(1) access instead of O(n) find operations
   // Fixed: Check both activePalette and colors array to prevent crash (2025-11-18)
   const colorLookupMap = useMemo(() => {
-    if (!activePalette?.colors) return new Map<string, string>();
+    // Safety check: ensure both activePalette exists AND colors array exists
+    if (!activePalette?.colors || !Array.isArray(activePalette.colors)) {
+      return new Map<string, string>();
+    }
     const map = new Map<string, string>();
     activePalette.colors.forEach(color => {
       map.set(color.id, color.hexCode);
     });
-    // Bundle version tracking: BUNDLE_VERSION
-    if (process.env.NODE_ENV === 'development') {
-      console.log('[Theme] Bundle version:', BUNDLE_VERSION);
-    }
     return map;
   }, [activePalette]);
 
