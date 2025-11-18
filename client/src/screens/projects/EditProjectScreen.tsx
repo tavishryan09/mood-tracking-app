@@ -235,6 +235,18 @@ const EditProjectScreen = React.memo(({ route, navigation }: EditProjectScreenPr
   const handleAddMember = useCallback(async (userId: string) => {
     try {
       await apiWithTimeout(projectsAPI.addMember(projectId, { userId }), TIMEOUT_DURATIONS.STANDARD);
+
+      // If using individual rates, auto-populate the user's default hourly rate
+      if (!useStandardRate) {
+        const user = allUsers.find(u => u.id === userId);
+        if (user?.defaultHourlyRate) {
+          setMemberRates(prev => ({
+            ...prev,
+            [userId]: user.defaultHourlyRate.toString()
+          }));
+        }
+      }
+
       setShowUserPicker(false);
       await loadData(); // Reload to get updated members list
       setSuccessMessage('Team member added successfully');
@@ -247,7 +259,7 @@ const EditProjectScreen = React.memo(({ route, navigation }: EditProjectScreenPr
       setErrorMessage(message);
       setShowErrorDialog(true);
     }
-  }, [projectId, loadData]);
+  }, [projectId, loadData, useStandardRate, allUsers]);
 
   const handleRemoveMember = async (memberId: string) => {
     setConfirmationTitle('Remove Team Member');

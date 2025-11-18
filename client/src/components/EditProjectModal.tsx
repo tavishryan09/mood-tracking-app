@@ -235,6 +235,18 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
 
     try {
       await projectsAPI.addMember(projectId, { userId });
+
+      // If using individual rates, auto-populate the user's default hourly rate
+      if (!useStandardRate) {
+        const user = allUsers.find(u => u.id === userId);
+        if (user?.defaultHourlyRate) {
+          setMemberRates(prev => ({
+            ...prev,
+            [userId]: user.defaultHourlyRate.toString()
+          }));
+        }
+      }
+
       await loadData(); // Reload to get updated members list
       setDialogTitle('Success');
       setDialogMessage('Team member added successfully');
