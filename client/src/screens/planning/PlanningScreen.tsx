@@ -1700,8 +1700,10 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
     };
   }, [selectedCell, blockAssignments, copiedCell]);
 
-  if (loading) {
-    console.log('⏸️ [PlanningScreen] Showing loading spinner');
+  // Only show loading spinner on initial mount with no data
+  // Don't show it when refreshing data (to preserve scroll position)
+  if (loading && users.length === 0) {
+    console.log('⏸️ [PlanningScreen] Showing loading spinner (initial load)');
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" />
