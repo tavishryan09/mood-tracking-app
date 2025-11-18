@@ -305,7 +305,6 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
             : 'transparent',
           margin: assignment ? '5px' : '0',
           padding: assignment?.projectName === 'Unavailable' ? 0 : '4px',
-          borderRadius: isDragOver ? 0 : (assignment?.projectName === 'Unavailable' ? 0 : '10px'),
           // Thin light borders on all sides (moved from <td>)
           borderTop: `1px solid ${cellBorderColor}`,
           borderLeft: `1px solid ${cellBorderColor}`,
