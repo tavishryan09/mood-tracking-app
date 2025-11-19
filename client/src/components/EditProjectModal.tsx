@@ -59,6 +59,29 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
     }
   }, [visible, projectId]);
 
+  // Auto-populate member rates when switching to individual rates
+  useEffect(() => {
+    if (!useStandardRate && teamMembers.length > 0 && allUsers.length > 0) {
+      const newRates: { [key: string]: string } = { ...memberRates };
+      let hasChanges = false;
+
+      teamMembers.forEach((member) => {
+        // Only autofill if the member doesn't already have a rate
+        if (!newRates[member.userId] || newRates[member.userId].trim() === '') {
+          const user = allUsers.find(u => u.id === member.userId);
+          if (user?.defaultHourlyRate) {
+            newRates[member.userId] = user.defaultHourlyRate.toString();
+            hasChanges = true;
+          }
+        }
+      });
+
+      if (hasChanges) {
+        setMemberRates(newRates);
+      }
+    }
+  }, [useStandardRate, teamMembers, allUsers]);
+
   const loadData = async () => {
     if (!projectId) return;
 
@@ -93,6 +116,9 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
       (project.members || []).forEach((member: any) => {
         if (member.customHourlyRate) {
           rates[member.userId] = member.customHourlyRate.toString();
+        } else if (!project.useStandardRate && member.user?.defaultHourlyRate) {
+          // Auto-populate with user's default rate if project uses individual rates
+          rates[member.userId] = member.user.defaultHourlyRate.toString();
         }
       });
       setMemberRates(rates);
