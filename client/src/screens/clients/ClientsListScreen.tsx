@@ -153,6 +153,20 @@ const ClientsListScreen = React.memo(({ navigation, route }: ClientsListScreenPr
     const primaryContact = item.contacts?.find((c: any) => c.isPrimary);
     const secondaryContacts = item.contacts?.filter((c: any) => !c.isPrimary) || [];
 
+    // Check if primary contact has any data
+    const hasPrimaryContact = primaryContact && (
+      primaryContact.name || primaryContact.title || primaryContact.email || primaryContact.phone
+    );
+
+    // Check if there are any secondary contacts with data
+    const hasSecondaryContacts = secondaryContacts.length > 0;
+
+    // Check if business info has any data (excluding name since it's in the header)
+    const hasBusinessInfo = item.company || item.address || item.website || item.notes || (item._count?.projects || 0) > 0;
+
+    // Count how many columns we're showing
+    const columnsToShow = [hasBusinessInfo, hasPrimaryContact, hasSecondaryContacts].filter(Boolean).length;
+
     return (
       <TouchableOpacity
         onPress={() => handleEditClick(item.id)}
@@ -195,45 +209,47 @@ const ClientsListScreen = React.memo(({ navigation, route }: ClientsListScreenPr
               </Menu>
             </View>
 
-            <View style={styles.threeColumnLayout}>
-              {/* Column 1: Business Information */}
-              <View style={styles.column}>
-                <Paragraph style={[styles.columnLabel, { color: themeColors.clientCardText }]}>Business Information</Paragraph>
-                {item.company && (
-                  <View style={styles.infoRow}>
-                    <Paragraph style={[styles.infoLabel, { color: currentColors.textSecondary }]}>Company:</Paragraph>
-                    <Paragraph style={[styles.infoValue, { color: themeColors.clientCardText }]}>{item.company}</Paragraph>
+            {columnsToShow > 0 && (
+              <View style={styles.threeColumnLayout}>
+                {/* Column 1: Business Information */}
+                {hasBusinessInfo && (
+                  <View style={styles.column}>
+                    <Paragraph style={[styles.columnLabel, { color: themeColors.clientCardText }]}>Business Information</Paragraph>
+                    {item.company && item.company !== item.name && (
+                      <View style={styles.infoRow}>
+                        <Paragraph style={[styles.infoLabel, { color: currentColors.textSecondary }]}>Company:</Paragraph>
+                        <Paragraph style={[styles.infoValue, { color: themeColors.clientCardText }]}>{item.company}</Paragraph>
+                      </View>
+                    )}
+                    {item.address && (
+                      <View style={styles.infoRow}>
+                        <Paragraph style={[styles.infoLabel, { color: currentColors.textSecondary }]}>Address:</Paragraph>
+                        <Paragraph style={[styles.infoValue, { color: themeColors.clientCardText }]}>{item.address}</Paragraph>
+                      </View>
+                    )}
+                    {item.website && (
+                      <View style={styles.infoRow}>
+                        <Paragraph style={[styles.infoLabel, { color: currentColors.textSecondary }]}>Website:</Paragraph>
+                        <Paragraph style={[styles.infoValue, { color: themeColors.clientCardText }]}>{item.website}</Paragraph>
+                      </View>
+                    )}
+                    <View style={styles.infoRow}>
+                      <Paragraph style={[styles.infoLabel, { color: currentColors.textSecondary }]}>Projects:</Paragraph>
+                      <Paragraph style={[styles.infoValue, { color: themeColors.clientCardText }]}>{item._count?.projects || 0}</Paragraph>
+                    </View>
+                    {item.notes && (
+                      <View style={styles.infoRow}>
+                        <Paragraph style={[styles.infoLabel, { color: currentColors.textSecondary }]}>Notes:</Paragraph>
+                        <Paragraph style={[styles.infoValue, { color: themeColors.clientCardText }]}>{item.notes}</Paragraph>
+                      </View>
+                    )}
                   </View>
                 )}
-                {item.address && (
-                  <View style={styles.infoRow}>
-                    <Paragraph style={[styles.infoLabel, { color: currentColors.textSecondary }]}>Address:</Paragraph>
-                    <Paragraph style={[styles.infoValue, { color: themeColors.clientCardText }]}>{item.address}</Paragraph>
-                  </View>
-                )}
-                {item.website && (
-                  <View style={styles.infoRow}>
-                    <Paragraph style={[styles.infoLabel, { color: currentColors.textSecondary }]}>Website:</Paragraph>
-                    <Paragraph style={[styles.infoValue, { color: themeColors.clientCardText }]}>{item.website}</Paragraph>
-                  </View>
-                )}
-                <View style={styles.infoRow}>
-                  <Paragraph style={[styles.infoLabel, { color: currentColors.textSecondary }]}>Projects:</Paragraph>
-                  <Paragraph style={[styles.infoValue, { color: themeColors.clientCardText }]}>{item._count?.projects || 0}</Paragraph>
-                </View>
-                {item.notes && (
-                  <View style={styles.infoRow}>
-                    <Paragraph style={[styles.infoLabel, { color: currentColors.textSecondary }]}>Notes:</Paragraph>
-                    <Paragraph style={[styles.infoValue, { color: themeColors.clientCardText }]}>{item.notes}</Paragraph>
-                  </View>
-                )}
-              </View>
 
-              {/* Column 2: Primary Contact */}
-              <View style={styles.column}>
-                <Paragraph style={[styles.columnLabel, { color: themeColors.clientCardText }]}>Primary Contact</Paragraph>
-                {primaryContact ? (
-                  <>
+                {/* Column 2: Primary Contact */}
+                {hasPrimaryContact && (
+                  <View style={styles.column}>
+                    <Paragraph style={[styles.columnLabel, { color: themeColors.clientCardText }]}>Primary Contact</Paragraph>
                     {primaryContact.name && (
                       <View style={styles.infoRow}>
                         <Paragraph style={[styles.infoLabel, { color: currentColors.textSecondary }]}>Name:</Paragraph>
@@ -258,50 +274,46 @@ const ClientsListScreen = React.memo(({ navigation, route }: ClientsListScreenPr
                         <Paragraph style={[styles.infoValue, { color: themeColors.clientCardText }]}>{primaryContact.phone}</Paragraph>
                       </View>
                     )}
-                  </>
-                ) : (
-                  <Paragraph style={[styles.noData, { color: currentColors.textTertiary }]}>No primary contact</Paragraph>
+                  </View>
                 )}
-              </View>
 
-              {/* Column 3: Secondary Contacts */}
-              <View style={styles.column}>
-                <Paragraph style={[styles.columnLabel, { color: themeColors.clientCardText }]}>Secondary Contacts</Paragraph>
-                {secondaryContacts.length > 0 ? (
-                  secondaryContacts.map((contact: any, index: number) => (
-                    <View key={contact.id || index} style={styles.secondaryContactBlock}>
-                      {index > 0 && <View style={[styles.contactDivider, { borderBottomColor: currentColors.border }]} />}
-                      {contact.name && (
-                        <View style={styles.infoRow}>
-                          <Paragraph style={[styles.infoLabel, { color: currentColors.textSecondary }]}>Name:</Paragraph>
-                          <Paragraph style={[styles.infoValue, { color: themeColors.clientCardText }]}>{contact.name}</Paragraph>
-                        </View>
-                      )}
-                      {contact.title && (
-                        <View style={styles.infoRow}>
-                          <Paragraph style={[styles.infoLabel, { color: currentColors.textSecondary }]}>Title:</Paragraph>
-                          <Paragraph style={[styles.infoValue, { color: themeColors.clientCardText }]}>{contact.title}</Paragraph>
-                        </View>
-                      )}
-                      {contact.email && (
-                        <View style={styles.infoRow}>
-                          <Paragraph style={[styles.infoLabel, { color: currentColors.textSecondary }]}>Email:</Paragraph>
-                          <Paragraph style={[styles.infoValue, { color: themeColors.clientCardText }]}>{contact.email}</Paragraph>
-                        </View>
-                      )}
-                      {contact.phone && (
-                        <View style={styles.infoRow}>
-                          <Paragraph style={[styles.infoLabel, { color: currentColors.textSecondary }]}>Phone:</Paragraph>
-                          <Paragraph style={[styles.infoValue, { color: themeColors.clientCardText }]}>{contact.phone}</Paragraph>
-                        </View>
-                      )}
-                    </View>
-                  ))
-                ) : (
-                  <Paragraph style={[styles.noData, { color: currentColors.textTertiary }]}>No secondary contacts</Paragraph>
+                {/* Column 3: Secondary Contacts */}
+                {hasSecondaryContacts && (
+                  <View style={styles.column}>
+                    <Paragraph style={[styles.columnLabel, { color: themeColors.clientCardText }]}>Secondary Contacts</Paragraph>
+                    {secondaryContacts.map((contact: any, index: number) => (
+                      <View key={contact.id || index} style={styles.secondaryContactBlock}>
+                        {index > 0 && <View style={[styles.contactDivider, { borderBottomColor: currentColors.border }]} />}
+                        {contact.name && (
+                          <View style={styles.infoRow}>
+                            <Paragraph style={[styles.infoLabel, { color: currentColors.textSecondary }]}>Name:</Paragraph>
+                            <Paragraph style={[styles.infoValue, { color: themeColors.clientCardText }]}>{contact.name}</Paragraph>
+                          </View>
+                        )}
+                        {contact.title && (
+                          <View style={styles.infoRow}>
+                            <Paragraph style={[styles.infoLabel, { color: currentColors.textSecondary }]}>Title:</Paragraph>
+                            <Paragraph style={[styles.infoValue, { color: themeColors.clientCardText }]}>{contact.title}</Paragraph>
+                          </View>
+                        )}
+                        {contact.email && (
+                          <View style={styles.infoRow}>
+                            <Paragraph style={[styles.infoLabel, { color: currentColors.textSecondary }]}>Email:</Paragraph>
+                            <Paragraph style={[styles.infoValue, { color: themeColors.clientCardText }]}>{contact.email}</Paragraph>
+                          </View>
+                        )}
+                        {contact.phone && (
+                          <View style={styles.infoRow}>
+                            <Paragraph style={[styles.infoLabel, { color: currentColors.textSecondary }]}>Phone:</Paragraph>
+                            <Paragraph style={[styles.infoValue, { color: themeColors.clientCardText }]}>{contact.phone}</Paragraph>
+                          </View>
+                        )}
+                      </View>
+                    ))}
+                  </View>
                 )}
               </View>
-            </View>
+            )}
           </Card.Content>
         </Card>
       </TouchableOpacity>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Platform, TouchableOpacity, FlatList, Text, Modal, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard } from 'react-native';
-import { TextInput, Button, Title, List, SegmentedButtons, ActivityIndicator, Card, Paragraph, Switch } from 'react-native-paper';
+import { TextInput, Button, Title, List, ActivityIndicator, Card, Paragraph, Switch } from 'react-native-paper';
 import { projectsAPI, clientsAPI, usersAPI } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
 import { CustomDialog } from './CustomDialog';
@@ -27,7 +27,6 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
   const [projectValue, setProjectValue] = useState('');
   const [selectedClient, setSelectedClient] = useState('');
   const [clientInput, setClientInput] = useState('');
-  const [status, setStatus] = useState('ACTIVE');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -104,7 +103,6 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
       const currentClient = clientsResponse.data.find((c: any) => c.id === project.clientId);
       setClientInput(currentClient?.name || '');
 
-      setStatus(project.status);
       setUseStandardRate(project.useStandardRate !== false);
       setStandardHourlyRate(project.standardHourlyRate?.toString() || '');
       setDueDate(project.dueDate ? new Date(project.dueDate) : null);
@@ -221,7 +219,6 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
         description,
         projectValue: projectValue ? parseFloat(projectValue) : null,
         clientId: selectedClient,
-        status,
         useStandardRate,
         standardHourlyRate: standardHourlyRate ? parseFloat(standardHourlyRate) : null,
         dueDate: dueDate ? dueDate.toISOString() : null,
@@ -407,7 +404,7 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
                   keyboardShouldPersistTaps="handled"
                   showsVerticalScrollIndicator={true}
                 >
-                  <Card style={{ backgroundColor: currentColors.background.bg600, borderRadius: 8, elevation: 0, borderWidth: 0 }}>
+                  <Card style={{ backgroundColor: currentColors.background.bg600, borderRadius: 10, elevation: 0, borderWidth: 0 }}>
                     <Card.Content style={{ paddingBottom: 0 }}>
                 <Title style={{ color: currentColors.text }}>Edit Project</Title>
 
@@ -442,19 +439,6 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
                       mode="outlined"
                       keyboardType="decimal-pad"
                       placeholder="Enter project value"
-                      style={styles.input}
-                    />
-
-                    <Text style={[styles.sectionTitle, { color: currentColors.text }]}>Project Status</Text>
-                    <SegmentedButtons
-                      value={status}
-                      onValueChange={setStatus}
-                      buttons={[
-                        { value: 'ACTIVE', label: 'Active' },
-                        { value: 'ON_HOLD', label: 'On Hold' },
-                        { value: 'COMPLETED', label: 'Completed' },
-                        { value: 'ARCHIVED', label: 'Archived' },
-                      ]}
                       style={styles.input}
                     />
 
@@ -514,7 +498,7 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
                     </View>
 
                     {/* Billing Rate Section */}
-                    <Card style={[styles.billingSection, { backgroundColor: currentColors.background.bg500 }]}>
+                    <Card style={[styles.billingSection, { backgroundColor: currentColors.background.bg500, borderRadius: 10 }]}>
                       <Card.Content>
                         <Text style={[styles.sectionTitle, { color: currentColors.text }]}>Billing Rate</Text>
 
@@ -544,7 +528,7 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
                     </Card>
 
                     {/* Due Date Section */}
-                    <Card style={[styles.dueDateSection, { backgroundColor: currentColors.background.bg500 }]}>
+                    <Card style={[styles.dueDateSection, { backgroundColor: currentColors.background.bg500, borderRadius: 10 }]}>
                       <Card.Content>
                         <Text style={[styles.sectionTitle, { color: currentColors.text }]}>Project Due Date</Text>
 
@@ -592,7 +576,7 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
                     </Card>
 
                     {/* Team Members Section */}
-                    <Card style={[styles.teamSection, { backgroundColor: currentColors.background.bg500 }]}>
+                    <Card style={[styles.teamSection, { backgroundColor: currentColors.background.bg500, borderRadius: 10 }]}>
                       <Card.Content>
                         <Text style={[styles.sectionTitle, { color: currentColors.text }]}>Team Members</Text>
 
