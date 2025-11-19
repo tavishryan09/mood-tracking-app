@@ -515,12 +515,12 @@ export const deleteProject = async (req: AuthRequest, res: Response) => {
   try {
     const { id } = req.params;
 
-    await prisma.project.update({
+    // Actually delete the project (cascade will handle related records)
+    await prisma.project.delete({
       where: { id },
-      data: { status: 'ARCHIVED' },
     });
 
-    res.json({ message: 'Project archived successfully' });
+    res.json({ message: 'Project deleted successfully' });
   } catch (error) {
     console.error('Delete project error:', error);
     res.status(500).json({ error: 'Internal server error' });
