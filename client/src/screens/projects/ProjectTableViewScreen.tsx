@@ -1486,9 +1486,11 @@ const getStyles = (currentColors: any) => StyleSheet.create({
   tableContainer: {
     minWidth: TABLE_WIDTH,
     overflow: 'visible',
-    paddingBottom: 50,
-    paddingRight: 50,
+    paddingBottom: 100,
+    paddingRight: 100,
     backgroundColor: currentColors.background.bg300,
+    borderRightWidth: 1,
+    borderRightColor: currentColors.border,
   },
   headerRow: {
     flexDirection: 'row',
