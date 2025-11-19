@@ -292,7 +292,7 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
   const todayHeaderBg = getColorForElement('planningGrid', 'todayHeaderBackground');
   const todayHeaderFont = getColorForElement('planningGrid', 'todayHeaderText');
   const headerBorderColor = getColorForElement('planningGrid', 'headerBorderColor');
-  const cellBorderColor = getColorForElement('planningGrid', 'cellBorderColor');
+  const cellBorderColor = getColorForElement('planningGrid', 'cellBorderColor') || '#C7C7CC'; // Fallback to light gray
   const teamMemberBorderColor = getColorForElement('planningGrid', 'teamMemberBorderColor');
   const cellHoverBg = getColorForElement('planningGrid', 'cellHoverBackground');
 
