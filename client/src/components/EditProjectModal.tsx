@@ -219,7 +219,11 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
       // Remove members (with error handling for members that don't exist)
       for (const userId of membersToRemove) {
         try {
-          await projectsAPI.removeMember(projectId, userId);
+          // Find the ProjectMember ID (not the userId) from the original members
+          const memberToRemove = originalTeamMembers.find(m => m.userId === userId);
+          if (memberToRemove?.id) {
+            await projectsAPI.removeMember(projectId, memberToRemove.id);
+          }
         } catch (error: any) {
           // Ignore 404 errors (member already removed or doesn't exist)
           if (error.response?.status !== 404) {
