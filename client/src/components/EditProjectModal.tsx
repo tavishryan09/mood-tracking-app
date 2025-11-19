@@ -356,12 +356,24 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
     try {
       await projectsAPI.delete(projectId);
       setShowDeleteConfirm(false);
-      onSuccess();
-      onDismiss();
+      setDialogTitle('Success');
+      setDialogMessage('Project deleted successfully');
+      setDialogButtons([{
+        text: 'OK',
+        onPress: () => {
+          onSuccess();
+          onDismiss();
+        }
+      }]);
+      setDialogVisible(true);
     } catch (error: any) {
       console.error('Delete project error:', error);
       setSaving(false);
       setShowDeleteConfirm(false);
+      setDialogTitle('Error');
+      setDialogMessage(error.response?.data?.error || 'Failed to delete project. Please try again.');
+      setDialogButtons([{ text: 'OK', onPress: () => {} }]);
+      setDialogVisible(true);
     }
   };
 
