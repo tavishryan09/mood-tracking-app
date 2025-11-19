@@ -318,10 +318,8 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
             borderLeft: `2px solid ${currentColors.primary}`,
             borderRight: `2px solid ${currentColors.primary}`,
           } : {}),
-          // For other states use boxShadow
-          boxShadow: !isDragOver && (isHovered && assignment
-            ? `0 0 0 2px ${cellHoverBg}`
-            : isSelected
+          // For other states use boxShadow (but not for hover)
+          boxShadow: !isDragOver && !isHovered && (isSelected
               ? `0 0 0 2px ${currentColors.selected}`
               : copiedCell && copiedCell.userId === userId && copiedCell.date === dateString && copiedCell.blockIndex === blockIndex
                 ? `0 0 0 2px ${currentColors.copied}`
