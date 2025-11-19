@@ -1445,6 +1445,13 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
   const year = visibleWeekStart.getFullYear();
   const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
+  // Reset hasScrolled when screen comes into focus so it auto-scrolls to current week
+  useFocusEffect(
+    useCallback(() => {
+      setHasScrolled(false);
+    }, [])
+  );
+
   // Auto-scroll to the current week when component mounts
   useEffect(() => {
     if (!hasScrolled && quarterWeeks.length > 0 && Platform.OS === 'web') {
