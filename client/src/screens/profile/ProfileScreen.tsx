@@ -447,8 +447,9 @@ const ProfileScreen = React.memo(({ navigation, route }: ProfileScreenProps) => 
           return;
         }
 
-        const permission = await requestNotificationPermission();
-        logger.info('Notification permission:', permission, 'ProfileScreen');
+        logger.info('Requesting notification permission...', 'ProfileScreen');
+        const permission = await Notification.requestPermission();
+        logger.info('Notification permission result:', permission, 'ProfileScreen');
 
         if (permission !== 'granted') {
           setErrorMessage('Notification permission was denied. Please enable notifications in your browser settings.');
@@ -456,39 +457,44 @@ const ProfileScreen = React.memo(({ navigation, route }: ProfileScreenProps) => 
           return;
         }
 
-        // Check if service worker is ready
-        if ('serviceWorker' in navigator) {
-          const registration = await navigator.serviceWorker.ready;
-          logger.info('Service worker ready, sending notification', 'ProfileScreen');
+        logger.info('Creating test notification...', 'ProfileScreen');
 
-          await registration.showNotification('Test Notification', {
-            body: 'This is a test notification from your Mood Tracker app!',
-            icon: '/icons/icon-192x192.png',
-            badge: '/icons/icon-72x72.png',
-            tag: 'test-notification',
-            requireInteraction: false,
-            data: {
-              type: 'test',
-              url: '/planning',
-            },
-            actions: [
-              {
-                action: 'view-tasks',
-                title: 'View Tasks',
+        // Try service worker first, fall back to basic notification
+        try {
+          if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            const registration = await navigator.serviceWorker.ready;
+            logger.info('Using service worker for notification', 'ProfileScreen');
+
+            await registration.showNotification('Test Notification', {
+              body: 'This is a test notification from your Mood Tracker app!',
+              icon: '/icons/icon-192x192.png',
+              badge: '/icons/icon-72x72.png',
+              tag: 'test-notification',
+              requireInteraction: false,
+              data: {
+                type: 'test',
+                url: '/planning',
               },
-              {
-                action: 'dismiss',
-                title: 'Dismiss',
-              },
-            ],
-          });
+            });
+          } else {
+            // Fallback to basic notification
+            logger.info('Using basic Notification API (service worker not ready)', 'ProfileScreen');
+            const notification = new Notification('Test Notification', {
+              body: 'This is a test notification from your Mood Tracker app!',
+              icon: '/icons/icon-192x192.png',
+              tag: 'test-notification',
+            });
+
+            // Auto-close after 5 seconds
+            setTimeout(() => notification.close(), 5000);
+          }
 
           logger.info('Test notification sent successfully', 'ProfileScreen');
-          setSuccessMessage('Test notification sent!');
+          setSuccessMessage('Test notification sent! Check your system notifications.');
           setShowSuccessDialog(true);
-        } else {
-          setErrorMessage('Service worker is not available. Please reload the page.');
-          setShowErrorDialog(true);
+        } catch (notifError) {
+          logger.error('Error showing notification:', notifError, 'ProfileScreen');
+          throw notifError;
         }
       }
     } catch (error) {
