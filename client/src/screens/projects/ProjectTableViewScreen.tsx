@@ -1489,8 +1489,6 @@ const getStyles = (currentColors: any) => StyleSheet.create({
     paddingBottom: 100,
     paddingRight: 100,
     backgroundColor: currentColors.background.bg300,
-    borderRightWidth: 1,
-    borderRightColor: currentColors.border,
   },
   headerRow: {
     flexDirection: 'row',
@@ -1546,7 +1544,8 @@ const getStyles = (currentColors: any) => StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 10,
-    borderRightWidth: 0,
+    borderRightWidth: 1,
+    borderRightColor: currentColors.border,
   },
   actionButton: {
     padding: 5,
