@@ -576,10 +576,9 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
   // Handle cell hover to show expand options
   const handleCellHover = (userId: string, date: string, blockIndex: number, isHovering: boolean) => {
     const blockKey = `${userId}-${date}-${blockIndex}`;
-    const hasAssignment = !!blockAssignments[blockKey];
 
-    // Only allow hover effects for filled cells
-    if (hasAssignment && isHovering) {
+    // Allow hover effects for all cells
+    if (isHovering) {
       setHoveredBlock(blockKey);
     } else if (!isHovering && hoveredBlock === blockKey) {
       setHoveredBlock(null);
