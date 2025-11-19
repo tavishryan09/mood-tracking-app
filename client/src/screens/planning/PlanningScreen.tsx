@@ -296,6 +296,9 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
   const teamMemberBorderColor = getColorForElement('planningGrid', 'teamMemberBorderColor');
   const cellHoverBg = getColorForElement('planningGrid', 'cellHoverBackground');
 
+  // Mobile detection - not currently used but available for future features
+  const isMobile = width < 768;
+
   // Legacy color mappings (for backward compatibility)
   const calendarHeaderBg = planningColors.calendarHeaderBg || headerBg;
   const calendarHeaderFont = planningColors.calendarHeaderFont || headerText;
