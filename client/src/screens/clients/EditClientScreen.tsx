@@ -33,6 +33,7 @@ const EditClientScreen = React.memo(({ route, navigation }: EditClientScreenProp
   // Business/Company information
   const [businessName, setBusinessName] = useState('');
   const [address, setAddress] = useState('');
+  const [website, setWebsite] = useState('');
   const [notes, setNotes] = useState('');
 
   // Primary contact information
@@ -65,6 +66,7 @@ const EditClientScreen = React.memo(({ route, navigation }: EditClientScreenProp
 
       setBusinessName(client.name || '');
       setAddress(client.address || '');
+      setWebsite(client.website || '');
       setNotes(client.notes || '');
 
       // Load contacts
@@ -126,6 +128,7 @@ const EditClientScreen = React.memo(({ route, navigation }: EditClientScreenProp
       {
         businessName,
         address,
+        website,
         notes,
         primaryContactName,
         primaryContactTitle,
@@ -135,6 +138,7 @@ const EditClientScreen = React.memo(({ route, navigation }: EditClientScreenProp
       {
         businessName: { required: true, minLength: 2, maxLength: 200 },
         address: { maxLength: 500 },
+        website: { pattern: ValidationPatterns.url },
         notes: { maxLength: 1000 },
         primaryContactName: { required: true, minLength: 2, maxLength: 100 },
         primaryContactTitle: { maxLength: 100 },
@@ -191,6 +195,7 @@ const EditClientScreen = React.memo(({ route, navigation }: EditClientScreenProp
         name: sanitizedData.businessName,
         company: sanitizedData.businessName,
         address: sanitizedData.address || null,
+        website: sanitizedData.website || null,
         notes: sanitizedData.notes || null,
         email: sanitizedData.primaryContactEmail || null,
         phone: sanitizedData.primaryContactPhone || null,
@@ -263,6 +268,17 @@ const EditClientScreen = React.memo(({ route, navigation }: EditClientScreenProp
               multiline
               numberOfLines={2}
               style={styles.input}
+            />
+
+            <TextInput
+              label="Website"
+              value={website}
+              onChangeText={setWebsite}
+              mode="outlined"
+              keyboardType="url"
+              autoCapitalize="none"
+              style={styles.input}
+              placeholder="https://www.example.com"
             />
 
             <TextInput
