@@ -57,6 +57,7 @@ interface PlanningTaskCellProps {
   currentColors: any;
   cellBorderColor: string;
   teamMemberBorderColor: string;
+  cellHoverBg: string;
   weekdayCellBg: string;
   weekendCellBg: string;
   todayCellBg: string;
@@ -156,6 +157,7 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
   currentColors,
   cellBorderColor,
   teamMemberBorderColor,
+  cellHoverBg,
   weekdayCellBg,
   weekendCellBg,
   todayCellBg,
@@ -318,7 +320,7 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
           } : {}),
           // For other states use boxShadow
           boxShadow: !isDragOver && (isHovered && assignment
-            ? `0 0 0 2px ${currentColors.primary}`
+            ? `0 0 0 2px ${cellHoverBg}`
             : isSelected
               ? `0 0 0 2px ${currentColors.selected}`
               : copiedCell && copiedCell.userId === userId && copiedCell.date === dateString && copiedCell.blockIndex === blockIndex

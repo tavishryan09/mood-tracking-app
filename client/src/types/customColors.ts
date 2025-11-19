@@ -162,6 +162,7 @@ export interface ElementColorMapping {
     headerBorderColor: string;
     cellBorderColor: string;
     teamMemberBorderColor: string;
+    cellHoverBackground: string;
   };
 
   // Clients Screen
@@ -368,6 +369,7 @@ export const ElementLabels = {
       headerBorderColor: 'Header Border Color',
       cellBorderColor: 'Cell Border Color',
       teamMemberBorderColor: 'Team Member Border Color',
+      cellHoverBackground: 'Cell Hover Background',
     },
   },
   clients: {

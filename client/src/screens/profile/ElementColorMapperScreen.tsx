@@ -122,6 +122,7 @@ const ElementColorMapperScreen = React.memo(({ navigation, route }: ElementColor
               headerBorderColor: textColor.id,
               cellBorderColor: textColor.id,
               teamMemberBorderColor: textColor.id,
+              cellHoverBackground: primaryColor.id,
             };
 
             // Save the updated mapping
@@ -130,7 +131,7 @@ const ElementColorMapperScreen = React.memo(({ navigation, route }: ElementColor
           }
 
           // Add missing header fields to existing planningGrid mappings
-          if (loadedMapping.planningGrid && palette && (!loadedMapping.planningGrid.headerBackground || !loadedMapping.planningGrid.settingsIconColor || !loadedMapping.planningGrid.todayCellBackground || !loadedMapping.planningGrid.teamMemberBorderColor || !loadedMapping.planningGrid.screenBackground)) {
+          if (loadedMapping.planningGrid && palette && (!loadedMapping.planningGrid.headerBackground || !loadedMapping.planningGrid.settingsIconColor || !loadedMapping.planningGrid.todayCellBackground || !loadedMapping.planningGrid.teamMemberBorderColor || !loadedMapping.planningGrid.screenBackground || !loadedMapping.planningGrid.cellHoverBackground)) {
             const primaryColor = palette.colors.find(c => c.isPrimary) || palette.colors[0];
             const textColor = palette.colors.find(c => c.name.toLowerCase().includes('black') || c.name.toLowerCase().includes('dark')) || palette.colors[0];
             const bgColor = palette.colors.find(c => c.name.toLowerCase().includes('white') || c.name.toLowerCase().includes('light')) || palette.colors[0];
@@ -145,6 +146,7 @@ const ElementColorMapperScreen = React.memo(({ navigation, route }: ElementColor
               todayHeaderBackground: loadedMapping.planningGrid.todayHeaderBackground || primaryColor.id,
               todayHeaderText: loadedMapping.planningGrid.todayHeaderText || bgColor.id,
               teamMemberBorderColor: loadedMapping.planningGrid.teamMemberBorderColor || textColor.id,
+              cellHoverBackground: loadedMapping.planningGrid.cellHoverBackground || primaryColor.id,
               ...loadedMapping.planningGrid,
             };
 

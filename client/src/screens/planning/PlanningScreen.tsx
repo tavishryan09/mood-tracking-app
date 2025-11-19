@@ -294,6 +294,7 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
   const headerBorderColor = getColorForElement('planningGrid', 'headerBorderColor');
   const cellBorderColor = getColorForElement('planningGrid', 'cellBorderColor');
   const teamMemberBorderColor = getColorForElement('planningGrid', 'teamMemberBorderColor');
+  const cellHoverBg = getColorForElement('planningGrid', 'cellHoverBackground');
 
   // Legacy color mappings (for backward compatibility)
   const calendarHeaderBg = planningColors.calendarHeaderBg || headerBg;
@@ -2044,6 +2045,7 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
                                 currentColors={currentColors}
                                 cellBorderColor={cellBorderColor}
                                 teamMemberBorderColor={teamMemberBorderColor}
+                                cellHoverBg={cellHoverBg}
                                 weekdayCellBg={weekdayCellBg}
                                 weekendCellBg={weekendCellBg}
                                 todayCellBg={todayCellBg}
