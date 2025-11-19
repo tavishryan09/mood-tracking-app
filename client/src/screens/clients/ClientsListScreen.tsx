@@ -10,6 +10,7 @@ import { useCustomColorTheme } from '../../contexts/CustomColorThemeContext';
 import { ClientsListScreenProps } from '../../types/navigation';
 import { logger } from '../../utils/logger';
 import { apiWithTimeout, TIMEOUT_DURATIONS } from '../../utils/apiWithTimeout';
+import EditClientModal from '../../components/EditClientModal';
 
 const ClientsListScreen = React.memo(({ navigation, route }: ClientsListScreenProps) => {
   const { currentColors } = useTheme();
@@ -35,6 +36,10 @@ const ClientsListScreen = React.memo(({ navigation, route }: ClientsListScreenPr
   const [searchQuery, setSearchQuery] = useState('');
   const [menuVisible, setMenuVisible] = useState<string | null>(null);
   const [deletingClientId, setDeletingClientId] = useState<string | null>(null);
+
+  // Modal state
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
 
   // Memoize sortClients function to prevent recreation on every render
   const sortClients = useCallback((clientsList: any[]) => {
@@ -130,12 +135,26 @@ const ClientsListScreen = React.memo(({ navigation, route }: ClientsListScreenPr
     setDeletingClientId(null);
   }, []);
 
+  const handleEditClick = useCallback((clientId: string) => {
+    setSelectedClientId(clientId);
+    setEditModalVisible(true);
+  }, []);
+
+  const handleModalClose = useCallback(() => {
+    setEditModalVisible(false);
+    setSelectedClientId(null);
+  }, []);
+
+  const handleClientUpdated = useCallback(() => {
+    loadClients();
+  }, [loadClients]);
+
   const renderClient = useCallback(({ item }: any) => {
     const primaryContact = item.contacts?.find((c: any) => c.isPrimary);
 
     return (
       <TouchableOpacity
-        onPress={() => navigation.navigate('EditClient', { clientId: item.id })}
+        onPress={() => handleEditClick(item.id)}
         activeOpacity={0.7}
       >
         <Card style={[styles.card, { backgroundColor: themeColors.clientCardBg, borderColor: themeColors.clientCardBorder, borderWidth: 1 }]}>
@@ -161,7 +180,7 @@ const ClientsListScreen = React.memo(({ navigation, route }: ClientsListScreenPr
                 <Menu.Item
                   onPress={() => {
                     setMenuVisible(null);
-                    navigation.navigate('EditClient', { clientId: item.id });
+                    handleEditClick(item.id);
                   }}
                   title="Edit"
                   leadingIcon={() => <HugeiconsIcon icon={PencilEdit02Icon} size={20} color={currentColors.icon} />}
@@ -215,7 +234,7 @@ const ClientsListScreen = React.memo(({ navigation, route }: ClientsListScreenPr
         </Card>
       </TouchableOpacity>
     );
-  }, [navigation, themeColors, currentColors, menuVisible, handleDeleteClick]);
+  }, [themeColors, currentColors, menuVisible, handleDeleteClick, handleEditClick]);
 
   if (loading) {
     return (
@@ -262,6 +281,14 @@ const ClientsListScreen = React.memo(({ navigation, route }: ClientsListScreenPr
         onPress={() => {
           navigation.navigate('CreateClient');
         }}
+      />
+
+      {/* Edit Client Modal */}
+      <EditClientModal
+        visible={editModalVisible}
+        clientId={selectedClientId}
+        onClose={handleModalClose}
+        onClientUpdated={handleClientUpdated}
       />
 
       {/* Delete Confirmation Modal */}
