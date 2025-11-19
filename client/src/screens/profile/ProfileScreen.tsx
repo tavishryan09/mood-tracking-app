@@ -12,6 +12,7 @@ import axios from 'axios';
 import { ProfileScreenProps } from '../../types/navigation';
 import { logger } from '../../utils/logger';
 import { apiWithTimeout, TIMEOUT_DURATIONS } from '../../utils/apiWithTimeout';
+import { requestNotificationPermission, showNotification } from '../../utils/serviceWorkerRegistration';
 
 const ProfileScreen = React.memo(({ navigation, route }: ProfileScreenProps) => {
   const { user, logout, refreshUser, token } = useAuth();
@@ -398,6 +399,16 @@ const ProfileScreen = React.memo(({ navigation, route }: ProfileScreenProps) => 
 
   const handleSaveNotifications = async () => {
     try {
+      // Request notification permission if enabling notifications
+      if (pushNotifications && Platform.OS === 'web') {
+        const permission = await requestNotificationPermission();
+        if (permission !== 'granted') {
+          setErrorMessage('Notification permission was denied. Please enable notifications in your browser settings.');
+          setShowErrorDialog(true);
+          return;
+        }
+      }
+
       // Save notification preferences to user settings
       await Promise.all([
         settingsAPI.user.set('push_notifications', pushNotifications),
@@ -422,6 +433,46 @@ const ProfileScreen = React.memo(({ navigation, route }: ProfileScreenProps) => 
     } catch (error) {
       logger.error('Save notifications error:', error, 'ProfileScreen');
       setErrorMessage('Failed to save notification preferences');
+      setShowErrorDialog(true);
+    }
+  };
+
+  const handleTestNotification = async () => {
+    try {
+      if (Platform.OS === 'web') {
+        const permission = await requestNotificationPermission();
+        if (permission !== 'granted') {
+          setErrorMessage('Notification permission was denied. Please enable notifications in your browser settings.');
+          setShowErrorDialog(true);
+          return;
+        }
+
+        await showNotification('Test Notification', {
+          body: 'This is a test notification from your Mood Tracker app!',
+          tag: 'test-notification',
+          requireInteraction: false,
+          data: {
+            type: 'test',
+            url: '/planning',
+          },
+          actions: [
+            {
+              action: 'view-tasks',
+              title: 'View Tasks',
+            },
+            {
+              action: 'dismiss',
+              title: 'Dismiss',
+            },
+          ],
+        });
+
+        setSuccessMessage('Test notification sent!');
+        setShowSuccessDialog(true);
+      }
+    } catch (error) {
+      logger.error('Test notification error:', error, 'ProfileScreen');
+      setErrorMessage('Failed to send test notification');
       setShowErrorDialog(true);
     }
   };
@@ -1329,6 +1380,17 @@ const ProfileScreen = React.memo(({ navigation, route }: ProfileScreenProps) => 
                   outlineColor={currentColors.border}
                   activeOutlineColor={currentColors.primary}
                 />
+
+                {Platform.OS === 'web' && (
+                  <Button
+                    mode="outlined"
+                    onPress={handleTestNotification}
+                    style={{ marginTop: 15 }}
+                    icon="bell-ring"
+                  >
+                    Test Notification
+                  </Button>
+                )}
 
                 <View style={styles.modalButtons}>
                   <Button

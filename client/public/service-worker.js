@@ -440,10 +440,13 @@ async function scheduleNotification(time, enabled) {
       return;
     }
 
+    // Round minutes to nearest 15-minute interval
+    const roundedMinutes = Math.round(minutes / 15) * 15;
+
     // Calculate next notification time
     const now = new Date();
     const scheduledTime = new Date();
-    scheduledTime.setHours(hours, minutes, 0, 0);
+    scheduledTime.setHours(hours, roundedMinutes, 0, 0);
 
     // If the time has already passed today, schedule for tomorrow
     if (scheduledTime <= now) {
@@ -554,7 +557,7 @@ async function checkAndSendNotifications() {
   }
 }
 
-// Set up periodic check (every minute)
+// Set up periodic check (every 15 minutes)
 setInterval(() => {
   checkAndSendNotifications();
-}, 60000); // Check every minute
+}, 900000); // Check every 15 minutes
