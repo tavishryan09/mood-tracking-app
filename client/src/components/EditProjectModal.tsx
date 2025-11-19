@@ -34,9 +34,6 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
   const [useStandardRate, setUseStandardRate] = useState(true);
   const [standardHourlyRate, setStandardHourlyRate] = useState('');
 
-  // Due date state
-  const [dueDate, setDueDate] = useState<Date | null>(null);
-
   // Team members state
   const [allUsers, setAllUsers] = useState<any[]>([]);
   const [teamMembers, setTeamMembers] = useState<any[]>([]);
@@ -105,7 +102,6 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
 
       setUseStandardRate(project.useStandardRate !== false);
       setStandardHourlyRate(project.standardHourlyRate?.toString() || '');
-      setDueDate(project.dueDate ? new Date(project.dueDate) : null);
       setTeamMembers(project.members || []);
       setOriginalTeamMembers(project.members || []); // Store original for comparison on save
 
@@ -221,7 +217,6 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
         clientId: selectedClient,
         useStandardRate,
         standardHourlyRate: standardHourlyRate ? parseFloat(standardHourlyRate) : null,
-        dueDate: dueDate ? dueDate.toISOString() : null,
       });
 
       // Sync team member changes (additions and removals)
@@ -423,12 +418,10 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
                     />
 
                     <TextInput
-                      label="Description"
+                      label="Common Name"
                       value={description}
                       onChangeText={setDescription}
                       mode="outlined"
-                      multiline
-                      numberOfLines={3}
                       style={styles.input}
                     />
 
@@ -522,54 +515,6 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
                         {!useStandardRate && (
                           <Paragraph style={[styles.helpText, { color: currentColors.textSecondary }]}>
                             Custom rates can be set per team member when adding them to the project.
-                          </Paragraph>
-                        )}
-                      </Card.Content>
-                    </Card>
-
-                    {/* Due Date Section */}
-                    <Card style={[styles.dueDateSection, { backgroundColor: currentColors.background.bg500, borderRadius: 10 }]}>
-                      <Card.Content>
-                        <Text style={[styles.sectionTitle, { color: currentColors.text }]}>Project Due Date</Text>
-
-                        {Platform.OS === 'web' && (
-                          <View style={styles.dateInputContainer}>
-                            <input
-                              type="date"
-                              value={dueDate ? dueDate.toISOString().split('T')[0] : ''}
-                              onChange={(e) => {
-                                const dateValue = e.target.value;
-                                if (dateValue) {
-                                  setDueDate(new Date(dateValue));
-                                } else {
-                                  setDueDate(null);
-                                }
-                              }}
-                              style={{
-                                padding: '12px',
-                                fontSize: '16px',
-                                borderRadius: '4px',
-                                border: `1px solid ${currentColors.border}`,
-                                backgroundColor: currentColors.background.bg700,
-                                color: currentColors.text,
-                                maxWidth: '300px',
-                              }}
-                            />
-                            {dueDate && (
-                              <Button
-                                mode="text"
-                                onPress={() => setDueDate(null)}
-                                style={styles.clearButton}
-                              >
-                                Clear
-                              </Button>
-                            )}
-                          </View>
-                        )}
-
-                        {dueDate && (
-                          <Paragraph style={[styles.helpText, { color: currentColors.textSecondary }]}>
-                            A deadline event will be automatically added to your calendar.
                           </Paragraph>
                         )}
                       </Card.Content>
@@ -772,11 +717,6 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     elevation: 2,
   },
-  dueDateSection: {
-    marginTop: 15,
-    marginBottom: 15,
-    elevation: 2,
-  },
   teamSection: {
     marginTop: 15,
     marginBottom: 15,
@@ -792,14 +732,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontStyle: 'italic',
     marginTop: 8,
-  },
-  dateInputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  clearButton: {
-    marginLeft: 10,
   },
   emptyText: {
     textAlign: 'center',
