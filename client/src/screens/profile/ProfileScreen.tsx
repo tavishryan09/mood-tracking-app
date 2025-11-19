@@ -50,6 +50,7 @@ const ProfileScreen = React.memo(({ navigation, route }: ProfileScreenProps) => 
 
   // Notifications settings
   const [pushNotifications, setPushNotifications] = useState(true);
+  const [notificationTime, setNotificationTime] = useState('09:00'); // Default 9:00 AM
 
   // Outlook Calendar integration
   const [outlookConnected, setOutlookConnected] = useState(false);
@@ -372,10 +373,36 @@ const ProfileScreen = React.memo(({ navigation, route }: ProfileScreenProps) => 
     }
   };
 
+  const handleOpenNotifications = async () => {
+    try {
+      // Load notification settings
+      const [pushNotifResponse, notifTimeResponse] = await Promise.all([
+        settingsAPI.user.get('push_notifications'),
+        settingsAPI.user.get('notification_time'),
+      ]);
+
+      if (pushNotifResponse?.data?.value !== undefined) {
+        setPushNotifications(pushNotifResponse.data.value);
+      }
+      if (notifTimeResponse?.data?.value) {
+        setNotificationTime(notifTimeResponse.data.value);
+      }
+
+      setShowNotificationsModal(true);
+    } catch (error) {
+      logger.error('Load notification settings error:', error, 'ProfileScreen');
+      // Still open modal with defaults
+      setShowNotificationsModal(true);
+    }
+  };
+
   const handleSaveNotifications = async () => {
     try {
       // Save notification preferences to user settings
-      await settingsAPI.user.set('push_notifications', pushNotifications);
+      await Promise.all([
+        settingsAPI.user.set('push_notifications', pushNotifications),
+        settingsAPI.user.set('notification_time', notificationTime),
+      ]);
       setShowNotificationsModal(false);
       setSuccessMessage('Notification preferences saved');
       setShowSuccessDialog(true);
@@ -973,7 +1000,7 @@ const ProfileScreen = React.memo(({ navigation, route }: ProfileScreenProps) => 
           title="Notifications"
           description="Manage notification preferences"
           right={() => <HugeiconsIcon icon={PencilEdit02Icon} size={24} color={currentColors.icon} />}
-          onPress={() => setShowNotificationsModal(true)}
+          onPress={handleOpenNotifications}
         />
         <List.Item
           title="Change Password"
@@ -1267,6 +1294,27 @@ const ProfileScreen = React.memo(({ navigation, route }: ProfileScreenProps) => 
                       onValueChange={setPushNotifications}
                     />
                   )}
+                />
+
+                <Divider style={{ marginVertical: 10 }} />
+
+                <Text style={{ color: currentColors.text, fontSize: 16, fontWeight: '600', marginBottom: 10 }}>
+                  Daily Notification Time
+                </Text>
+                <Text style={{ color: currentColors.text, opacity: 0.7, fontSize: 14, marginBottom: 15 }}>
+                  Choose when to receive daily task reminders
+                </Text>
+
+                <TextInput
+                  mode="outlined"
+                  label="Notification Time"
+                  value={notificationTime}
+                  onChangeText={setNotificationTime}
+                  placeholder="HH:MM (24-hour format)"
+                  style={{ backgroundColor: currentColors.background.bg500 }}
+                  textColor={currentColors.text}
+                  outlineColor={currentColors.border}
+                  activeOutlineColor={currentColors.primary}
                 />
 
                 <View style={styles.modalButtons}>
