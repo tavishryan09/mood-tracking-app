@@ -248,6 +248,12 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
       ? weekendCellBg
       : weekdayCellBg;
 
+  // Debug: Log the border color being used (only for first cell to avoid spam)
+  if (blockIndex === 0 && dayIndex === 0 && weekIndex === 0) {
+    console.log('[PlanningTaskCell] cellBorderColor:', cellBorderColor);
+    console.log('[PlanningTaskCell] teamMemberBorderColor:', teamMemberBorderColor);
+  }
+
   return (
     <td
       key={`${weekIndex}-${dayIndex}`}
