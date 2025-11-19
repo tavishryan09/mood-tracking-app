@@ -1035,12 +1035,6 @@ const ProjectTableViewScreen = React.memo(() => {
                   >
                     <HugeiconsIcon icon={Edit02Icon} size={20} color={currentColors.icon} />
                   </TouchableOpacity>
-                  <TouchableOpacity
-                    onPress={() => handleDeleteClick(project.id)}
-                    style={styles.actionButton}
-                  >
-                    <HugeiconsIcon icon={Delete02Icon} size={20} color={currentColors.error} />
-                  </TouchableOpacity>
                 </View>
               </View>
             );
@@ -1487,7 +1481,6 @@ const getStyles = (currentColors: any) => StyleSheet.create({
     minWidth: TABLE_WIDTH,
     overflow: 'visible',
     paddingBottom: 100,
-    paddingRight: 100,
     backgroundColor: currentColors.background.bg300,
   },
   headerRow: {
