@@ -403,6 +403,19 @@ const ProfileScreen = React.memo(({ navigation, route }: ProfileScreenProps) => 
         settingsAPI.user.set('push_notifications', pushNotifications),
         settingsAPI.user.set('notification_time', notificationTime),
       ]);
+
+      // Send message to service worker to schedule notifications
+      if (Platform.OS === 'web' && 'serviceWorker' in navigator && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({
+          type: 'SCHEDULE_NOTIFICATION',
+          payload: {
+            time: notificationTime,
+            enabled: pushNotifications,
+          },
+        });
+        logger.info('Sent notification schedule to service worker', 'ProfileScreen');
+      }
+
       setShowNotificationsModal(false);
       setSuccessMessage('Notification preferences saved');
       setShowSuccessDialog(true);

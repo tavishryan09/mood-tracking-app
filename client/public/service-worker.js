@@ -1,7 +1,7 @@
 /* eslint-disable no-restricted-globals */
 
 // Use timestamp to force cache update on each deployment
-const CACHE_VERSION = '2025-11-05-icon-fix';
+const CACHE_VERSION = '2025-01-18-notifications';
 const CACHE_NAME = `mood-tracker-${CACHE_VERSION}`;
 const RUNTIME_CACHE = `mood-tracker-runtime-${CACHE_VERSION}`;
 
@@ -241,6 +241,18 @@ self.addEventListener('notificationclick', (event) => {
     event.waitUntil(
       clients.openWindow('/')
     );
+  } else if (event.action === 'view-tasks') {
+    event.waitUntil(
+      clients.openWindow('/planning')
+    );
+  } else if (event.action === 'dismiss') {
+    // Just close the notification
+    return;
+  } else if (event.notification.data && event.notification.data.url) {
+    // Default click - open the URL specified in notification data
+    event.waitUntil(
+      clients.openWindow(event.notification.data.url)
+    );
   }
 });
 
@@ -373,6 +385,11 @@ self.addEventListener('message', (event) => {
     // Manually trigger sync
     event.waitUntil(syncTimeEntries());
   }
+
+  if (event.data && event.data.type === 'SCHEDULE_NOTIFICATION') {
+    const { time, enabled } = event.data.payload;
+    event.waitUntil(scheduleNotification(time, enabled));
+  }
 });
 
 // Queue a request for later sync
@@ -403,3 +420,141 @@ async function queueRequest(url, method, headers, body) {
     throw error;
   }
 }
+
+// Schedule daily notification
+async function scheduleNotification(time, enabled) {
+  try {
+    console.log('[Service Worker] Scheduling notification:', { time, enabled });
+
+    if (!enabled) {
+      // Cancel scheduled notification
+      console.log('[Service Worker] Notifications disabled, canceling schedule');
+      return;
+    }
+
+    // Parse time (HH:MM format)
+    const [hours, minutes] = time.split(':').map(Number);
+
+    if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+      console.error('[Service Worker] Invalid time format:', time);
+      return;
+    }
+
+    // Calculate next notification time
+    const now = new Date();
+    const scheduledTime = new Date();
+    scheduledTime.setHours(hours, minutes, 0, 0);
+
+    // If the time has already passed today, schedule for tomorrow
+    if (scheduledTime <= now) {
+      scheduledTime.setDate(scheduledTime.getDate() + 1);
+    }
+
+    const delay = scheduledTime.getTime() - now.getTime();
+
+    console.log('[Service Worker] Next notification scheduled for:', scheduledTime.toLocaleString());
+    console.log('[Service Worker] Delay (ms):', delay);
+
+    // Store the notification schedule in IndexedDB
+    const db = await openDB();
+    const tx = db.transaction('data', 'readwrite');
+    const store = tx.objectStore('data');
+
+    return new Promise((resolve, reject) => {
+      const putRequest = store.put({
+        key: 'notification_schedule',
+        time: time,
+        enabled: enabled,
+        nextScheduledTime: scheduledTime.getTime(),
+        timestamp: Date.now(),
+      });
+
+      putRequest.onsuccess = () => {
+        console.log('[Service Worker] Notification schedule saved');
+        resolve();
+      };
+      putRequest.onerror = () => reject(putRequest.error);
+    });
+  } catch (error) {
+    console.error('[Service Worker] Failed to schedule notification:', error);
+    throw error;
+  }
+}
+
+// Check and send daily notifications (called periodically)
+async function checkAndSendNotifications() {
+  try {
+    const db = await openDB();
+    const tx = db.transaction('data', 'readonly');
+    const store = tx.objectStore('data');
+
+    return new Promise((resolve, reject) => {
+      const getRequest = store.get('notification_schedule');
+
+      getRequest.onsuccess = async () => {
+        const schedule = getRequest.result;
+
+        if (!schedule || !schedule.enabled) {
+          console.log('[Service Worker] No notification schedule or disabled');
+          resolve();
+          return;
+        }
+
+        const now = Date.now();
+        const scheduledTime = schedule.nextScheduledTime;
+
+        // Check if it's time to send notification (within 1 minute window)
+        if (now >= scheduledTime && now < scheduledTime + 60000) {
+          console.log('[Service Worker] Time to send daily notification!');
+
+          // Show notification
+          await self.registration.showNotification('Daily Task Reminder', {
+            body: 'Time to check your tasks for today!',
+            icon: '/icons/icon-192x192.png',
+            badge: '/icons/icon-72x72.png',
+            vibrate: [200, 100, 200],
+            tag: 'daily-reminder',
+            requireInteraction: false,
+            data: {
+              type: 'daily-reminder',
+              url: '/planning',
+            },
+            actions: [
+              {
+                action: 'view-tasks',
+                title: 'View Tasks',
+              },
+              {
+                action: 'dismiss',
+                title: 'Dismiss',
+              },
+            ],
+          });
+
+          // Update next scheduled time (tomorrow at the same time)
+          const nextTime = new Date(scheduledTime);
+          nextTime.setDate(nextTime.getDate() + 1);
+
+          const updateTx = db.transaction('data', 'readwrite');
+          const updateStore = updateTx.objectStore('data');
+
+          schedule.nextScheduledTime = nextTime.getTime();
+          updateStore.put(schedule);
+
+          console.log('[Service Worker] Next notification scheduled for:', new Date(nextTime).toLocaleString());
+        }
+
+        resolve();
+      };
+
+      getRequest.onerror = () => reject(getRequest.error);
+    });
+  } catch (error) {
+    console.error('[Service Worker] Error checking notifications:', error);
+  }
+}
+
+// Set up periodic check (every minute)
+setInterval(() => {
+  checkAndSendNotifications();
+}, 60000); // Check every minute
