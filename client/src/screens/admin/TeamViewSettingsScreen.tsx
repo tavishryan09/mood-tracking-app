@@ -362,6 +362,7 @@ const TeamViewSettingsScreen = React.memo(({ navigation }: TeamViewSettingsScree
           <Menu
             visible={menuVisible}
             onDismiss={() => {
+              console.log('MENU DISMISSED', { role });
               logger.log('Menu dismissed', { role }, 'TeamViewSettingsScreen');
               setMenuVisible(false);
             }}
@@ -370,9 +371,12 @@ const TeamViewSettingsScreen = React.memo(({ navigation }: TeamViewSettingsScree
               <Pressable
                 onPress={() => {
                   try {
+                    console.log('MENU BUTTON CLICKED', { role, menuVisible, availablePages: availablePages.length });
                     logger.log('Menu button clicked', { role, menuVisible }, 'TeamViewSettingsScreen');
                     setMenuVisible(!menuVisible);
+                    console.log('Menu visibility toggled to:', !menuVisible);
                   } catch (error) {
+                    console.error('ERROR IN MENU BUTTON:', error);
                     logger.error('Error in menu button onPress:', error, 'TeamViewSettingsScreen');
                   }
                 }}
@@ -404,6 +408,7 @@ const TeamViewSettingsScreen = React.memo(({ navigation }: TeamViewSettingsScree
                 <Menu.Item
                   key={page.key}
                   onPress={() => {
+                    console.log('MENU ITEM SELECTED', { role, page: page.label });
                     logger.log('Default page selected', { role, page: page.label }, 'TeamViewSettingsScreen');
                     setDefaultPage(page.key);
                     setMenuVisible(false);
