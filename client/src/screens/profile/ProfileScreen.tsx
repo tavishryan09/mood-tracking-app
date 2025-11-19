@@ -440,39 +440,60 @@ const ProfileScreen = React.memo(({ navigation, route }: ProfileScreenProps) => 
   const handleTestNotification = async () => {
     try {
       if (Platform.OS === 'web') {
+        // Check if notifications are supported
+        if (!('Notification' in window)) {
+          setErrorMessage('Notifications are not supported in this browser.');
+          setShowErrorDialog(true);
+          return;
+        }
+
         const permission = await requestNotificationPermission();
+        logger.info('Notification permission:', permission, 'ProfileScreen');
+
         if (permission !== 'granted') {
           setErrorMessage('Notification permission was denied. Please enable notifications in your browser settings.');
           setShowErrorDialog(true);
           return;
         }
 
-        await showNotification('Test Notification', {
-          body: 'This is a test notification from your Mood Tracker app!',
-          tag: 'test-notification',
-          requireInteraction: false,
-          data: {
-            type: 'test',
-            url: '/planning',
-          },
-          actions: [
-            {
-              action: 'view-tasks',
-              title: 'View Tasks',
-            },
-            {
-              action: 'dismiss',
-              title: 'Dismiss',
-            },
-          ],
-        });
+        // Check if service worker is ready
+        if ('serviceWorker' in navigator) {
+          const registration = await navigator.serviceWorker.ready;
+          logger.info('Service worker ready, sending notification', 'ProfileScreen');
 
-        setSuccessMessage('Test notification sent!');
-        setShowSuccessDialog(true);
+          await registration.showNotification('Test Notification', {
+            body: 'This is a test notification from your Mood Tracker app!',
+            icon: '/icons/icon-192x192.png',
+            badge: '/icons/icon-72x72.png',
+            tag: 'test-notification',
+            requireInteraction: false,
+            data: {
+              type: 'test',
+              url: '/planning',
+            },
+            actions: [
+              {
+                action: 'view-tasks',
+                title: 'View Tasks',
+              },
+              {
+                action: 'dismiss',
+                title: 'Dismiss',
+              },
+            ],
+          });
+
+          logger.info('Test notification sent successfully', 'ProfileScreen');
+          setSuccessMessage('Test notification sent!');
+          setShowSuccessDialog(true);
+        } else {
+          setErrorMessage('Service worker is not available. Please reload the page.');
+          setShowErrorDialog(true);
+        }
       }
     } catch (error) {
       logger.error('Test notification error:', error, 'ProfileScreen');
-      setErrorMessage('Failed to send test notification');
+      setErrorMessage(`Failed to send test notification: ${error instanceof Error ? error.message : 'Unknown error'}`);
       setShowErrorDialog(true);
     }
   };
