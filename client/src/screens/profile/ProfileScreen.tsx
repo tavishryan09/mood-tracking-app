@@ -438,32 +438,41 @@ const ProfileScreen = React.memo(({ navigation, route }: ProfileScreenProps) => 
   };
 
   const handleTestNotification = async () => {
+    console.log('[TEST NOTIFICATION] Button clicked');
     try {
       if (Platform.OS === 'web') {
+        console.log('[TEST NOTIFICATION] Platform is web');
+
         // Check if notifications are supported
         if (!('Notification' in window)) {
+          console.log('[TEST NOTIFICATION] Notifications NOT supported');
           setErrorMessage('Notifications are not supported in this browser.');
           setShowErrorDialog(true);
           return;
         }
+        console.log('[TEST NOTIFICATION] Notifications supported');
 
-        logger.info('Requesting notification permission...', 'ProfileScreen');
+        console.log('[TEST NOTIFICATION] Current permission:', Notification.permission);
         const permission = await Notification.requestPermission();
-        logger.info('Notification permission result:', permission, 'ProfileScreen');
+        console.log('[TEST NOTIFICATION] Permission after request:', permission);
 
         if (permission !== 'granted') {
+          console.log('[TEST NOTIFICATION] Permission denied');
           setErrorMessage('Notification permission was denied. Please enable notifications in your browser settings.');
           setShowErrorDialog(true);
           return;
         }
 
-        logger.info('Creating test notification...', 'ProfileScreen');
+        console.log('[TEST NOTIFICATION] Creating notification...');
+        console.log('[TEST NOTIFICATION] Service worker available:', 'serviceWorker' in navigator);
+        console.log('[TEST NOTIFICATION] Service worker controller:', navigator.serviceWorker?.controller);
 
         // Try service worker first, fall back to basic notification
         try {
           if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            console.log('[TEST NOTIFICATION] Using service worker');
             const registration = await navigator.serviceWorker.ready;
-            logger.info('Using service worker for notification', 'ProfileScreen');
+            console.log('[TEST NOTIFICATION] Service worker ready:', registration);
 
             await registration.showNotification('Test Notification', {
               body: 'This is a test notification from your Mood Tracker app!',
@@ -476,29 +485,33 @@ const ProfileScreen = React.memo(({ navigation, route }: ProfileScreenProps) => 
                 url: '/planning',
               },
             });
+            console.log('[TEST NOTIFICATION] Service worker notification sent');
           } else {
             // Fallback to basic notification
-            logger.info('Using basic Notification API (service worker not ready)', 'ProfileScreen');
+            console.log('[TEST NOTIFICATION] Using basic Notification API');
             const notification = new Notification('Test Notification', {
               body: 'This is a test notification from your Mood Tracker app!',
               icon: '/icons/icon-192x192.png',
               tag: 'test-notification',
             });
+            console.log('[TEST NOTIFICATION] Basic notification created:', notification);
 
             // Auto-close after 5 seconds
             setTimeout(() => notification.close(), 5000);
           }
 
-          logger.info('Test notification sent successfully', 'ProfileScreen');
+          console.log('[TEST NOTIFICATION] Notification sent successfully');
           setSuccessMessage('Test notification sent! Check your system notifications.');
           setShowSuccessDialog(true);
         } catch (notifError) {
-          logger.error('Error showing notification:', notifError, 'ProfileScreen');
+          console.error('[TEST NOTIFICATION] Error showing notification:', notifError);
           throw notifError;
         }
+      } else {
+        console.log('[TEST NOTIFICATION] Platform is not web:', Platform.OS);
       }
     } catch (error) {
-      logger.error('Test notification error:', error, 'ProfileScreen');
+      console.error('[TEST NOTIFICATION] Top-level error:', error);
       setErrorMessage(`Failed to send test notification: ${error instanceof Error ? error.message : 'Unknown error'}`);
       setShowErrorDialog(true);
     }
