@@ -270,7 +270,7 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
         borderLeft: `1px solid ${cellBorderColor}`,
         borderRight: `1px solid ${cellBorderColor}`,
         borderBottom: (isLastBlockForUser && !isLastUser) ? `5px solid ${teamMemberBorderColor}` : `1px solid ${cellBorderColor}`,
-        backgroundColor: cellBgColor,
+        backgroundColor: isHovered ? cellHoverBg : cellBgColor,
         opacity: isOutsideQuarter ? 0.4 : 1,
         position: 'relative',
         overflow: 'visible',
