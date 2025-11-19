@@ -49,7 +49,6 @@ const ProfileScreen = React.memo(({ navigation, route }: ProfileScreenProps) => 
   const [confirmPassword, setConfirmPassword] = useState('');
 
   // Notifications settings
-  const [emailNotifications, setEmailNotifications] = useState(true);
   const [pushNotifications, setPushNotifications] = useState(true);
 
   // Outlook Calendar integration
@@ -376,7 +375,6 @@ const ProfileScreen = React.memo(({ navigation, route }: ProfileScreenProps) => 
   const handleSaveNotifications = async () => {
     try {
       // Save notification preferences to user settings
-      await settingsAPI.user.set('email_notifications', emailNotifications);
       await settingsAPI.user.set('push_notifications', pushNotifications);
       setShowNotificationsModal(false);
       setSuccessMessage('Notification preferences saved');
@@ -1259,17 +1257,6 @@ const ProfileScreen = React.memo(({ navigation, route }: ProfileScreenProps) => 
             <Card style={{ backgroundColor: currentColors.background.bg600, borderRadius: 8 }}>
               <Card.Content>
                 <Title style={{ color: currentColors.text, marginBottom: 20 }}>Notification Preferences</Title>
-
-                <List.Item
-                  title="Email Notifications"
-                  description="Receive email notifications for important updates"
-                  right={() => (
-                    <Switch
-                      value={emailNotifications}
-                      onValueChange={setEmailNotifications}
-                    />
-                  )}
-                />
 
                 <List.Item
                   title="Push Notifications"
