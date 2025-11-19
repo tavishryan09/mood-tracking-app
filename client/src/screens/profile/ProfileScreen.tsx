@@ -12,7 +12,6 @@ import axios from 'axios';
 import { ProfileScreenProps } from '../../types/navigation';
 import { logger } from '../../utils/logger';
 import { apiWithTimeout, TIMEOUT_DURATIONS } from '../../utils/apiWithTimeout';
-import { requestNotificationPermission, showNotification } from '../../utils/serviceWorkerRegistration';
 
 const ProfileScreen = React.memo(({ navigation, route }: ProfileScreenProps) => {
   const { user, logout, refreshUser, token } = useAuth();
@@ -21,7 +20,6 @@ const ProfileScreen = React.memo(({ navigation, route }: ProfileScreenProps) => 
   // Modal states
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
-  const [showNotificationsModal, setShowNotificationsModal] = useState(false);
   const [showManageUsersModal, setShowManageUsersModal] = useState(false);
   const [showTeamViewSettingsModal, setShowTeamViewSettingsModal] = useState(false);
   const [showEditUserModal, setShowEditUserModal] = useState(false);
@@ -48,10 +46,6 @@ const ProfileScreen = React.memo(({ navigation, route }: ProfileScreenProps) => 
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-
-  // Notifications settings
-  const [pushNotifications, setPushNotifications] = useState(true);
-  const [notificationTime, setNotificationTime] = useState('09:00'); // Default 9:00 AM
 
   // Outlook Calendar integration
   const [outlookConnected, setOutlookConnected] = useState(false);
@@ -371,149 +365,6 @@ const ProfileScreen = React.memo(({ navigation, route }: ProfileScreenProps) => 
       setShowErrorDialog(true);
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleOpenNotifications = async () => {
-    try {
-      // Load notification settings
-      const [pushNotifResponse, notifTimeResponse] = await Promise.all([
-        settingsAPI.user.get('push_notifications'),
-        settingsAPI.user.get('notification_time'),
-      ]);
-
-      if (pushNotifResponse?.data?.value !== undefined) {
-        setPushNotifications(pushNotifResponse.data.value);
-      }
-      if (notifTimeResponse?.data?.value) {
-        setNotificationTime(notifTimeResponse.data.value);
-      }
-
-      setShowNotificationsModal(true);
-    } catch (error) {
-      logger.error('Load notification settings error:', error, 'ProfileScreen');
-      // Still open modal with defaults
-      setShowNotificationsModal(true);
-    }
-  };
-
-  const handleSaveNotifications = async () => {
-    try {
-      // Request notification permission if enabling notifications
-      if (pushNotifications && Platform.OS === 'web') {
-        const permission = await requestNotificationPermission();
-        if (permission !== 'granted') {
-          setErrorMessage('Notification permission was denied. Please enable notifications in your browser settings.');
-          setShowErrorDialog(true);
-          return;
-        }
-      }
-
-      // Save notification preferences to user settings
-      await Promise.all([
-        settingsAPI.user.set('push_notifications', pushNotifications),
-        settingsAPI.user.set('notification_time', notificationTime),
-      ]);
-
-      // Send message to service worker to schedule notifications
-      if (Platform.OS === 'web' && 'serviceWorker' in navigator && navigator.serviceWorker.controller) {
-        navigator.serviceWorker.controller.postMessage({
-          type: 'SCHEDULE_NOTIFICATION',
-          payload: {
-            time: notificationTime,
-            enabled: pushNotifications,
-          },
-        });
-        logger.info('Sent notification schedule to service worker', 'ProfileScreen');
-      }
-
-      setShowNotificationsModal(false);
-      setSuccessMessage('Notification preferences saved');
-      setShowSuccessDialog(true);
-    } catch (error) {
-      logger.error('Save notifications error:', error, 'ProfileScreen');
-      setErrorMessage('Failed to save notification preferences');
-      setShowErrorDialog(true);
-    }
-  };
-
-  const handleTestNotification = async () => {
-    console.log('[TEST NOTIFICATION] Button clicked');
-    try {
-      if (Platform.OS === 'web') {
-        console.log('[TEST NOTIFICATION] Platform is web');
-
-        // Check if notifications are supported
-        if (!('Notification' in window)) {
-          console.log('[TEST NOTIFICATION] Notifications NOT supported');
-          setErrorMessage('Notifications are not supported in this browser.');
-          setShowErrorDialog(true);
-          return;
-        }
-        console.log('[TEST NOTIFICATION] Notifications supported');
-
-        console.log('[TEST NOTIFICATION] Current permission:', Notification.permission);
-        const permission = await Notification.requestPermission();
-        console.log('[TEST NOTIFICATION] Permission after request:', permission);
-
-        if (permission !== 'granted') {
-          console.log('[TEST NOTIFICATION] Permission denied');
-          setErrorMessage('Notification permission was denied. Please enable notifications in your browser settings.');
-          setShowErrorDialog(true);
-          return;
-        }
-
-        console.log('[TEST NOTIFICATION] Creating notification...');
-        console.log('[TEST NOTIFICATION] Service worker available:', 'serviceWorker' in navigator);
-        console.log('[TEST NOTIFICATION] Service worker controller:', navigator.serviceWorker?.controller);
-
-        // Try service worker first, fall back to basic notification
-        try {
-          if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-            console.log('[TEST NOTIFICATION] Using service worker');
-            const registration = await navigator.serviceWorker.ready;
-            console.log('[TEST NOTIFICATION] Service worker ready:', registration);
-
-            await registration.showNotification('Test Notification', {
-              body: 'This is a test notification from your Mood Tracker app!',
-              icon: '/icons/icon-192x192.png',
-              badge: '/icons/icon-72x72.png',
-              tag: 'test-notification',
-              requireInteraction: false,
-              data: {
-                type: 'test',
-                url: '/planning',
-              },
-            });
-            console.log('[TEST NOTIFICATION] Service worker notification sent');
-          } else {
-            // Fallback to basic notification
-            console.log('[TEST NOTIFICATION] Using basic Notification API');
-            const notification = new Notification('Test Notification', {
-              body: 'This is a test notification from your Mood Tracker app!',
-              icon: '/icons/icon-192x192.png',
-              tag: 'test-notification',
-            });
-            console.log('[TEST NOTIFICATION] Basic notification created:', notification);
-
-            // Auto-close after 5 seconds
-            setTimeout(() => notification.close(), 5000);
-          }
-
-          console.log('[TEST NOTIFICATION] Notification sent successfully');
-          setSuccessMessage('Test notification sent! Check your system notifications.');
-          setShowSuccessDialog(true);
-        } catch (notifError) {
-          console.error('[TEST NOTIFICATION] Error showing notification:', notifError);
-          throw notifError;
-        }
-      } else {
-        console.log('[TEST NOTIFICATION] Platform is not web:', Platform.OS);
-      }
-    } catch (error) {
-      console.error('[TEST NOTIFICATION] Top-level error:', error);
-      setErrorMessage(`Failed to send test notification: ${error instanceof Error ? error.message : 'Unknown error'}`);
-      setShowErrorDialog(true);
     }
   };
 
@@ -1101,12 +952,6 @@ const ProfileScreen = React.memo(({ navigation, route }: ProfileScreenProps) => 
           onPress={handleEditProfile}
         />
         <List.Item
-          title="Notifications"
-          description="Manage notification preferences"
-          right={() => <HugeiconsIcon icon={PencilEdit02Icon} size={24} color={currentColors.icon} />}
-          onPress={handleOpenNotifications}
-        />
-        <List.Item
           title="Change Password"
           description="Update your password"
           right={() => <HugeiconsIcon icon={PencilEdit02Icon} size={24} color={currentColors.icon} />}
@@ -1368,84 +1213,6 @@ const ProfileScreen = React.memo(({ navigation, route }: ProfileScreenProps) => 
                     style={styles.modalButton}
                   >
                     Change Password
-                  </Button>
-                </View>
-              </Card.Content>
-            </Card>
-          </View>
-        </View>
-      </Modal>
-
-      {/* Notifications Modal */}
-      <Modal
-        visible={showNotificationsModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowNotificationsModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.modalContainer, { backgroundColor: currentColors.background.bg700 }]}>
-            <Card style={{ backgroundColor: currentColors.background.bg600, borderRadius: 8 }}>
-              <Card.Content>
-                <Title style={{ color: currentColors.text, marginBottom: 20 }}>Notification Preferences</Title>
-
-                <List.Item
-                  title="Push Notifications"
-                  description="Receive push notifications on your device"
-                  right={() => (
-                    <Switch
-                      value={pushNotifications}
-                      onValueChange={setPushNotifications}
-                    />
-                  )}
-                />
-
-                <Divider style={{ marginVertical: 10 }} />
-
-                <Text style={{ color: currentColors.text, fontSize: 16, fontWeight: '600', marginBottom: 10 }}>
-                  Daily Notification Time
-                </Text>
-                <Text style={{ color: currentColors.text, opacity: 0.7, fontSize: 14, marginBottom: 15 }}>
-                  Choose when to receive daily task reminders
-                </Text>
-
-                <TextInput
-                  mode="outlined"
-                  label="Notification Time"
-                  value={notificationTime}
-                  onChangeText={setNotificationTime}
-                  placeholder="HH:MM (24-hour format)"
-                  style={{ backgroundColor: currentColors.background.bg500 }}
-                  textColor={currentColors.text}
-                  outlineColor={currentColors.border}
-                  activeOutlineColor={currentColors.primary}
-                />
-
-                {Platform.OS === 'web' && (
-                  <Button
-                    mode="outlined"
-                    onPress={handleTestNotification}
-                    style={{ marginTop: 15 }}
-                    icon="bell-ring"
-                  >
-                    Test Notification
-                  </Button>
-                )}
-
-                <View style={styles.modalButtons}>
-                  <Button
-                    mode="outlined"
-                    onPress={() => setShowNotificationsModal(false)}
-                    style={styles.modalButton}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    mode="contained"
-                    onPress={handleSaveNotifications}
-                    style={styles.modalButton}
-                  >
-                    Save
                   </Button>
                 </View>
               </Card.Content>

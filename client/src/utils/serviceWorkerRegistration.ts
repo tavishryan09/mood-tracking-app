@@ -127,39 +127,6 @@ export function unregister() {
   }
 }
 
-// Request permission for notifications
-export async function requestNotificationPermission(): Promise<NotificationPermission> {
-  if (!('Notification' in window)) {
-
-    return 'denied';
-  }
-
-  if (Notification.permission === 'granted') {
-    return 'granted';
-  }
-
-  if (Notification.permission !== 'denied') {
-    const permission = await Notification.requestPermission();
-    return permission;
-  }
-
-  return Notification.permission;
-}
-
-// Show a notification
-export async function showNotification(title: string, options?: NotificationOptions) {
-  const permission = await requestNotificationPermission();
-
-  if (permission === 'granted' && 'serviceWorker' in navigator) {
-    const registration = await navigator.serviceWorker.ready;
-    await registration.showNotification(title, {
-      icon: '/icons/icon-192x192.png',
-      badge: '/icons/icon-72x72.png',
-      ...options,
-    });
-  }
-}
-
 // Check if app is installed
 export function isAppInstalled(): boolean {
   // Check if running in standalone mode
