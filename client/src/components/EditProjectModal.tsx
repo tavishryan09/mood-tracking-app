@@ -216,9 +216,16 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
         await projectsAPI.addMember(projectId, { userId });
       }
 
-      // Remove members
+      // Remove members (with error handling for members that don't exist)
       for (const userId of membersToRemove) {
-        await projectsAPI.removeMember(projectId, userId);
+        try {
+          await projectsAPI.removeMember(projectId, userId);
+        } catch (error: any) {
+          // Ignore 404 errors (member already removed or doesn't exist)
+          if (error.response?.status !== 404) {
+            throw error; // Re-throw other errors
+          }
+        }
       }
 
       // Update member rates if not using standard rate
