@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Text, Pressable } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Text } from 'react-native';
 import { List, Switch, Title, Paragraph, Divider, Button, Menu } from 'react-native-paper';
 import { useTheme } from '../../contexts/ThemeContext';
 import { settingsAPI } from '../../services/api';
@@ -368,7 +368,7 @@ const TeamViewSettingsScreen = React.memo(({ navigation }: TeamViewSettingsScree
             }}
             contentStyle={{ backgroundColor: currentColors.background.bg300 }}
             anchor={
-              <Pressable
+              <TouchableOpacity
                 onPress={() => {
                   try {
                     console.log('MENU BUTTON CLICKED', { role, menuVisible, availablePages: availablePages.length });
@@ -381,21 +381,22 @@ const TeamViewSettingsScreen = React.memo(({ navigation }: TeamViewSettingsScree
                   }
                 }}
                 disabled={availablePages.length === 0}
-                style={({ pressed }) => ({
+                style={{
                   alignSelf: 'flex-start',
                   borderWidth: 1,
                   borderColor: availablePages.length === 0 ? currentColors.textTertiary : currentColors.primary,
                   borderRadius: 4,
                   paddingHorizontal: 16,
                   paddingVertical: 8,
-                  opacity: availablePages.length === 0 ? 0.5 : pressed ? 0.7 : 1,
-                  backgroundColor: pressed ? currentColors.background.bg500 : 'transparent',
-                })}
+                  opacity: availablePages.length === 0 ? 0.5 : 1,
+                  backgroundColor: 'transparent',
+                }}
+                activeOpacity={0.7}
               >
                 <Text style={{ color: availablePages.length === 0 ? currentColors.textTertiary : currentColors.primary }}>
                   {PAGES.find((p) => p.key === defaultPage)?.label || 'Select'}
                 </Text>
-              </Pressable>
+              </TouchableOpacity>
             }
           >
             {availablePages.length === 0 ? (
