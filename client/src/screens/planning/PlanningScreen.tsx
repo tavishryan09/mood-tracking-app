@@ -398,12 +398,20 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
     blockAssignmentsRef.current = blockAssignments;
   }, [blockAssignments]);
 
-  // Update persisted quarters when planning tasks change
+  // Update persisted quarters when planning tasks or deadline tasks change
   useEffect(() => {
-    if (blockAssignments.length >= 0) {
-      hookUpdatePersistedQuarters(blockAssignments);
-    }
-  }, [blockAssignments, hookUpdatePersistedQuarters]);
+    // Convert blockAssignments object to array format expected by updatePersistedQuarters
+    const planningTasksArray = Object.entries(blockAssignments).map(([key, assignment]) => {
+      // Extract date from the key format: userId-date-blockIndex
+      const datePart = key.split('-').slice(1, 4).join('-'); // Gets YYYY-MM-DD
+      return {
+        date: datePart,
+        ...assignment
+      };
+    });
+
+    hookUpdatePersistedQuarters(planningTasksArray, deadlineTasks);
+  }, [blockAssignments, deadlineTasks, hookUpdatePersistedQuarters]);
 
   // Keyboard event handler for deleting selected cells
   useEffect(() => {

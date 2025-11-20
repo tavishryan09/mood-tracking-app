@@ -33,7 +33,7 @@ interface UsePlanningNavigationReturn {
   getWeekNumber: (date: Date) => number;
   getQuarterFromDate: (date: Date) => number;
   generateQuarterWeeks: () => Date[];
-  updatePersistedQuarters: (planningTasks: any[]) => void;
+  updatePersistedQuarters: (planningTasks: any[], deadlineTasks: any[]) => void;
 }
 
 export const usePlanningNavigation = (): UsePlanningNavigationReturn => {
@@ -89,8 +89,8 @@ export const usePlanningNavigation = (): UsePlanningNavigationReturn => {
     loadPersistedQuarters();
   }, [isQuarterEnded]);
 
-  // Helper to check if a quarter has any planning tasks
-  const quarterHasTasks = useCallback((quarter: QuarterInfo, planningTasks: any[]): boolean => {
+  // Helper to check if a quarter has any planning tasks or deadline tasks
+  const quarterHasTasks = useCallback((quarter: QuarterInfo, planningTasks: any[], deadlineTasks: any[]): boolean => {
     const { year, quarter: q } = quarter;
     const startMonth = (q - 1) * 3;
     const quarterStart = new Date(year, startMonth, 1);
@@ -98,14 +98,23 @@ export const usePlanningNavigation = (): UsePlanningNavigationReturn => {
     const quarterEnd = new Date(year, startMonth + 3, 0);
     quarterEnd.setHours(23, 59, 59, 999);
 
-    return planningTasks.some(task => {
+    // Check if there are any planning tasks in this quarter
+    const hasPlanningTasks = planningTasks.some(task => {
       const taskDate = new Date(task.date);
       return taskDate >= quarterStart && taskDate <= quarterEnd;
     });
+
+    // Check if there are any deadline tasks in this quarter
+    const hasDeadlineTasks = deadlineTasks.some(task => {
+      const taskDate = new Date(task.date);
+      return taskDate >= quarterStart && taskDate <= quarterEnd;
+    });
+
+    return hasPlanningTasks || hasDeadlineTasks;
   }, []);
 
-  // Function to update persisted quarters based on planning tasks
-  const updatePersistedQuarters = useCallback(async (planningTasks: any[]) => {
+  // Function to update persisted quarters based on planning tasks and deadline tasks
+  const updatePersistedQuarters = useCallback(async (planningTasks: any[], deadlineTasks: any[]) => {
     try {
       const now = new Date();
       const currentYear = now.getFullYear();
@@ -129,7 +138,7 @@ export const usePlanningNavigation = (): UsePlanningNavigationReturn => {
 
         // For future quarters, only save if they have tasks
         const isFutureQuarter = q.year > currentYear || (q.year === currentYear && q.quarter > currentQuarter);
-        if (isFutureQuarter && quarterHasTasks(q, planningTasks)) {
+        if (isFutureQuarter && quarterHasTasks(q, planningTasks, deadlineTasks)) {
           quartersToSave.push(q);
         }
       });
