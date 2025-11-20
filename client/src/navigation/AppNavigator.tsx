@@ -228,6 +228,7 @@ const MainTabs = () => {
   const { currentColors } = useTheme();
   const { getColorForElement } = useCustomColorTheme();
   const [visibleTabs, setVisibleTabs] = useState<string[]>([]);
+  const [defaultPage, setDefaultPage] = useState<string>('Dashboard');
   const [tabsLoaded, setTabsLoaded] = useState(false);
 
   useEffect(() => {
@@ -238,21 +239,25 @@ const MainTabs = () => {
     try {
       if (!user || !user.role) {
         setVisibleTabs(['Dashboard', 'Planning', 'Projects', 'Clients', 'Profile']);
+        setDefaultPage('Dashboard');
         setTabsLoaded(true);
         return;
       }
 
       // Get settings key based on role
-      let settingsKey = 'team_view_user_page_access';
+      let pageAccessKey = 'team_view_user_page_access';
+      let defaultPageKey = 'team_view_user_default_page';
       if (user.role === 'ADMIN') {
-        settingsKey = 'team_view_admin_page_access';
+        pageAccessKey = 'team_view_admin_page_access';
+        defaultPageKey = 'team_view_admin_default_page';
       } else if (user.role === 'MANAGER') {
-        settingsKey = 'team_view_manager_page_access';
+        pageAccessKey = 'team_view_manager_page_access';
+        defaultPageKey = 'team_view_manager_default_page';
       }
 
       // Load settings from app-wide settings (team settings)
       try {
-        const response = await settingsAPI.app.get(settingsKey);
+        const response = await settingsAPI.app.get(pageAccessKey);
         const pageAccess = response.data?.value;
 
         if (pageAccess) {
@@ -266,16 +271,34 @@ const MainTabs = () => {
           if (pageAccess.Profile) tabs.push('Profile');
 
           setVisibleTabs(tabs);
+
+          // Load default page
+          try {
+            const defaultPageResponse = await settingsAPI.app.get(defaultPageKey);
+            const savedDefaultPage = defaultPageResponse.data?.value;
+            if (savedDefaultPage && tabs.includes(savedDefaultPage)) {
+              console.log('[AppNavigator] Setting default page to:', savedDefaultPage);
+              setDefaultPage(savedDefaultPage);
+            } else {
+              // Fallback to first visible tab
+              setDefaultPage(tabs[0] || 'Dashboard');
+            }
+          } catch (error: any) {
+            console.log('[AppNavigator] No default page saved, using first visible tab');
+            setDefaultPage(tabs[0] || 'Dashboard');
+          }
         } else {
           // If no settings saved, show all tabs
 
           setVisibleTabs(['Dashboard', 'Planning', 'Projects', 'Clients', 'Profile']);
+          setDefaultPage('Dashboard');
         }
       } catch (error: any) {
         // If 404, no settings exist yet - show all tabs
         if (error.response?.status === 404) {
 
           setVisibleTabs(['Dashboard', 'Planning', 'Projects', 'Clients', 'Profile']);
+          setDefaultPage('Dashboard');
         } else {
           throw error;
         }
@@ -283,6 +306,7 @@ const MainTabs = () => {
     } catch (error) {
       console.error('[AppNavigator] Error loading tab settings:', error);
       setVisibleTabs(['Dashboard', 'Planning', 'Projects', 'Clients', 'Profile']);
+      setDefaultPage('Dashboard');
     } finally {
       setTabsLoaded(true);
     }
@@ -295,6 +319,7 @@ const MainTabs = () => {
 
   return (
     <Tab.Navigator
+      initialRouteName={defaultPage}
       key={currentColors.primary} // Force re-render when theme changes
       screenOptions={({ route }) => ({
         // Performance: Only load screens when they're focused
