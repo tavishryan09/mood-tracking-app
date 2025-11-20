@@ -368,7 +368,8 @@ const TeamViewSettingsScreen = React.memo(({ navigation }: TeamViewSettingsScree
             }}
             contentStyle={{ backgroundColor: currentColors.background.bg300 }}
             anchor={
-              <TouchableOpacity
+              <Button
+                mode="outlined"
                 onPress={() => {
                   try {
                     console.log('MENU BUTTON CLICKED', { role, menuVisible, availablePages: availablePages.length });
@@ -381,22 +382,14 @@ const TeamViewSettingsScreen = React.memo(({ navigation }: TeamViewSettingsScree
                   }
                 }}
                 disabled={availablePages.length === 0}
+                textColor={availablePages.length === 0 ? currentColors.textTertiary : currentColors.primary}
                 style={{
                   alignSelf: 'flex-start',
-                  borderWidth: 1,
                   borderColor: availablePages.length === 0 ? currentColors.textTertiary : currentColors.primary,
-                  borderRadius: 4,
-                  paddingHorizontal: 16,
-                  paddingVertical: 8,
-                  opacity: availablePages.length === 0 ? 0.5 : 1,
-                  backgroundColor: 'transparent',
                 }}
-                activeOpacity={0.7}
               >
-                <Text style={{ color: availablePages.length === 0 ? currentColors.textTertiary : currentColors.primary }}>
-                  {PAGES.find((p) => p.key === defaultPage)?.label || 'Select'}
-                </Text>
-              </TouchableOpacity>
+                {PAGES.find((p) => p.key === defaultPage)?.label || 'Select'}
+              </Button>
             }
           >
             {availablePages.length === 0 ? (
