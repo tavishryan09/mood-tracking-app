@@ -50,10 +50,12 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
     weekTitle: hookWeekTitle,
     showQuarterPrompt: hookShowQuarterPrompt,
     nextQuarterInfo: hookNextQuarterInfo,
+    previousQuarterInfo: hookPreviousQuarterInfo,
     setVisibleWeekIndex: hookSetVisibleWeekIndex,
     loadNextWeek: hookLoadNextWeek,
     loadPreviousWeek: hookLoadPreviousWeek,
     confirmLoadNextQuarter: hookConfirmLoadNextQuarter,
+    confirmLoadPreviousQuarter: hookConfirmLoadPreviousQuarter,
     cancelLoadNextQuarter: hookCancelLoadNextQuarter,
     getWeekNumber: hookGetWeekNumber,
     getQuarterFromDate: hookGetQuarterFromDate,
@@ -2619,11 +2621,17 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
         onDismiss={() => setShowWarningDialog(false)}
       />
 
-      {/* Load Next Quarter Dialog */}
+      {/* Load Quarter Dialog (Next or Previous) */}
       <CustomDialog
         visible={hookShowQuarterPrompt}
-        title="Load Next Quarter?"
-        message={hookNextQuarterInfo ? `Would you like to load Q${hookNextQuarterInfo.quarter} ${hookNextQuarterInfo.year} to continue adding and editing planning tasks?` : ''}
+        title={hookNextQuarterInfo ? 'Load Next Quarter?' : 'Load Previous Quarter?'}
+        message={
+          hookNextQuarterInfo
+            ? `Would you like to load Q${hookNextQuarterInfo.quarter} ${hookNextQuarterInfo.year} to continue adding and editing planning tasks?`
+            : hookPreviousQuarterInfo
+            ? `Would you like to load Q${hookPreviousQuarterInfo.quarter} ${hookPreviousQuarterInfo.year}?`
+            : ''
+        }
         buttons={[
           {
             label: 'Cancel',
@@ -2631,7 +2639,7 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
           },
           {
             label: 'Load Quarter',
-            onPress: hookConfirmLoadNextQuarter,
+            onPress: hookNextQuarterInfo ? hookConfirmLoadNextQuarter : hookConfirmLoadPreviousQuarter,
             variant: 'solid',
             color: currentColors.primary,
           },

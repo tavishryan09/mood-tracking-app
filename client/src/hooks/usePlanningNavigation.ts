@@ -20,6 +20,7 @@ interface UsePlanningNavigationReturn {
   scrollContainerRef: React.MutableRefObject<HTMLDivElement | null>;
   showQuarterPrompt: boolean;
   nextQuarterInfo: QuarterInfo | null;
+  previousQuarterInfo: QuarterInfo | null;
   loadedQuarters: QuarterInfo[];
   setCurrentWeekStart: (date: Date) => void;
   setCurrentQuarter: (quarter: QuarterInfo) => void;
@@ -27,6 +28,7 @@ interface UsePlanningNavigationReturn {
   loadNextWeek: () => void;
   loadPreviousWeek: () => void;
   confirmLoadNextQuarter: () => void;
+  confirmLoadPreviousQuarter: () => void;
   cancelLoadNextQuarter: () => void;
   getWeekNumber: (date: Date) => number;
   getQuarterFromDate: (date: Date) => number;
@@ -54,16 +56,28 @@ export const usePlanningNavigation = (): UsePlanningNavigationReturn => {
     }];
   });
 
-  // Load persisted quarters on mount
+  // Helper to check if a quarter has ended
+  const isQuarterEnded = useCallback((quarter: QuarterInfo): boolean => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentQuarter = Math.floor(now.getMonth() / 3) + 1;
+
+    // Quarter has ended if it's in a previous year, or same year but earlier quarter
+    return quarter.year < currentYear || (quarter.year === currentYear && quarter.quarter < currentQuarter);
+  }, []);
+
+  // Load persisted quarters on mount, filtering out ended quarters
   useEffect(() => {
     const loadPersistedQuarters = async () => {
       try {
         const stored = await AsyncStorage.getItem('planning_loaded_quarters');
         if (stored) {
           const parsedQuarters = JSON.parse(stored) as QuarterInfo[];
-          // Only use persisted quarters if they're valid
-          if (Array.isArray(parsedQuarters) && parsedQuarters.length > 0) {
-            setLoadedQuarters(parsedQuarters);
+          // Filter out quarters that have ended, only keep current and future quarters
+          const activeQuarters = parsedQuarters.filter(q => !isQuarterEnded(q));
+
+          if (activeQuarters.length > 0) {
+            setLoadedQuarters(activeQuarters);
           }
         }
       } catch (error) {
@@ -72,13 +86,15 @@ export const usePlanningNavigation = (): UsePlanningNavigationReturn => {
     };
 
     loadPersistedQuarters();
-  }, []);
+  }, [isQuarterEnded]);
 
-  // Persist loaded quarters whenever they change
+  // Persist loaded quarters whenever they change (only non-ended quarters)
   useEffect(() => {
     const persistQuarters = async () => {
       try {
-        await AsyncStorage.setItem('planning_loaded_quarters', JSON.stringify(loadedQuarters));
+        // Only persist current and future quarters, not ended ones
+        const quartersToSave = loadedQuarters.filter(q => !isQuarterEnded(q));
+        await AsyncStorage.setItem('planning_loaded_quarters', JSON.stringify(quartersToSave));
       } catch (error) {
         console.error('[usePlanningNavigation] Error persisting quarters:', error);
       }
@@ -87,7 +103,7 @@ export const usePlanningNavigation = (): UsePlanningNavigationReturn => {
     if (loadedQuarters.length > 0) {
       persistQuarters();
     }
-  }, [loadedQuarters]);
+  }, [loadedQuarters, isQuarterEnded]);
 
   // Initialize current week start (Monday)
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
@@ -104,6 +120,7 @@ export const usePlanningNavigation = (): UsePlanningNavigationReturn => {
   const [visibleWeekIndex, setVisibleWeekIndex] = useState(0);
   const [showQuarterPrompt, setShowQuarterPrompt] = useState(false);
   const [nextQuarterInfo, setNextQuarterInfo] = useState<QuarterInfo | null>(null);
+  const [previousQuarterInfo, setPreviousQuarterInfo] = useState<QuarterInfo | null>(null);
 
   // Get week number (ISO week number)
   const getWeekNumber = useCallback((date: Date): number => {
@@ -192,13 +209,30 @@ export const usePlanningNavigation = (): UsePlanningNavigationReturn => {
         return;
       }
 
-      const prevWeekIndex = Math.max(0, visibleWeekIndex - 1);
+      const prevWeekIndex = visibleWeekIndex - 1;
+
+      // Check if we're trying to go before the first week of the loaded quarters
+      if (prevWeekIndex < 0) {
+        // Calculate previous quarter
+        const firstLoadedQuarter = loadedQuarters[0];
+        let prevQuarter = firstLoadedQuarter.quarter - 1;
+        let prevYear = firstLoadedQuarter.year;
+        if (prevQuarter < 1) {
+          prevQuarter = 4;
+          prevYear -= 1;
+        }
+
+        setPreviousQuarterInfo({ year: prevYear, quarter: prevQuarter });
+        setShowQuarterPrompt(true);
+        return;
+      }
+
       const scrollLeft = prevWeekIndex * 7 * DAY_CELL_WIDTH;
 
       scrollContainer.scrollLeft = scrollLeft;
       setVisibleWeekIndex(prevWeekIndex);
     }
-  }, [visibleWeekIndex]);
+  }, [visibleWeekIndex, loadedQuarters]);
 
   // Confirm loading next quarter
   const confirmLoadNextQuarter = useCallback(() => {
@@ -214,10 +248,33 @@ export const usePlanningNavigation = (): UsePlanningNavigationReturn => {
     }
   }, [nextQuarterInfo]);
 
-  // Cancel loading next quarter
+  // Confirm loading previous quarter
+  const confirmLoadPreviousQuarter = useCallback(() => {
+    if (previousQuarterInfo) {
+      // Prepend the previous quarter to loaded quarters
+      setLoadedQuarters(prev => [previousQuarterInfo, ...prev]);
+      setCurrentQuarter(previousQuarterInfo);
+      setShowQuarterPrompt(false);
+      setPreviousQuarterInfo(null);
+
+      // Scroll will automatically adjust since we prepended weeks
+      // We need to adjust the visible week index to account for the new weeks added
+      setVisibleWeekIndex(0);
+
+      if (Platform.OS === 'web') {
+        const scrollContainer = scrollContainerRef.current || (document.querySelector('[data-planning-scroll]') as HTMLDivElement);
+        if (scrollContainer) {
+          scrollContainer.scrollLeft = 0;
+        }
+      }
+    }
+  }, [previousQuarterInfo]);
+
+  // Cancel loading quarter
   const cancelLoadNextQuarter = useCallback(() => {
     setShowQuarterPrompt(false);
     setNextQuarterInfo(null);
+    setPreviousQuarterInfo(null);
   }, []);
 
   // Calculate visible week based on scroll position or initial state
@@ -240,6 +297,7 @@ export const usePlanningNavigation = (): UsePlanningNavigationReturn => {
     scrollContainerRef,
     showQuarterPrompt,
     nextQuarterInfo,
+    previousQuarterInfo,
     loadedQuarters,
     setCurrentWeekStart,
     setCurrentQuarter,
@@ -247,6 +305,7 @@ export const usePlanningNavigation = (): UsePlanningNavigationReturn => {
     loadNextWeek,
     loadPreviousWeek,
     confirmLoadNextQuarter,
+    confirmLoadPreviousQuarter,
     cancelLoadNextQuarter,
     getWeekNumber,
     getQuarterFromDate,
