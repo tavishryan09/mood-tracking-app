@@ -139,6 +139,7 @@ export const usePlanningNavigation = (): UsePlanningNavigationReturn => {
   // Generate weeks for all loaded quarters
   const generateQuarterWeeks = useCallback((): Date[] => {
     const allWeeks: Date[] = [];
+    const seenWeekStarts = new Set<string>();
 
     // Generate weeks for each loaded quarter
     loadedQuarters.forEach(({ year, quarter }) => {
@@ -159,7 +160,15 @@ export const usePlanningNavigation = (): UsePlanningNavigationReturn => {
       const currentWeek = new Date(firstMonday);
 
       while (currentWeek <= quarterEnd) {
-        allWeeks.push(new Date(currentWeek));
+        // Create a unique key for this week start date
+        const weekKey = `${currentWeek.getFullYear()}-${currentWeek.getMonth()}-${currentWeek.getDate()}`;
+
+        // Only add if we haven't seen this week start before
+        if (!seenWeekStarts.has(weekKey)) {
+          allWeeks.push(new Date(currentWeek));
+          seenWeekStarts.add(weekKey);
+        }
+
         currentWeek.setDate(currentWeek.getDate() + 7);
       }
     });
