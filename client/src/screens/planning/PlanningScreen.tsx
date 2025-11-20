@@ -60,6 +60,7 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
     getWeekNumber: hookGetWeekNumber,
     getQuarterFromDate: hookGetQuarterFromDate,
     generateQuarterWeeks: hookGenerateQuarterWeeks,
+    updatePersistedQuarters: hookUpdatePersistedQuarters,
   } = navigationHook;
 
   // Data from hook
@@ -396,6 +397,13 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
   useEffect(() => {
     blockAssignmentsRef.current = blockAssignments;
   }, [blockAssignments]);
+
+  // Update persisted quarters when planning tasks change
+  useEffect(() => {
+    if (blockAssignments.length >= 0) {
+      hookUpdatePersistedQuarters(blockAssignments);
+    }
+  }, [blockAssignments, hookUpdatePersistedQuarters]);
 
   // Keyboard event handler for deleting selected cells
   useEffect(() => {

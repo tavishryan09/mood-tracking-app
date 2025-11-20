@@ -33,6 +33,7 @@ interface UsePlanningNavigationReturn {
   getWeekNumber: (date: Date) => number;
   getQuarterFromDate: (date: Date) => number;
   generateQuarterWeeks: () => Date[];
+  updatePersistedQuarters: (planningTasks: any[]) => void;
 }
 
 export const usePlanningNavigation = (): UsePlanningNavigationReturn => {
@@ -88,22 +89,56 @@ export const usePlanningNavigation = (): UsePlanningNavigationReturn => {
     loadPersistedQuarters();
   }, [isQuarterEnded]);
 
-  // Persist loaded quarters whenever they change (only non-ended quarters)
-  useEffect(() => {
-    const persistQuarters = async () => {
-      try {
-        // Only persist current and future quarters, not ended ones
-        const quartersToSave = loadedQuarters.filter(q => !isQuarterEnded(q));
-        await AsyncStorage.setItem('planning_loaded_quarters', JSON.stringify(quartersToSave));
-      } catch (error) {
-        console.error('[usePlanningNavigation] Error persisting quarters:', error);
-      }
-    };
+  // Helper to check if a quarter has any planning tasks
+  const quarterHasTasks = useCallback((quarter: QuarterInfo, planningTasks: any[]): boolean => {
+    const { year, quarter: q } = quarter;
+    const startMonth = (q - 1) * 3;
+    const quarterStart = new Date(year, startMonth, 1);
+    quarterStart.setHours(0, 0, 0, 0);
+    const quarterEnd = new Date(year, startMonth + 3, 0);
+    quarterEnd.setHours(23, 59, 59, 999);
 
-    if (loadedQuarters.length > 0) {
-      persistQuarters();
+    return planningTasks.some(task => {
+      const taskDate = new Date(task.date);
+      return taskDate >= quarterStart && taskDate <= quarterEnd;
+    });
+  }, []);
+
+  // Function to update persisted quarters based on planning tasks
+  const updatePersistedQuarters = useCallback(async (planningTasks: any[]) => {
+    try {
+      const now = new Date();
+      const currentYear = now.getFullYear();
+      const currentQuarter = Math.floor(now.getMonth() / 3) + 1;
+      const currentQuarterInfo = { year: currentYear, quarter: currentQuarter };
+
+      // Start with current quarter (always include)
+      const quartersToSave = [currentQuarterInfo];
+
+      // Add future quarters that have tasks
+      loadedQuarters.forEach(q => {
+        // Skip if it's the current quarter (already added)
+        if (q.year === currentQuarterInfo.year && q.quarter === currentQuarterInfo.quarter) {
+          return;
+        }
+
+        // Skip ended quarters
+        if (isQuarterEnded(q)) {
+          return;
+        }
+
+        // For future quarters, only save if they have tasks
+        const isFutureQuarter = q.year > currentYear || (q.year === currentYear && q.quarter > currentQuarter);
+        if (isFutureQuarter && quarterHasTasks(q, planningTasks)) {
+          quartersToSave.push(q);
+        }
+      });
+
+      await AsyncStorage.setItem('planning_loaded_quarters', JSON.stringify(quartersToSave));
+    } catch (error) {
+      console.error('[usePlanningNavigation] Error updating persisted quarters:', error);
     }
-  }, [loadedQuarters, isQuarterEnded]);
+  }, [loadedQuarters, isQuarterEnded, quarterHasTasks]);
 
   // Initialize current week start (Monday)
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
@@ -319,5 +354,6 @@ export const usePlanningNavigation = (): UsePlanningNavigationReturn => {
     getWeekNumber,
     getQuarterFromDate,
     generateQuarterWeeks,
+    updatePersistedQuarters,
   };
 };
