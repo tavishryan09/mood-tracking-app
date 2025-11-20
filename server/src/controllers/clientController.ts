@@ -16,6 +16,12 @@ export const getAllClients = async (req: AuthRequest, res: Response) => {
             email: true,
           },
         },
+        contacts: {
+          orderBy: [
+            { isPrimary: 'desc' },
+            { createdAt: 'asc' },
+          ],
+        },
         _count: {
           select: {
             projects: true,

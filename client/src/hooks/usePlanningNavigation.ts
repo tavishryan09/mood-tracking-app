@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const DAY_CELL_WIDTH = 180; // Must match PlanningScreen.tsx DAY_CELL_WIDTH
 
@@ -19,6 +20,7 @@ interface UsePlanningNavigationReturn {
   scrollContainerRef: React.MutableRefObject<HTMLDivElement | null>;
   showQuarterPrompt: boolean;
   nextQuarterInfo: QuarterInfo | null;
+  loadedQuarters: QuarterInfo[];
   setCurrentWeekStart: (date: Date) => void;
   setCurrentQuarter: (quarter: QuarterInfo) => void;
   setVisibleWeekIndex: (index: number) => void;
@@ -42,6 +44,50 @@ export const usePlanningNavigation = (): UsePlanningNavigationReturn => {
       quarter: Math.floor(now.getMonth() / 3) + 1,
     };
   });
+
+  // Track all loaded quarters (initially just the current quarter)
+  const [loadedQuarters, setLoadedQuarters] = useState<QuarterInfo[]>(() => {
+    const now = new Date();
+    return [{
+      year: now.getFullYear(),
+      quarter: Math.floor(now.getMonth() / 3) + 1,
+    }];
+  });
+
+  // Load persisted quarters on mount
+  useEffect(() => {
+    const loadPersistedQuarters = async () => {
+      try {
+        const stored = await AsyncStorage.getItem('planning_loaded_quarters');
+        if (stored) {
+          const parsedQuarters = JSON.parse(stored) as QuarterInfo[];
+          // Only use persisted quarters if they're valid
+          if (Array.isArray(parsedQuarters) && parsedQuarters.length > 0) {
+            setLoadedQuarters(parsedQuarters);
+          }
+        }
+      } catch (error) {
+        console.error('[usePlanningNavigation] Error loading persisted quarters:', error);
+      }
+    };
+
+    loadPersistedQuarters();
+  }, []);
+
+  // Persist loaded quarters whenever they change
+  useEffect(() => {
+    const persistQuarters = async () => {
+      try {
+        await AsyncStorage.setItem('planning_loaded_quarters', JSON.stringify(loadedQuarters));
+      } catch (error) {
+        console.error('[usePlanningNavigation] Error persisting quarters:', error);
+      }
+    };
+
+    if (loadedQuarters.length > 0) {
+      persistQuarters();
+    }
+  }, [loadedQuarters]);
 
   // Initialize current week start (Monday)
   const [currentWeekStart, setCurrentWeekStart] = useState<Date>(() => {
@@ -73,33 +119,36 @@ export const usePlanningNavigation = (): UsePlanningNavigationReturn => {
     return Math.floor(date.getMonth() / 3) + 1;
   }, []);
 
-  // Generate weeks for the current quarter
+  // Generate weeks for all loaded quarters
   const generateQuarterWeeks = useCallback((): Date[] => {
-    const { year, quarter } = currentQuarter;
-    const startMonth = (quarter - 1) * 3;
+    const allWeeks: Date[] = [];
 
-    // Find the first Monday of the quarter (or before if quarter doesn't start on Monday)
-    const quarterStart = new Date(year, startMonth, 1);
-    const firstMonday = new Date(quarterStart);
-    const dayOfWeek = quarterStart.getDay();
-    // Monday-based week: if Sunday (0), go back 6 days; otherwise go back (dayOfWeek - 1) days
-    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-    firstMonday.setDate(quarterStart.getDate() - daysFromMonday);
+    // Generate weeks for each loaded quarter
+    loadedQuarters.forEach(({ year, quarter }) => {
+      const startMonth = (quarter - 1) * 3;
 
-    // Find the last day of the quarter
-    const quarterEnd = new Date(year, startMonth + 3, 0);
+      // Find the first Monday of the quarter (or before if quarter doesn't start on Monday)
+      const quarterStart = new Date(year, startMonth, 1);
+      const firstMonday = new Date(quarterStart);
+      const dayOfWeek = quarterStart.getDay();
+      // Monday-based week: if Sunday (0), go back 6 days; otherwise go back (dayOfWeek - 1) days
+      const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+      firstMonday.setDate(quarterStart.getDate() - daysFromMonday);
 
-    // Generate all weeks in the quarter
-    const weeks: Date[] = [];
-    const currentWeek = new Date(firstMonday);
+      // Find the last day of the quarter
+      const quarterEnd = new Date(year, startMonth + 3, 0);
 
-    while (currentWeek <= quarterEnd) {
-      weeks.push(new Date(currentWeek));
-      currentWeek.setDate(currentWeek.getDate() + 7);
-    }
+      // Generate all weeks in this quarter
+      const currentWeek = new Date(firstMonday);
 
-    return weeks;
-  }, [currentQuarter]);
+      while (currentWeek <= quarterEnd) {
+        allWeeks.push(new Date(currentWeek));
+        currentWeek.setDate(currentWeek.getDate() + 7);
+      }
+    });
+
+    return allWeeks;
+  }, [loadedQuarters]);
 
   const quarterWeeks = generateQuarterWeeks();
 
@@ -154,18 +203,14 @@ export const usePlanningNavigation = (): UsePlanningNavigationReturn => {
   // Confirm loading next quarter
   const confirmLoadNextQuarter = useCallback(() => {
     if (nextQuarterInfo) {
+      // Append the next quarter to loaded quarters
+      setLoadedQuarters(prev => [...prev, nextQuarterInfo]);
       setCurrentQuarter(nextQuarterInfo);
-      setVisibleWeekIndex(0);
       setShowQuarterPrompt(false);
       setNextQuarterInfo(null);
 
-      // Scroll to the beginning
-      if (Platform.OS === 'web') {
-        const scrollContainer = scrollContainerRef.current || (document.querySelector('[data-planning-scroll]') as HTMLDivElement);
-        if (scrollContainer) {
-          scrollContainer.scrollLeft = 0;
-        }
-      }
+      // Don't reset scroll - the new quarter will be appended to the end
+      // The scroll position will remain at the end of the previous quarter
     }
   }, [nextQuarterInfo]);
 
@@ -195,6 +240,7 @@ export const usePlanningNavigation = (): UsePlanningNavigationReturn => {
     scrollContainerRef,
     showQuarterPrompt,
     nextQuarterInfo,
+    loadedQuarters,
     setCurrentWeekStart,
     setCurrentQuarter,
     setVisibleWeekIndex,
