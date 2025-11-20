@@ -846,41 +846,42 @@ const ProfileScreen = React.memo(({ navigation, route }: ProfileScreenProps) => 
           );
         })}
 
-        <List.Item
-          title="Default Page"
-          description={`Page to show when ${roleLabel}s log in`}
-          right={() => (
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <Menu
-                visible={menuVisible}
-                onDismiss={() => setMenuVisible(false)}
-                contentStyle={{ backgroundColor: currentColors.background.bg500 }}
-                anchor={
-                  <Button
-                    mode="outlined"
-                    onPress={() => setMenuVisible(true)}
-                    style={{ minWidth: 120 }}
-                  >
-                    {PAGES.find((p) => p.key === defaultPage)?.label || 'Select'}
-                  </Button>
-                }
-              >
-                {availablePages.map((page) => (
-                  <Menu.Item
-                    key={page.key}
-                    onPress={() => {
-                      setDefaultPage(page.key);
-                      setMenuVisible(false);
-                    }}
-                    title={page.label}
-                    leadingIcon={page.key === defaultPage ? 'check' : undefined}
-                    titleStyle={{ color: currentColors.text }}
-                  />
-                ))}
-              </Menu>
+        <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+          <Paragraph style={{ fontSize: 14, fontWeight: '600', color: currentColors.text, marginBottom: 4 }}>
+            Default Page
+          </Paragraph>
+          <Paragraph style={{ fontSize: 12, color: currentColors.textSecondary, marginBottom: 8 }}>
+            Page to show when {roleLabel}s log in
+          </Paragraph>
+          <Button
+            mode="outlined"
+            onPress={() => {
+              console.log('DEFAULT PAGE BUTTON CLICKED', { role, menuVisible });
+              setMenuVisible(!menuVisible);
+            }}
+            style={{ minWidth: 120, alignSelf: 'flex-start' }}
+            textColor={currentColors.primary}
+          >
+            {PAGES.find((p) => p.key === defaultPage)?.label || 'Select'}
+          </Button>
+          {menuVisible && (
+            <View style={{ marginTop: 4, borderWidth: 1, borderColor: currentColors.border, borderRadius: 4, backgroundColor: currentColors.background.bg300, maxWidth: 200 }}>
+              {availablePages.map((page) => (
+                <List.Item
+                  key={page.key}
+                  title={page.label}
+                  onPress={() => {
+                    console.log('PAGE SELECTED', { role, page: page.label });
+                    setDefaultPage(page.key);
+                    setMenuVisible(false);
+                  }}
+                  titleStyle={{ color: currentColors.text }}
+                  left={() => page.key === defaultPage ? <List.Icon icon="check" color={currentColors.primary} /> : null}
+                />
+              ))}
             </View>
           )}
-        />
+        </View>
 
         <Divider style={{ marginVertical: 10 }} />
         <List.Item
