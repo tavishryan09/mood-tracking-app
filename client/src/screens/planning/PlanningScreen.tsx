@@ -48,9 +48,13 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
     visibleWeekStart: hookVisibleWeekStart,
     weekNumber: hookWeekNumber,
     weekTitle: hookWeekTitle,
+    showQuarterPrompt: hookShowQuarterPrompt,
+    nextQuarterInfo: hookNextQuarterInfo,
     setVisibleWeekIndex: hookSetVisibleWeekIndex,
     loadNextWeek: hookLoadNextWeek,
     loadPreviousWeek: hookLoadPreviousWeek,
+    confirmLoadNextQuarter: hookConfirmLoadNextQuarter,
+    cancelLoadNextQuarter: hookCancelLoadNextQuarter,
     getWeekNumber: hookGetWeekNumber,
     getQuarterFromDate: hookGetQuarterFromDate,
     generateQuarterWeeks: hookGenerateQuarterWeeks,
@@ -2613,6 +2617,26 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
           },
         ]}
         onDismiss={() => setShowWarningDialog(false)}
+      />
+
+      {/* Load Next Quarter Dialog */}
+      <CustomDialog
+        visible={hookShowQuarterPrompt}
+        title="Load Next Quarter?"
+        message={hookNextQuarterInfo ? `Would you like to load Q${hookNextQuarterInfo.quarter} ${hookNextQuarterInfo.year} to continue adding and editing planning tasks?` : ''}
+        buttons={[
+          {
+            label: 'Cancel',
+            onPress: hookCancelLoadNextQuarter,
+          },
+          {
+            label: 'Load Quarter',
+            onPress: hookConfirmLoadNextQuarter,
+            variant: 'solid',
+            color: currentColors.primary,
+          },
+        ]}
+        onDismiss={hookCancelLoadNextQuarter}
       />
     </View>
   );
