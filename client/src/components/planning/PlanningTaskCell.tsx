@@ -336,7 +336,6 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
           <div
             onMouseDown={(e: any) => handleEdgeDragStart(userId, dateString, blockIndex, 'top', e, span)}
             onTouchStart={(e: any) => {
-              e.stopPropagation();
               handleEdgeDragStart(userId, dateString, blockIndex, 'top', e.touches[0], span);
             }}
             style={{
@@ -367,7 +366,7 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
               alignItems: 'center',
               gap: '2px',
               overflow: 'hidden',
-              pointerEvents: 'auto',
+              pointerEvents: 'none',
               userSelect: 'none',
               textAlign: 'center',
             }}
@@ -433,7 +432,6 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
           <div
             onMouseDown={(e: any) => handleEdgeDragStart(userId, dateString, blockIndex, 'bottom', e, span)}
             onTouchStart={(e: any) => {
-              e.stopPropagation();
               handleEdgeDragStart(userId, dateString, blockIndex, 'bottom', e.touches[0], span);
             }}
             style={{
