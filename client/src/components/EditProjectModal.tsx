@@ -545,32 +545,37 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
                               const needsRate = isMember && !useStandardRate;
 
                               return (
-                                <View key={user.id}>
-                                  <List.Item
-                                    title={`${user.firstName} ${user.lastName}`}
-                                    description={user.email}
-                                    right={() => (
-                                      <Switch
-                                        value={isMember}
-                                        onValueChange={(value) => {
-                                          if (value) {
-                                            handleAddMember(user.id);
-                                          } else {
-                                            handleRemoveMember(user.id);
-                                          }
-                                        }}
-                                      />
-                                    )}
-                                    style={[
-                                      styles.userItem,
-                                      { backgroundColor: currentColors.background.bg500 },
-                                      needsRate && !hasRate && { borderLeftWidth: 3, borderLeftColor: currentColors.error }
-                                    ]}
-                                  />
+                                <View
+                                  key={user.id}
+                                  style={[
+                                    styles.teamMemberRow,
+                                    { backgroundColor: currentColors.background.bg500 },
+                                    needsRate && !hasRate && { borderLeftWidth: 3, borderLeftColor: currentColors.error }
+                                  ]}
+                                >
+                                  <View style={{ flex: 1 }}>
+                                    <List.Item
+                                      title={`${user.firstName} ${user.lastName}`}
+                                      description={user.email}
+                                      right={() => (
+                                        <Switch
+                                          value={isMember}
+                                          onValueChange={(value) => {
+                                            if (value) {
+                                              handleAddMember(user.id);
+                                            } else {
+                                              handleRemoveMember(user.id);
+                                            }
+                                          }}
+                                        />
+                                      )}
+                                      style={{ backgroundColor: currentColors.background.bg500 }}
+                                    />
+                                  </View>
                                   {isMember && !useStandardRate && (
-                                    <View style={{ paddingHorizontal: 16, paddingBottom: 10 }}>
+                                    <View style={{ width: 200, paddingRight: 16, justifyContent: 'center' }}>
                                       <TextInput
-                                        label={`Hourly Rate for ${user.firstName} ($)`}
+                                        label={`Rate ($)`}
                                         value={memberRates[user.id] || ''}
                                         onChangeText={(text) => {
                                           setMemberRates({
@@ -580,9 +585,9 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
                                         }}
                                         mode="outlined"
                                         keyboardType="decimal-pad"
-                                        placeholder="Enter hourly rate"
+                                        placeholder="Hourly rate"
                                         error={!hasRate}
-                                        style={[styles.input, { marginBottom: 5 }]}
+                                        dense
                                       />
                                     </View>
                                   )}
@@ -753,6 +758,12 @@ const styles = StyleSheet.create({
     paddingVertical: 20,
   },
   userItem: {
+    marginBottom: 5,
+    borderRadius: 8,
+  },
+  teamMemberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     marginBottom: 5,
     borderRadius: 8,
   },
