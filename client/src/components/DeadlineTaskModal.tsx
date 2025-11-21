@@ -138,7 +138,7 @@ const DeadlineTaskModal: React.FC<DeadlineTaskModalProps> = ({
   const handleProjectSearch = (text: string) => {
     setProjectSearch(text);
     if (text.trim() === '') {
-      setFilteredProjects(projects);
+      setFilteredProjects([]);
     } else {
       const filtered = projects.filter((project: any) => {
         const displayName = project.description || project.name;
@@ -336,11 +336,10 @@ const DeadlineTaskModal: React.FC<DeadlineTaskModalProps> = ({
                     placeholderTextColor={currentColors.textTertiary}
                     value={projectSearch}
                     onChangeText={handleProjectSearch}
-                    onFocus={() => setFilteredProjects(projects)}
                   />
                 </View>
 
-                {filteredProjects.length > 0 && projectSearch !== '' && (
+                {filteredProjects.length > 0 && projectSearch.trim() !== '' && (
                   <ScrollView
                     style={[
                       styles.projectList,
