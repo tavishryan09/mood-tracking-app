@@ -300,7 +300,6 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
           alignItems: 'center',
           position: 'relative',
           cursor: assignment ? 'pointer' : 'default',
-          touchAction: 'none',
           backgroundColor: assignment
             ? (isHovered && assignment.projectName === 'Unavailable')
               ? cellHoverBg
@@ -346,7 +345,7 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
               top: 0,
               left: 0,
               right: 0,
-              height: '10px',
+              height: '15px',
               cursor: 'ns-resize',
               zIndex: 10,
               backgroundColor: 'transparent',
@@ -361,6 +360,10 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
             draggable={Platform.OS === 'web'}
             onDragStart={(e) => handleTaskDragStart(e, userId, dateString, blockIndex)}
             onDragEnd={handleTaskDragEnd}
+            onTouchStart={(e) => {
+              // On mobile, let touches pass through to parent for long-press
+              // Don't stop propagation here
+            }}
             style={{
               width: '100%',
               flex: 1,
@@ -370,9 +373,10 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
               alignItems: 'center',
               gap: '2px',
               overflow: 'hidden',
-              pointerEvents: 'none',
               userSelect: 'none',
               textAlign: 'center',
+              // Keep pointer events enabled for desktop drag
+              // Mobile touch events will bubble up to parent handlers
             }}
           >
             {/* Project name */}
@@ -445,7 +449,7 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
               bottom: 0,
               left: 0,
               right: 0,
-              height: '10px',
+              height: '15px',
               cursor: 'ns-resize',
               zIndex: 10,
               backgroundColor: 'transparent',
