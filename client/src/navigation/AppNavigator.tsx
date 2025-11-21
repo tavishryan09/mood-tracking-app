@@ -540,8 +540,8 @@ const MainStack = () => {
   );
 };
 
-// Responsive navigator wrapper that adapts UI without unmounting
-// This component wraps both navigators in a stable container to minimize remounts
+// Responsive navigator wrapper that minimizes remounting
+// Both navigators share the same route names, so React Navigation can handle transitions
 const ResponsiveMainNavigator = React.memo(() => {
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= 768;
@@ -553,13 +553,11 @@ const ResponsiveMainNavigator = React.memo(() => {
     }
   }, [isDesktop]);
 
-  // Use conditional rendering with View wrapper to maintain component tree stability
-  // Desktop and Mobile navigators are rendered but one is hidden
-  // This is a temporary solution - ideally we'd use a single navigator with responsive UI
+  // Render the appropriate navigator without keys to avoid forced remounts
+  // React Navigation will handle state as best it can given the different navigator types
   return (
     <View style={{ flex: 1, width: '100%', height: '100%' }}>
-      {isDesktop && <DesktopNavigator />}
-      {!isDesktop && <MainStack />}
+      {isDesktop ? <DesktopNavigator /> : <MainStack />}
     </View>
   );
 });
