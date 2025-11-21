@@ -114,18 +114,20 @@ export const usePlanningNavigation = (): UsePlanningNavigationReturn => {
   }, []);
 
   // Function to update persisted quarters based on planning tasks and deadline tasks
+  // This only updates AsyncStorage, NOT the loadedQuarters state (which is managed separately)
   const updatePersistedQuarters = useCallback(async (planningTasks: any[], deadlineTasks: any[]) => {
-    setLoadedQuarters(currentLoadedQuarters => {
-      try {
+    try {
+      // Get current loaded quarters - don't modify state, just read it
+      setLoadedQuarters(currentLoadedQuarters => {
         const now = new Date();
         const currentYear = now.getFullYear();
         const currentQuarter = Math.floor(now.getMonth() / 3) + 1;
         const currentQuarterInfo = { year: currentYear, quarter: currentQuarter };
 
-        // Start with current quarter (always include)
+        // Start with current quarter (always include in persistence)
         const quartersToSave = [currentQuarterInfo];
 
-        // Add future quarters that have tasks
+        // Add future quarters that have tasks (only for persistence)
         currentLoadedQuarters.forEach(q => {
           // Skip if it's the current quarter (already added)
           if (q.year === currentQuarterInfo.year && q.quarter === currentQuarterInfo.quarter) {
@@ -137,24 +139,24 @@ export const usePlanningNavigation = (): UsePlanningNavigationReturn => {
             return;
           }
 
-          // For future quarters, only save if they have tasks
+          // For future quarters, only persist if they have tasks
           const isFutureQuarter = q.year > currentYear || (q.year === currentYear && q.quarter > currentQuarter);
           if (isFutureQuarter && quarterHasTasks(q, planningTasks, deadlineTasks)) {
             quartersToSave.push(q);
           }
         });
 
-        // Update AsyncStorage
+        // Update AsyncStorage only - don't change loadedQuarters state
         AsyncStorage.setItem('planning_loaded_quarters', JSON.stringify(quartersToSave)).catch(error => {
           console.error('[usePlanningNavigation] Error updating persisted quarters:', error);
         });
 
-        return quartersToSave;
-      } catch (error) {
-        console.error('[usePlanningNavigation] Error updating persisted quarters:', error);
+        // Return unchanged - we're just using this to read the current value
         return currentLoadedQuarters;
-      }
-    });
+      });
+    } catch (error) {
+      console.error('[usePlanningNavigation] Error updating persisted quarters:', error);
+    }
   }, [isQuarterEnded, quarterHasTasks]);
 
   // Initialize current week start (Monday)
