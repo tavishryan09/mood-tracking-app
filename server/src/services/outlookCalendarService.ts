@@ -376,36 +376,55 @@ class OutlookCalendarService {
         const date = new Date(taskDate);
         date.setUTCHours(0, 0, 0, 0);
         const startDate = new Date(date);
-        startDate.setDate(startDate.getDate() - 1); // Include day before to catch any timezone issues
+        startDate.setDate(startDate.getDate() - 2); // Expand to 2 days before to catch timezone issues
         const endDate = new Date(date);
-        endDate.setDate(endDate.getDate() + 2); // Include day after
+        endDate.setDate(endDate.getDate() + 3); // Expand to 3 days after
+
+        console.log(`[Outlook] Searching for deadline task ${taskId} for user ${userId} between ${startDate.toISOString()} and ${endDate.toISOString()}`);
 
         const allEvents = await client
           .api(`/me/calendars/${calendarId}/events`)
           .filter(`start/dateTime ge '${startDate.toISOString()}' and start/dateTime le '${endDate.toISOString()}'`)
-          .select('id,body')
+          .select('id,subject,body,start')
           .get();
+
+        console.log(`[Outlook] Found ${allEvents?.value?.length || 0} total events in date range for user ${userId}`);
 
         // Manually filter events that contain this TaskID
         const matchingEvents = allEvents?.value?.filter((event: any) => {
           const bodyContent = event.body?.content || '';
-          return bodyContent.includes(`TaskID: ${taskId}`);
+          const hasTaskId = bodyContent.includes(`TaskID: ${taskId}`);
+          if (hasTaskId) {
+            console.log(`[Outlook] Matched event: ${event.subject} (${event.id}) on ${event.start?.dateTime}`);
+          }
+          return hasTaskId;
         }) || [];
 
         // Delete all matching events
         if (matchingEvents.length > 0) {
-          console.log(`[Outlook] Found ${matchingEvents.length} events to delete for task ${taskId} for user ${userId}`);
+          console.log(`[Outlook] Deleting ${matchingEvents.length} events for task ${taskId} for user ${userId}`);
           for (const event of matchingEvents) {
             try {
               await client.api(`/me/calendars/${calendarId}/events/${event.id}`).delete();
+              console.log(`[Outlook] Successfully deleted event ${event.id}`);
             } catch (deleteError: any) {
               if (deleteError.statusCode !== 404) {
-                console.error('[Outlook] Error deleting event:', deleteError);
+                console.error(`[Outlook] Error deleting event ${event.id}:`, deleteError);
+              } else {
+                console.log(`[Outlook] Event ${event.id} already deleted (404)`);
               }
             }
           }
         } else {
-          console.log(`[Outlook] No events found for task ${taskId} for user ${userId}`);
+          console.log(`[Outlook] WARNING: No events found for task ${taskId} for user ${userId} in date range`);
+          // Log all events in the range for debugging
+          if (allEvents?.value?.length > 0) {
+            console.log(`[Outlook] All events in range for debugging:`);
+            allEvents.value.forEach((event: any) => {
+              console.log(`  - ${event.subject} (${event.id}) on ${event.start?.dateTime}`);
+              console.log(`    Body preview: ${(event.body?.content || '').substring(0, 100)}`);
+            });
+          }
         }
 
         return true;
