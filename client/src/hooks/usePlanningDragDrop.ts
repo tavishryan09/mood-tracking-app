@@ -372,13 +372,17 @@ export const usePlanningDragDrop = ({
   // ========================================
 
   const handleEdgeDragStart = useCallback((userId: string, date: string, blockIndex: number, edge: 'top' | 'bottom', e: any, currentSpan: number) => {
-    e.preventDefault();
-    e.stopPropagation();
+    if (e.preventDefault) e.preventDefault();
+    if (e.stopPropagation) e.stopPropagation();
 
     isDraggingEdgeRef.current = true;
 
-    // Support both mouse and touch events
-    const clientY = e.clientY !== undefined ? e.clientY : e.pageY;
+    // Support both mouse events and touch events
+    // For touch events, we receive e.touches[0] which has clientY
+    // For mouse events, we receive the event which has clientY
+    const clientY = e.clientY;
+
+    console.log('[Edge Drag Start] clientY:', clientY, 'edge:', edge, 'span:', currentSpan);
 
     setDraggingEdge({
       userId,
@@ -404,6 +408,8 @@ export const usePlanningDragDrop = ({
       const deltaY = clientY - draggingEdge.startY;
       const blockHeight = 50;
       const deltaBlocks = Math.round(deltaY / blockHeight);
+
+      console.log('[Edge Move] clientY:', clientY, 'startY:', draggingEdge.startY, 'deltaY:', deltaY, 'deltaBlocks:', deltaBlocks);
 
       const { userId, date, blockIndex, edge, initialSpan } = draggingEdge;
       let newSpan = initialSpan;
