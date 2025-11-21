@@ -181,7 +181,7 @@ LoginScreen.displayName = 'LoginScreen';
 const createStyles = (currentColors: any) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: currentColors.background.bg500,
+    backgroundColor: '#FFFFFF',
   },
   scrollContent: {
     flexGrow: 1,
