@@ -475,8 +475,15 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
   }, [planningColors]);
 
   // Initial data load on mount and when loaded quarters change
+  // Use a ref to track loaded quarters to avoid infinite loops
+  const loadedQuartersRef = useRef<string>('');
+
   useEffect(() => {
-    hookLoadData(hookLoadedQuarters);
+    const quartersKey = JSON.stringify(hookLoadedQuarters);
+    if (loadedQuartersRef.current !== quartersKey) {
+      loadedQuartersRef.current = quartersKey;
+      hookLoadData(hookLoadedQuarters);
+    }
   }, [hookLoadData, hookLoadedQuarters]);
 
 
