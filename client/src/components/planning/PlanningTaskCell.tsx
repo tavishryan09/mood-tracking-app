@@ -274,7 +274,7 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
         borderTop: `1px solid ${cellBorderColor}`,
         borderLeft: `1px solid ${cellBorderColor}`,
         borderRight: `1px solid ${cellBorderColor}`,
-        borderBottom: (isLastBlockForUser && !isLastUser) ? `5px solid ${teamMemberBorderColor}` : `1px solid ${cellBorderColor}`,
+        borderBottom: (isLastBlockForUser && isLastUser) ? 'none' : (isLastBlockForUser && !isLastUser) ? `5px solid ${teamMemberBorderColor}` : `1px solid ${cellBorderColor}`,
         backgroundColor: isHovered ? cellHoverBg : cellBgColor,
         position: 'relative',
         overflow: 'visible',
