@@ -191,8 +191,9 @@ const createStyles = (currentColors: any) => StyleSheet.create({
     padding: 20,
   },
   logo: {
-    width: 500,
-    height: 133,
+    width: 400,
+    maxWidth: 400,
+    height: 106,
     marginBottom: 30,
     alignSelf: 'center',
   },
