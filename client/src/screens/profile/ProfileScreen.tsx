@@ -1262,7 +1262,7 @@ const ProfileScreen = React.memo(({ navigation, route }: ProfileScreenProps) => 
                   placeholder="Search users..."
                   onChangeText={setSearchQuery}
                   value={searchQuery}
-                  style={styles.searchbar}
+                  style={[styles.searchbar, { backgroundColor: currentColors.background.bg300 }]}
                   icon={() => <HugeiconsIcon icon={Search01Icon} size={24} color={currentColors.icon} />}
                 />
 

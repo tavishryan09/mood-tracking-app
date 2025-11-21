@@ -290,6 +290,7 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
   const deadlinesRowBg = getColorForElement('planningGrid', 'deadlinesRowBackground');
   const deadlinesRowText = getColorForElement('planningGrid', 'deadlinesRowText');
   const emptyDeadlineCellBg = getColorForElement('planningGrid', 'emptyDeadlineCellBackground');
+  const weekendDeadlineCellBg = getColorForElement('planningGrid', 'weekendCellBackground');
   const teamMemberColBg = getColorForElement('planningGrid', 'teamMemberCellBackground');
   const teamMemberColText = getColorForElement('planningGrid', 'teamMemberCellText');
   const weekdayHeaderBg = getColorForElement('planningGrid', 'weekdayHeaderBackground');
