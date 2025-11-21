@@ -1299,8 +1299,7 @@ const ProjectTableViewScreen = React.memo(() => {
                     onValueChange={(value) =>
                       setColumnVisibility({ ...columnVisibility, [key]: value })
                     }
-                    trackColor={{ false: currentColors.background.bg500, true: currentColors.primary }}
-                    thumbColor={currentColors.white}
+                    color={currentColors.primary}
                   />
                 </View>
               ))}
@@ -1310,31 +1309,21 @@ const ProjectTableViewScreen = React.memo(() => {
               <Button
                 mode="contained"
                 onPress={saveToProfile}
-                style={[styles.modalButton, { backgroundColor: currentColors.primary }]}
-                labelStyle={{ color: currentColors.white }}
+                style={styles.modalButton}
+                buttonColor={currentColors.primary}
               >
                 Save to My Profile
               </Button>
 
               {user?.role === 'ADMIN' && (
                 <Button
-                  mode="contained"
+                  mode="outlined"
                   onPress={saveAsDefault}
-                  style={[styles.modalButton, { backgroundColor: currentColors.secondary }]}
-                  labelStyle={{ color: currentColors.white }}
+                  style={[styles.modalButton, { marginTop: 10 }]}
                 >
-                  Save as Default for All
+                  Save as Default for All Users
                 </Button>
               )}
-
-              <Button
-                mode="outlined"
-                onPress={() => setShowSettingsModal(false)}
-                style={styles.modalButton}
-                labelStyle={{ color: currentColors.text }}
-              >
-                Cancel
-              </Button>
             </View>
           </View>
         </View>
