@@ -11,6 +11,7 @@ import { ClientsListScreenProps } from '../../types/navigation';
 import { logger } from '../../utils/logger';
 import { apiWithTimeout, TIMEOUT_DURATIONS } from '../../utils/apiWithTimeout';
 import EditClientModal from '../../components/EditClientModal';
+import CreateClientModal from '../../components/CreateClientModal';
 
 const ClientsListScreen = React.memo(({ navigation, route }: ClientsListScreenProps) => {
   const { currentColors } = useTheme();
@@ -39,6 +40,7 @@ const ClientsListScreen = React.memo(({ navigation, route }: ClientsListScreenPr
 
   // Modal state
   const [editModalVisible, setEditModalVisible] = useState(false);
+  const [createModalVisible, setCreateModalVisible] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState<string | null>(null);
 
   // Memoize sortClients function to prevent recreation on every render
@@ -362,9 +364,14 @@ const ClientsListScreen = React.memo(({ navigation, route }: ClientsListScreenPr
         icon={() => <HugeiconsIcon icon={AddCircleIcon} size={24} color={themeColors.addButtonIcon} />}
         label="New Client"
         color={themeColors.addButtonIcon}
-        onPress={() => {
-          navigation.navigate('CreateClient');
-        }}
+        onPress={() => setCreateModalVisible(true)}
+      />
+
+      {/* Create Client Modal */}
+      <CreateClientModal
+        visible={createModalVisible}
+        onClose={() => setCreateModalVisible(false)}
+        onClientCreated={handleClientUpdated}
       />
 
       {/* Edit Client Modal */}
