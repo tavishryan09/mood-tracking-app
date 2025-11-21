@@ -292,10 +292,8 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
         onTouchMove={handleMobileLongPressEnd}
         style={{
           width: '100%',
-          minHeight: `${TIME_BLOCK_HEIGHT * span}px`,
-          height: '100%',
+          height: `${TIME_BLOCK_HEIGHT * span}px`,
           maxWidth: '-webkit-fill-available',
-          maxHeight: '-webkit-fill-available',
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
