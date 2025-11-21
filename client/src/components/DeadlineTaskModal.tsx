@@ -397,7 +397,7 @@ const DeadlineTaskModal: React.FC<DeadlineTaskModalProps> = ({
 
                 <View style={styles.rightButtonGroup}>
                   <Button
-                    mode="outlined"
+                    mode="text"
                     onPress={onDismiss}
                     style={styles.button}
                     disabled={loading}
@@ -526,6 +526,11 @@ const styles = StyleSheet.create({
   },
   button: {
     minWidth: 100,
+    borderRadius: 5,
+  },
+  deleteButton: {
+    minWidth: 100,
+    borderRadius: 5,
   },
 });
 
