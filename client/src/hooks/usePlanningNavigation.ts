@@ -357,11 +357,23 @@ export const usePlanningNavigation = (): UsePlanningNavigationReturn => {
     setPreviousQuarterInfo(null);
   }, []);
 
+  // Helper to determine which quarter a week belongs to
+  // Using ISO week date standard: a week belongs to the year/quarter that contains its Thursday
+  const getQuarterForWeek = useCallback((weekStart: Date): { quarter: number; year: number } => {
+    // Thursday is the 4th day (index 3) from Monday
+    const thursday = new Date(weekStart);
+    thursday.setDate(weekStart.getDate() + 3);
+
+    const quarter = Math.floor(thursday.getMonth() / 3) + 1;
+    const year = thursday.getFullYear();
+
+    return { quarter, year };
+  }, []);
+
   // Calculate visible week based on scroll position or initial state
   const visibleWeekStart = quarterWeeks[visibleWeekIndex] || currentWeekStart;
   const weekNumber = getWeekNumber(visibleWeekStart);
-  const quarter = getQuarterFromDate(visibleWeekStart);
-  const year = visibleWeekStart.getFullYear();
+  const { quarter, year } = getQuarterForWeek(visibleWeekStart);
 
   // Format week title
   const weekTitle = `Week ${weekNumber}, Q${quarter} ${year}`;
