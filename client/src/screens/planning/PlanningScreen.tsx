@@ -1866,13 +1866,13 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
                   {/* Label cell - only render on first slot */}
                   {slotIndex === 0 && (
                     <td
-                      className="deadline-label-cell"
+                      className="deadline-label-cell juana-font"
                       rowSpan={2}
                       style={{
                         width: `${USER_COLUMN_WIDTH}px`,
                         minWidth: `${USER_COLUMN_WIDTH}px`,
                         maxWidth: `${USER_COLUMN_WIDTH}px`,
-                        height: `${TIME_BLOCK_HEIGHT}px`,
+                        height: '100px',
                         borderBottom: `5px solid ${headerBorderColor}`,
                         borderRight: '0px',
                         backgroundColor: deadlinesRowBg,
@@ -1887,7 +1887,6 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
                         left: 0,
                         zIndex: 15,
                       }}
-                      className="juana-font"
                     >
                       Deadlines & Milestones
                     </td>
