@@ -540,6 +540,30 @@ const MainStack = () => {
   );
 };
 
+// Responsive navigator wrapper that adapts UI without unmounting
+// This component wraps both navigators in a stable container to minimize remounts
+const ResponsiveMainNavigator = React.memo(() => {
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width >= 768;
+
+  // Clear ProjectTableView URL if on mobile (safety check for bookmarks/history)
+  React.useEffect(() => {
+    if (!isDesktop && Platform.OS === 'web' && window.location.pathname.includes('ProjectTableView')) {
+      window.history.replaceState({}, '', '/');
+    }
+  }, [isDesktop]);
+
+  // Use conditional rendering with View wrapper to maintain component tree stability
+  // Desktop and Mobile navigators are rendered but one is hidden
+  // This is a temporary solution - ideally we'd use a single navigator with responsive UI
+  return (
+    <View style={{ flex: 1, width: '100%', height: '100%' }}>
+      {isDesktop && <DesktopNavigator />}
+      {!isDesktop && <MainStack />}
+    </View>
+  );
+});
+
 const AppNavigator = () => {
   const authContext = useAuth();
   const { width } = useWindowDimensions();
@@ -551,14 +575,6 @@ const AppNavigator = () => {
 
   // Use desktop layout for web and screens wider than 768px
   const isDesktop = Platform.OS === 'web' && width >= 768;
-
-  // Clear ProjectTableView URL if on mobile (safety check for bookmarks/history)
-  // No reload needed - just update URL
-  React.useEffect(() => {
-    if (!isDesktop && Platform.OS === 'web' && window.location.pathname.includes('ProjectTableView')) {
-      window.history.replaceState({}, '', '/');
-    }
-  }, [isDesktop]);
 
   // Don't block rendering while auth is loading - show auth screen instead
   // This prevents the infinite loading issue on web
@@ -631,11 +647,7 @@ const AppNavigator = () => {
       }}
     >
       {!loading && isAuthenticated ? (
-        isDesktop ? (
-          <DesktopNavigator />
-        ) : (
-          <MainStack />
-        )
+        <ResponsiveMainNavigator />
       ) : (
         <AuthNavigator />
       )}
