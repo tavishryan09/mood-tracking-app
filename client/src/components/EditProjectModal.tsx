@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Platform, TouchableOpacity, FlatList, Text, Modal, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard } from 'react-native';
-import { TextInput, Button, Title, List, ActivityIndicator, Card, Paragraph, Switch } from 'react-native-paper';
+import { TextInput, Button, Title, List, ActivityIndicator, Card, Paragraph, Switch, IconButton } from 'react-native-paper';
+import { HugeiconsIcon } from '@hugeicons/react-native';
+import { Cancel01Icon } from '@hugeicons/core-free-icons';
 import { projectsAPI, clientsAPI, usersAPI } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
 import { CustomDialog } from './CustomDialog';
@@ -401,7 +403,13 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
                 >
                   <Card style={{ backgroundColor: currentColors.background.bg600, borderRadius: 10, elevation: 0, borderWidth: 0 }}>
                     <Card.Content style={{ paddingBottom: 0 }}>
-                <Title style={{ color: currentColors.text }}>Edit Project</Title>
+                <View style={styles.modalHeader}>
+                  <Title style={{ color: currentColors.text, flex: 1 }}>Edit Project</Title>
+                  <IconButton
+                    icon={() => <HugeiconsIcon icon={Cancel01Icon} size={24} color={currentColors.text} />}
+                    onPress={onDismiss}
+                  />
+                </View>
 
                 {loading ? (
                   <View style={styles.loadingContainer}>
@@ -698,6 +706,12 @@ const styles = StyleSheet.create({
   },
   scrollView: {
     flex: 1,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 10,
   },
   loadingContainer: {
     paddingVertical: 40,
