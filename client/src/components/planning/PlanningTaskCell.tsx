@@ -267,7 +267,6 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
         width: '180px',
         minWidth: '180px',
         maxWidth: '180px',
-        height: `${TIME_BLOCK_HEIGHT * span}px`,
         padding: 0,
         margin: 0,
         borderTop: `1px solid ${cellBorderColor}`,
