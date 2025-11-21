@@ -480,7 +480,11 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
 
   useEffect(() => {
     const quartersKey = JSON.stringify(hookLoadedQuarters);
+    console.log('[PlanningScreen] Loaded quarters changed:', hookLoadedQuarters);
+    console.log('[PlanningScreen] Previous key:', loadedQuartersRef.current);
+    console.log('[PlanningScreen] New key:', quartersKey);
     if (loadedQuartersRef.current !== quartersKey) {
+      console.log('[PlanningScreen] Loading data for quarters:', hookLoadedQuarters);
       loadedQuartersRef.current = quartersKey;
       hookLoadData(hookLoadedQuarters);
     }

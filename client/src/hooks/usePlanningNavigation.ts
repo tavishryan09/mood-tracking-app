@@ -298,8 +298,14 @@ export const usePlanningNavigation = (): UsePlanningNavigationReturn => {
   // Confirm loading next quarter
   const confirmLoadNextQuarter = useCallback(() => {
     if (nextQuarterInfo) {
+      console.log('[usePlanningNavigation] Confirming load next quarter:', nextQuarterInfo);
       // Append the next quarter to loaded quarters
-      setLoadedQuarters(prev => [...prev, nextQuarterInfo]);
+      setLoadedQuarters(prev => {
+        const newQuarters = [...prev, nextQuarterInfo];
+        console.log('[usePlanningNavigation] Previous quarters:', prev);
+        console.log('[usePlanningNavigation] New quarters after append:', newQuarters);
+        return newQuarters;
+      });
       // Don't change currentQuarter - we want to keep all loaded quarters visible
       setShowQuarterPrompt(false);
       setNextQuarterInfo(null);

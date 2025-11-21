@@ -78,6 +78,7 @@ export const usePlanningData = (): UsePlanningDataReturn => {
 
   const loadData = useCallback(async (loadedQuarters: QuarterInfo[]) => {
     try {
+      console.log('[usePlanningData] loadData called with quarters:', loadedQuarters);
       setLoading(true);
 
       // Calculate date range spanning all loaded quarters
@@ -110,6 +111,8 @@ export const usePlanningData = (): UsePlanningDataReturn => {
         setLoading(false);
         return;
       }
+
+      console.log('[usePlanningData] Loading tasks from', earliestStart.toISOString(), 'to', latestEnd.toISOString());
 
       // Load users, projects, planning tasks, and deadline tasks for all loaded quarters
       const [usersResponse, projectsResponse, planningTasksResponse, deadlineTasksResponse] = await Promise.all([
