@@ -604,6 +604,7 @@ const styles = StyleSheet.create({
   },
   button: {
     minWidth: 100,
+    borderRadius: 5,
   },
   modalHeader: {
     flexDirection: 'row',
