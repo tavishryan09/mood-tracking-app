@@ -125,7 +125,7 @@ const getTaskFontColor = (
   return projectTaskFont;
 };
 
-const TIME_BLOCK_HEIGHT = 48;
+const TIME_BLOCK_HEIGHT = 50;
 
 const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
   userId,
