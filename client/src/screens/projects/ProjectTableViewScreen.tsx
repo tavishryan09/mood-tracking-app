@@ -1664,6 +1664,7 @@ const getStyles = (currentColors: any) => StyleSheet.create({
   },
   modalButton: {
     marginVertical: 4,
+    borderRadius: 5,
   },
   confirmationOverlay: {
     flex: 1,
