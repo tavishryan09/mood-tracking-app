@@ -609,7 +609,7 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
                         </Text>
                         <View style={styles.confirmButtons}>
                           <Button
-                            mode="outlined"
+                            mode="text"
                             onPress={handleDeleteCancel}
                             disabled={saving}
                             style={styles.confirmButton}
@@ -646,7 +646,7 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
 
                       <View style={styles.rightButtonGroup}>
                         <Button
-                          mode="outlined"
+                          mode="text"
                           onPress={onDismiss}
                           style={styles.button}
                           disabled={saving || showDeleteConfirm}
@@ -814,6 +814,7 @@ const styles = StyleSheet.create({
   },
   deleteButton: {
     minWidth: 100,
+    borderRadius: 5,
   },
   rightButtonGroup: {
     flexDirection: 'row',
@@ -821,6 +822,7 @@ const styles = StyleSheet.create({
   },
   button: {
     minWidth: 100,
+    borderRadius: 5,
   },
   confirmContainer: {
     padding: 16,
@@ -840,6 +842,7 @@ const styles = StyleSheet.create({
   },
   confirmButton: {
     minWidth: 100,
+    borderRadius: 5,
   },
 });
 
