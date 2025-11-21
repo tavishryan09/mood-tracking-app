@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Modal, ScrollView, TextInput as RNTextInput, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, Keyboard } from 'react-native';
-import { TextInput, Button, Title, RadioButton, Text, Card } from 'react-native-paper';
+import { TextInput, Button, Title, RadioButton, Text, Card, IconButton } from 'react-native-paper';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-import { Search01Icon } from '@hugeicons/core-free-icons';
+import { Search01Icon, Cancel01Icon } from '@hugeicons/core-free-icons';
 import { projectsAPI, clientsAPI } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
 import { CustomDialog } from './CustomDialog';
@@ -280,13 +280,21 @@ const DeadlineTaskModal: React.FC<DeadlineTaskModalProps> = ({
                 >
                   <Card style={{ backgroundColor: currentColors.background.bg600, borderRadius: 8, elevation: 0, borderWidth: 0 }}>
                     <Card.Content style={{ paddingBottom: 0 }}>
-              <Title style={{ color: currentColors.text }}>
-                {existingTask ? 'Edit Deadline / Milestone' : 'Add Deadline / Milestone'}
-              </Title>
+              <View style={styles.modalHeader}>
+                <View style={{ flex: 1 }}>
+                  <Title style={{ color: currentColors.text }}>
+                    {existingTask ? 'Edit Deadline / Milestone' : 'Add Deadline / Milestone'}
+                  </Title>
+                  <Text style={[styles.dateText, { color: currentColors.textSecondary }]}>
+                    {date.toLocaleDateString()} - Slot {slotIndex + 1}
+                  </Text>
+                </View>
+                <IconButton
+                  icon={() => <HugeiconsIcon icon={Cancel01Icon} size={24} color={currentColors.text} />}
+                  onPress={onDismiss}
+                />
+              </View>
 
-              <Text style={[styles.dateText, { color: currentColors.textSecondary }]}>
-                {date.toLocaleDateString()} - Slot {slotIndex + 1}
-              </Text>
 
               {/* Deadline Type */}
               <View style={styles.section}>
@@ -479,9 +487,15 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
   },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 10,
+  },
   dateText: {
     fontSize: 14,
-    marginBottom: 20,
+    marginBottom: 10,
   },
   section: {
     marginBottom: 20,

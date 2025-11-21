@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, StyleSheet, Modal, ScrollView, Platform, Text, TouchableOpacity } from 'react-native';
-import { Title, Button, TextInput } from 'react-native-paper';
+import { Title, Button, TextInput, IconButton } from 'react-native-paper';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-import { CheckmarkCircle02Icon, CircleIcon, Search01Icon } from '@hugeicons/core-free-icons';
+import { CheckmarkCircle02Icon, CircleIcon, Search01Icon, Cancel01Icon } from '@hugeicons/core-free-icons';
 
 interface Project {
   id: string;
@@ -125,7 +125,13 @@ const ProjectAssignmentModal = React.memo(({
     >
       <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0, 0, 0, 0.8)' }]}>
         <View style={[styles.modalContent, { backgroundColor: currentColors.background.bg300 }]}>
-          <Title style={[styles.modalTitle, { color: currentColors.text }]}>Assign Project</Title>
+          <View style={styles.modalHeader}>
+            <Title style={[styles.modalTitle, { color: currentColors.text, flex: 1 }]}>Assign Project</Title>
+            <IconButton
+              icon={() => <HugeiconsIcon icon={Cancel01Icon} size={24} color={currentColors.text} />}
+              onPress={handleCancel}
+            />
+          </View>
 
           <ScrollView style={styles.modalScrollView} showsVerticalScrollIndicator={true}>
             {/* Only show project and task fields if Unavailable or Time Off is NOT selected */}
@@ -452,11 +458,15 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 20,
   },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 10,
+  },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 16,
-    textAlign: 'center',
   },
   modalScrollView: {
     marginBottom: 16,

@@ -1,6 +1,8 @@
 import React from 'react';
 import { View, StyleSheet, Modal, ScrollView, Platform, Text } from 'react-native';
-import { Title, Button, Switch } from 'react-native-paper';
+import { Title, Button, Switch, IconButton } from 'react-native-paper';
+import { HugeiconsIcon } from '@hugeicons/react-native';
+import { Cancel01Icon } from '@hugeicons/core-free-icons';
 
 interface User {
   id: string;
@@ -56,10 +58,18 @@ const ManageTeamMembersModal = React.memo(({
     >
       <View style={[styles.modalOverlay, { backgroundColor: 'rgba(0, 0, 0, 0.8)' }]}>
         <View style={[styles.modalContent, { backgroundColor: currentColors.background.bg300 }]}>
-          <Title style={[styles.modalTitle, { color: currentColors.text }]}>Manage Team Members</Title>
-          <Text style={[styles.modalSubtitle, { color: currentColors.text }]}>
-            Select team members to show in the planning view. Drag and drop to reorder.
-          </Text>
+          <View style={styles.modalHeader}>
+            <View style={{ flex: 1 }}>
+              <Title style={[styles.modalTitle, { color: currentColors.text }]}>Manage Team Members</Title>
+              <Text style={[styles.modalSubtitle, { color: currentColors.text }]}>
+                Select team members to show in the planning view. Drag and drop to reorder.
+              </Text>
+            </View>
+            <IconButton
+              icon={() => <HugeiconsIcon icon={Cancel01Icon} size={24} color={currentColors.text} />}
+              onPress={onClose}
+            />
+          </View>
 
           <ScrollView style={styles.modalList}>
             {users.map((user) => {
@@ -179,11 +189,15 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     padding: 20,
   },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 10,
+  },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 10,
-    textAlign: 'center',
   },
   modalSubtitle: {
     fontSize: 14,

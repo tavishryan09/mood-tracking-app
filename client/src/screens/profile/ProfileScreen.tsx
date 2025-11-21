@@ -1838,7 +1838,7 @@ const styles = StyleSheet.create({
   fullModalContainer: {
     width: '95%',
     maxWidth: 900,
-    height: 'auto',
+    maxHeight: '90%',
     borderRadius: 8,
   },
   modalHeader: {
