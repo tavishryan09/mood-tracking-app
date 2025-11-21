@@ -101,19 +101,22 @@ const ProjectAssignmentModal = React.memo(({
 }: ProjectAssignmentModalProps) => {
   const handleCancel = () => {
     onClose();
-    setProjectSearch('');
-    setTaskDescription('');
-    setIsOutOfOffice(false);
-    setIsTimeOff(false);
-    setIsUnavailable(false);
-    setIsRepeatEvent(false);
-    setRepeatType('weekly');
-    setRepeatEndDate(null);
-    setRepeatWeeklyDays([false, false, false, false, false, false, false]);
-    setMonthlyRepeatType('date');
-    setMonthlyWeekNumber(1);
-    setMonthlyDayOfWeek(1);
-    setSelectedBlock(null);
+    // Delay state reset until after modal close animation (typically 300ms)
+    setTimeout(() => {
+      setProjectSearch('');
+      setTaskDescription('');
+      setIsOutOfOffice(false);
+      setIsTimeOff(false);
+      setIsUnavailable(false);
+      setIsRepeatEvent(false);
+      setRepeatType('weekly');
+      setRepeatEndDate(null);
+      setRepeatWeeklyDays([false, false, false, false, false, false, false]);
+      setMonthlyRepeatType('date');
+      setMonthlyWeekNumber(1);
+      setMonthlyDayOfWeek(1);
+      setSelectedBlock(null);
+    }, 300);
   };
 
   return (
