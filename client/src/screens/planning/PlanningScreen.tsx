@@ -540,8 +540,8 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
     // Set this cell as selected
     setSelectedCell(blockKey);
 
-    // On mobile/touch devices: if there's a copied cell and this is empty, paste immediately
-    if (Platform.OS !== 'web' && !existing && copiedCell) {
+    // If there's a copied cell and this cell is empty, paste immediately (works for mobile tap or desktop click)
+    if (!existing && copiedCell) {
       await handleMobilePaste(userId, date, blockIndex);
       return;
     }
