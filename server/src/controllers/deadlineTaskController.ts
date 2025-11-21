@@ -131,6 +131,30 @@ export const updateDeadlineTask = async (req: AuthRequest, res: Response) => {
     const { date, slotIndex, clientId, description, deadlineType, projectId } = req.body;
     const userId = req.user?.userId;
 
+    // Get the existing task to check if date is changing
+    const existingTask = await prisma.deadlineTask.findUnique({
+      where: { id },
+      select: { date: true }
+    });
+
+    const dateIsChanging = date !== undefined && existingTask &&
+      new Date(date).toISOString() !== existingTask.date.toISOString();
+
+    // If date is changing, delete old events from ALL users' Outlook calendars first
+    if (dateIsChanging && existingTask) {
+      console.log(`[DeadlineTask] Date is changing from ${existingTask.date.toISOString()} to ${new Date(date).toISOString()}, deleting old events first`);
+      try {
+        const deletePromise = outlookCalendarService.deleteDeadlineTaskFromAllUsers(id, existingTask.date);
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Outlook delete timeout')), 8000)
+        );
+        await Promise.race([deletePromise, timeoutPromise]);
+      } catch (error) {
+        console.error('[Outlook] Failed to delete old deadline task events (non-fatal):', error);
+        // Continue with update even if delete fails
+      }
+    }
+
     // Build update data object
     const updateData: any = {};
     if (date !== undefined) updateData.date = new Date(date);
