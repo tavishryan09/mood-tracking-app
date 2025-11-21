@@ -255,6 +255,7 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
   return (
     <td
       key={`${weekIndex}-${dayIndex}`}
+      className="planning-cell"
       rowSpan={span}
       onDragOver={(e) => handleTaskDragOver(e, userId, dateString, blockIndex)}
       onDrop={(e) => handleTaskDrop(e, userId, dateString, blockIndex)}
@@ -267,6 +268,7 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
         width: '180px',
         minWidth: '180px',
         maxWidth: '180px',
+        height: 'auto',
         padding: 0,
         margin: 0,
         borderTop: `1px solid ${cellBorderColor}`,
