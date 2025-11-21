@@ -7,9 +7,10 @@ import {
   Card,
   Paragraph,
   Button,
+  IconButton,
 } from 'react-native-paper';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-import { Search01Icon } from '@hugeicons/core-free-icons';
+import { Search01Icon, Cancel01Icon } from '@hugeicons/core-free-icons';
 import { userManagementAPI } from '../../services/api';
 import { useTheme } from '../../contexts/ThemeContext';
 import { CustomDialog } from '../../components/CustomDialog';
@@ -244,12 +245,13 @@ const ManageUsersScreen = React.memo(({ navigation }: ManageUsersScreenProps) =>
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: currentColors.background.bg300 }]}>
             <View style={styles.modalHeader}>
-              <Paragraph style={[styles.modalTitle, { color: currentColors.text }]}>
+              <Paragraph style={[styles.modalTitle, { color: currentColors.text, flex: 1 }]}>
                 Delete User
               </Paragraph>
-              <TouchableOpacity onPress={handleDeleteCancel} style={styles.closeButton}>
-                <Text style={[styles.closeButtonText, { color: currentColors.text }]}>✕</Text>
-              </TouchableOpacity>
+              <IconButton
+                icon={() => <HugeiconsIcon icon={Cancel01Icon} size={24} color={currentColors.text} />}
+                onPress={handleDeleteCancel}
+              />
             </View>
             <Paragraph style={[styles.modalMessage, { color: currentColors.textSecondary }]}>
               Are you sure you want to delete {deletingUserId ? users.find(u => u.id === deletingUserId)?.firstName : ''} {deletingUserId ? users.find(u => u.id === deletingUserId)?.lastName : ''}?

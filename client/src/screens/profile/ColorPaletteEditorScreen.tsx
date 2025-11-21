@@ -8,7 +8,7 @@ import { colorPalettes, ColorPaletteName, ColorPalette } from '../../theme/color
 import { CustomDialog } from '../../components/CustomDialog';
 import { settingsAPI } from '../../services/api';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-import { DragDropList02Icon, ArrowUp01Icon, ArrowDown01Icon } from '@hugeicons/core-free-icons';
+import { DragDropList02Icon, ArrowUp01Icon, ArrowDown01Icon, Cancel01Icon } from '@hugeicons/core-free-icons';
 import { ColorPaletteEditorScreenProps } from '../../types/navigation';
 import { logger } from '../../utils/logger';
 import { apiWithTimeout, TIMEOUT_DURATIONS } from '../../utils/apiWithTimeout';
@@ -523,9 +523,15 @@ const ColorPaletteEditorScreen = React.memo(({ navigation, route }: ColorPalette
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: currentColors.background.bg700 }]}>
-            <Text style={[styles.modalTitle, { color: currentColors.text }]}>
-              Select Color for {activeColorField}
-            </Text>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: currentColors.text, flex: 1 }]}>
+                Select Color for {activeColorField}
+              </Text>
+              <IconButton
+                icon={() => <HugeiconsIcon icon={Cancel01Icon} size={24} color={currentColors.text} />}
+                onPress={handleColorPickerCancel}
+              />
+            </View>
 
             <View style={styles.colorPickerContainer}>
               <ColorPicker
@@ -762,10 +768,15 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 5,
   },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 10,
+  },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    marginBottom: 20,
     textAlign: 'center',
   },
   colorPickerContainer: {
