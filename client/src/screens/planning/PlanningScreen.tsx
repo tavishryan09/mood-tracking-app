@@ -1956,7 +1956,7 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
                             width: `${DAY_CELL_WIDTH}px`,
                             minWidth: `${DAY_CELL_WIDTH}px`,
                             maxWidth: `${DAY_CELL_WIDTH}px`,
-                            height: slotIndex === 1 ? `${TIME_BLOCK_HEIGHT / 2 + 6.5}px` : `${TIME_BLOCK_HEIGHT / 2}px`,
+                            height: 'auto',
                             borderRight: `1px solid ${cellBorderColor}`,
                             borderBottom: slotIndex === 1 ? `5px solid ${headerBorderColor}` : `1px solid ${cellBorderColor}`,
                             backgroundColor: isDragOver
