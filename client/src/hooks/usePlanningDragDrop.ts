@@ -372,12 +372,13 @@ export const usePlanningDragDrop = ({
   // ========================================
 
   const handleEdgeDragStart = useCallback((userId: string, date: string, blockIndex: number, edge: 'top' | 'bottom', e: any, currentSpan: number) => {
-    if (Platform.OS !== 'web') return;
-
     e.preventDefault();
     e.stopPropagation();
 
     isDraggingEdgeRef.current = true;
+
+    // Support both mouse and touch events
+    const clientY = e.clientY !== undefined ? e.clientY : e.pageY;
 
     setDraggingEdge({
       userId,
@@ -385,23 +386,23 @@ export const usePlanningDragDrop = ({
       blockIndex,
       edge,
       initialSpan: currentSpan,
-      startY: e.clientY,
+      startY: clientY,
     });
   }, []);
 
-  // Edge drag effect (mouse move handler)
+  // Edge drag effect (mouse and touch move handler)
   useEffect(() => {
-    if (!draggingEdge || Platform.OS !== 'web') {
+    if (!draggingEdge) {
       return;
     }
 
-    const handleMouseMove = (e: MouseEvent) => {
+    const handleMove = (e: MouseEvent | TouchEvent) => {
       if (!draggingEdge) return;
 
       e.preventDefault();
-      const clientY = e.clientY;
+      const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
       const deltaY = clientY - draggingEdge.startY;
-      const blockHeight = 60;
+      const blockHeight = 50;
       const deltaBlocks = Math.round(deltaY / blockHeight);
 
       const { userId, date, blockIndex, edge, initialSpan } = draggingEdge;
@@ -456,7 +457,7 @@ export const usePlanningDragDrop = ({
       }
     };
 
-    const handleMouseUp = async (e: MouseEvent) => {
+    const handleEnd = async (e: MouseEvent | TouchEvent) => {
       if (!draggingEdge) return;
 
       // IMMEDIATELY stop drag state to prevent further mouse movements from affecting the task
@@ -522,12 +523,16 @@ export const usePlanningDragDrop = ({
       }
     };
 
-    document.addEventListener('mousemove', handleMouseMove as EventListener);
-    document.addEventListener('mouseup', handleMouseUp as EventListener);
+    document.addEventListener('mousemove', handleMove as EventListener);
+    document.addEventListener('mouseup', handleEnd as EventListener);
+    document.addEventListener('touchmove', handleMove as EventListener, { passive: false });
+    document.addEventListener('touchend', handleEnd as EventListener);
 
     return () => {
-      document.removeEventListener('mousemove', handleMouseMove as EventListener);
-      document.removeEventListener('mouseup', handleMouseUp as EventListener);
+      document.removeEventListener('mousemove', handleMove as EventListener);
+      document.removeEventListener('mouseup', handleEnd as EventListener);
+      document.removeEventListener('touchmove', handleMove as EventListener);
+      document.removeEventListener('touchend', handleEnd as EventListener);
     };
   }, [draggingEdge, blockAssignments, setBlockAssignments, invalidateDashboardQueries, hookLoadData, currentQuarter]);
 

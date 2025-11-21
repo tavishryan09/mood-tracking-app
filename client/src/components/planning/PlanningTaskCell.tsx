@@ -289,7 +289,6 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
         onClick={() => handleBlockClick(userId, dateString, blockIndex)}
         onTouchStart={(e) => handleMobileLongPressStart(userId, dateString, blockIndex, e)}
         onTouchEnd={handleMobileLongPressEnd}
-        onTouchMove={handleMobileLongPressEnd}
         style={{
           width: '100%',
           height: `${TIME_BLOCK_HEIGHT * span}px`,
