@@ -29,6 +29,7 @@ router.get('/app', authenticate, getAppSettings);
 // Note: Specific routes must come BEFORE the catch-all :key route
 // Public routes (no authentication required) - loaded before login
 router.get('/app/default_custom_theme', injectKey('default_custom_theme'), getSetting);
+router.get('/app/default_color_palette', injectKey('default_color_palette'), getSetting);
 router.get('/app/custom_color_palettes', injectKey('custom_color_palettes'), getSetting);
 router.get('/app/element_color_mapping', injectKey('element_color_mapping'), getSetting);
 

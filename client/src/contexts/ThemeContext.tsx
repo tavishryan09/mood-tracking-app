@@ -40,6 +40,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       const defaultPaletteResponse = await settingsAPI.app.get('default_color_palette');
       if (defaultPaletteResponse?.data?.value) {
         const defaultPalette = defaultPaletteResponse.data.value;
+        logger.log('Loaded admin default color palette:', { primary: defaultPalette.primary }, 'ThemeContext');
 
         // Store admin default in state instead of mutating imported object
         setAdminDefaultPalette(defaultPalette);
@@ -47,13 +48,13 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
         // Set it as selected
         setSelectedPaletteState('default');
       } else {
-
+        logger.warn('No default_color_palette value found in response', null, 'ThemeContext');
       }
     } catch (error: any) {
       if (error?.response?.status !== 404) {
         logger.error('Error loading app default theme:', error, 'ThemeContext');
       } else {
-
+        logger.warn('default_color_palette not found in database (404) - using hardcoded default', null, 'ThemeContext');
       }
     } finally {
       setIsThemeLoading(false);
