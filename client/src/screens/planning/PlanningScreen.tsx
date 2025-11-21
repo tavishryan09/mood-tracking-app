@@ -2391,39 +2391,6 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
 
                   <TouchableOpacity
                     style={{
-                      backgroundColor: currentColors.primary,
-                      padding: 16,
-                      borderRadius: 8,
-                      marginBottom: 12,
-                    }}
-                    onPress={() => {
-                      const task = longPressDeadlineAction.task;
-                      const dateString = `${longPressDeadlineAction.date.getFullYear()}-${String(longPressDeadlineAction.date.getMonth() + 1).padStart(2, '0')}-${String(longPressDeadlineAction.date.getDate()).padStart(2, '0')}`;
-                      const slotKey = `${dateString}-${longPressDeadlineAction.slotIndex}`;
-
-                      setCopiedDeadlineTask({
-                        projectId: task.projectId,
-                        clientId: task.clientId,
-                        description: task.description || '',
-                        deadlineType: task.deadlineType,
-                      });
-                      setLongPressDeadlineAction(null);
-                      setSuccessMessage('Deadline task copied! Tap an empty slot to paste.');
-                      setShowSuccessDialog(true);
-                    }}
-                  >
-                    <Text style={{
-                      color: '#FFFFFF',
-                      fontSize: 16,
-                      fontWeight: '600',
-                      textAlign: 'center',
-                    }}>
-                      Copy
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={{
                       backgroundColor: currentColors.secondary || currentColors.primary,
                       padding: 16,
                       borderRadius: 8,
