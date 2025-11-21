@@ -2019,7 +2019,7 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
                               width: `${USER_COLUMN_WIDTH}px`,
                               minWidth: `${USER_COLUMN_WIDTH}px`,
                               maxWidth: `${USER_COLUMN_WIDTH}px`,
-                              height: `${TIME_BLOCK_HEIGHT * 4}px`,
+                              height: '200px',
                               borderBottom: isLastUser ? '0px' : `5px solid ${teamMemberBorderColor}`,
                               borderRight: '0px',
                               backgroundColor: teamMemberColBg,
