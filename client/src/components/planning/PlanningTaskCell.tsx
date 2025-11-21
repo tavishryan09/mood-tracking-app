@@ -303,15 +303,17 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
           position: 'relative',
           cursor: assignment ? 'pointer' : 'default',
           backgroundColor: assignment
-            ? getTaskBackgroundColor(
-                assignment,
-                projectTaskBg,
-                adminTaskBg,
-                marketingTaskBg,
-                outOfOfficeBg,
-                unavailableBg,
-                timeOffBg
-              )
+            ? (isHovered && assignment.projectName === 'Unavailable')
+              ? cellHoverBg
+              : getTaskBackgroundColor(
+                  assignment,
+                  projectTaskBg,
+                  adminTaskBg,
+                  marketingTaskBg,
+                  outOfOfficeBg,
+                  unavailableBg,
+                  timeOffBg
+                )
             : 'transparent',
           margin: assignment && assignment.projectName !== 'Unavailable' ? '3px' : '0',
           padding: assignment?.projectName === 'Unavailable' ? 0 : '4px',
@@ -359,6 +361,7 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
             onDragStart={(e) => handleTaskDragStart(e, userId, dateString, blockIndex)}
             onDragEnd={handleTaskDragEnd}
             style={{
+              width: '100%',
               flex: 1,
               display: 'flex',
               flexDirection: 'column',
