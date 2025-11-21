@@ -300,6 +300,7 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
           alignItems: 'center',
           position: 'relative',
           cursor: assignment ? 'pointer' : 'default',
+          touchAction: 'none',
           backgroundColor: assignment
             ? (isHovered && assignment.projectName === 'Unavailable')
               ? cellHoverBg
@@ -336,6 +337,8 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
           <div
             onMouseDown={(e: any) => handleEdgeDragStart(userId, dateString, blockIndex, 'top', e, span)}
             onTouchStart={(e: any) => {
+              e.stopPropagation();
+              e.preventDefault();
               handleEdgeDragStart(userId, dateString, blockIndex, 'top', e.touches[0], span);
             }}
             style={{
@@ -347,6 +350,7 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
               cursor: 'ns-resize',
               zIndex: 10,
               backgroundColor: 'transparent',
+              touchAction: 'none',
             }}
           />
         )}
@@ -432,6 +436,8 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
           <div
             onMouseDown={(e: any) => handleEdgeDragStart(userId, dateString, blockIndex, 'bottom', e, span)}
             onTouchStart={(e: any) => {
+              e.stopPropagation();
+              e.preventDefault();
               handleEdgeDragStart(userId, dateString, blockIndex, 'bottom', e.touches[0], span);
             }}
             style={{
@@ -443,6 +449,7 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
               cursor: 'ns-resize',
               zIndex: 10,
               backgroundColor: 'transparent',
+              touchAction: 'none',
             }}
           />
         )}
