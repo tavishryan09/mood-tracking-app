@@ -268,7 +268,7 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
         width: '180px',
         minWidth: '180px',
         maxWidth: '180px',
-        height: 'auto',
+        height: '100%',
         padding: 0,
         margin: 0,
         borderTop: `1px solid ${cellBorderColor}`,
@@ -292,6 +292,7 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
         onTouchMove={handleMobileLongPressEnd}
         style={{
           width: '100%',
+          minHeight: `${TIME_BLOCK_HEIGHT * span}px`,
           height: '100%',
           maxWidth: '-webkit-fill-available',
           maxHeight: '-webkit-fill-available',
