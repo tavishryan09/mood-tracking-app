@@ -403,14 +403,18 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
   useEffect(() => {
     // Convert blockAssignments object to array format expected by updatePersistedQuarters
     const planningTasksArray = Object.entries(blockAssignments).map(([key, assignment]) => {
-      // Extract date from the key format: userId-date-blockIndex
-      const datePart = key.split('-').slice(1, 4).join('-'); // Gets YYYY-MM-DD
+      // Extract date from the key format: userId-YYYY-MM-DD-blockIndex
+      const parts = key.split('-');
+      // The date is always the last 3 parts before the blockIndex: YYYY, MM, DD
+      const datePart = parts.slice(-4, -1).join('-'); // Gets YYYY-MM-DD
       return {
         date: datePart,
         ...assignment
       };
     });
 
+    console.log('[PlanningScreen] Updating persisted quarters with planning tasks:', planningTasksArray.map(t => t.date));
+    console.log('[PlanningScreen] Updating persisted quarters with deadline tasks:', deadlineTasks.map(t => t.date));
     hookUpdatePersistedQuarters(planningTasksArray, deadlineTasks);
   }, [blockAssignments, deadlineTasks, hookUpdatePersistedQuarters]);
 

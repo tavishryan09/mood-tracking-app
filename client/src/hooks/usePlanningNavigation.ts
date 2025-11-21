@@ -98,18 +98,29 @@ export const usePlanningNavigation = (): UsePlanningNavigationReturn => {
     const quarterEnd = new Date(year, startMonth + 3, 0);
     quarterEnd.setHours(23, 59, 59, 999);
 
+    console.log(`[quarterHasTasks] Checking Q${q} ${year}:`, quarterStart.toISOString(), 'to', quarterEnd.toISOString());
+
     // Check if there are any planning tasks in this quarter
     const hasPlanningTasks = planningTasks.some(task => {
       const taskDate = new Date(task.date);
-      return taskDate >= quarterStart && taskDate <= quarterEnd;
+      const isInRange = taskDate >= quarterStart && taskDate <= quarterEnd;
+      if (isInRange) {
+        console.log(`[quarterHasTasks] Found planning task in Q${q} ${year}:`, task.date);
+      }
+      return isInRange;
     });
 
     // Check if there are any deadline tasks in this quarter
     const hasDeadlineTasks = deadlineTasks.some(task => {
       const taskDate = new Date(task.date);
-      return taskDate >= quarterStart && taskDate <= quarterEnd;
+      const isInRange = taskDate >= quarterStart && taskDate <= quarterEnd;
+      if (isInRange) {
+        console.log(`[quarterHasTasks] Found deadline task in Q${q} ${year}:`, task.date);
+      }
+      return isInRange;
     });
 
+    console.log(`[quarterHasTasks] Q${q} ${year} has tasks:`, hasPlanningTasks || hasDeadlineTasks);
     return hasPlanningTasks || hasDeadlineTasks;
   }, []);
 

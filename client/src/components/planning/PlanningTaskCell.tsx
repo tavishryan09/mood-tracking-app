@@ -201,9 +201,7 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
   const todayString = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
   const isToday = dateString === todayString;
 
-  // Quarter and weekend checks
-  const dayQuarter = getQuarterFromDate(date);
-  const isOutsideQuarter = dayQuarter !== currentQuarter.quarter;
+  // Weekend check (removed isOutsideQuarter check since we now support multiple loaded quarters)
   const dayOfWeek = date.getDay();
   const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
@@ -277,7 +275,6 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
         borderRight: `1px solid ${cellBorderColor}`,
         borderBottom: (isLastBlockForUser && !isLastUser) ? `5px solid ${teamMemberBorderColor}` : `1px solid ${cellBorderColor}`,
         backgroundColor: isHovered ? cellHoverBg : cellBgColor,
-        opacity: isOutsideQuarter ? 0.4 : 1,
         position: 'relative',
         overflow: 'visible',
         verticalAlign: 'top',
