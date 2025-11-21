@@ -272,21 +272,10 @@ const MainTabs = () => {
 
           setVisibleTabs(tabs);
 
-          // Load default page
-          try {
-            const defaultPageResponse = await settingsAPI.app.get(defaultPageKey);
-            const savedDefaultPage = defaultPageResponse.data?.value;
-            if (savedDefaultPage && tabs.includes(savedDefaultPage)) {
-              console.log('[AppNavigator] Setting default page to:', savedDefaultPage);
-              setDefaultPage(savedDefaultPage);
-            } else {
-              // Fallback to first visible tab
-              setDefaultPage(tabs[0] || 'Dashboard');
-            }
-          } catch (error: any) {
-            console.log('[AppNavigator] No default page saved, using first visible tab');
-            setDefaultPage(tabs[0] || 'Dashboard');
-          }
+          // On mobile, always default to Dashboard (ignore team settings for default page)
+          // Team settings for default page only apply to desktop view
+          console.log('[AppNavigator] Mobile view - defaulting to Dashboard');
+          setDefaultPage(tabs.includes('Dashboard') ? 'Dashboard' : (tabs[0] || 'Dashboard'));
         } else {
           // If no settings saved, show all tabs
 
@@ -320,7 +309,6 @@ const MainTabs = () => {
   return (
     <Tab.Navigator
       initialRouteName={defaultPage}
-      key={currentColors.primary} // Force re-render when theme changes
       screenOptions={({ route }) => ({
         // Performance: Only load screens when they're focused
         lazy: true,
