@@ -34,6 +34,8 @@ interface UsePlanningNavigationReturn {
   getQuarterFromDate: (date: Date) => number;
   generateQuarterWeeks: () => Date[];
   updatePersistedQuarters: (planningTasks: any[], deadlineTasks: any[]) => void;
+  isDateInNextUnloadedQuarter: (date: Date) => boolean;
+  autoAppendNextQuarterIfNeeded: (date: Date) => void;
 }
 
 export const usePlanningNavigation = (): UsePlanningNavigationReturn => {
@@ -378,6 +380,53 @@ export const usePlanningNavigation = (): UsePlanningNavigationReturn => {
   // Format week title
   const weekTitle = `Week ${weekNumber}, Q${quarter} ${year}`;
 
+  // Check if a date is in the next unloaded quarter
+  const isDateInNextUnloadedQuarter = useCallback((date: Date): boolean => {
+    const dateQuarter = Math.floor(date.getMonth() / 3) + 1;
+    const dateYear = date.getFullYear();
+
+    // Check if this quarter is loaded
+    const isLoaded = loadedQuarters.some(q => q.year === dateYear && q.quarter === dateQuarter);
+
+    if (isLoaded) {
+      return false;
+    }
+
+    // Get the last loaded quarter
+    const sortedQuarters = [...loadedQuarters].sort((a, b) => {
+      if (a.year !== b.year) return a.year - b.year;
+      return a.quarter - b.quarter;
+    });
+    const lastQuarter = sortedQuarters[sortedQuarters.length - 1];
+
+    // Calculate what the next quarter would be
+    let nextQuarter = lastQuarter.quarter + 1;
+    let nextYear = lastQuarter.year;
+    if (nextQuarter > 4) {
+      nextQuarter = 1;
+      nextYear += 1;
+    }
+
+    // Check if this date is in the next quarter
+    return dateYear === nextYear && dateQuarter === nextQuarter;
+  }, [loadedQuarters]);
+
+  // Auto-append next quarter if a date is in it
+  const autoAppendNextQuarterIfNeeded = useCallback((date: Date) => {
+    if (isDateInNextUnloadedQuarter(date)) {
+      const dateQuarter = Math.floor(date.getMonth() / 3) + 1;
+      const dateYear = date.getFullYear();
+
+      console.log('[usePlanningNavigation] Auto-appending next quarter:', { year: dateYear, quarter: dateQuarter });
+
+      setLoadedQuarters(prev => {
+        const newQuarters = [...prev, { year: dateYear, quarter: dateQuarter }];
+        console.log('[usePlanningNavigation] Updated quarters:', newQuarters);
+        return newQuarters;
+      });
+    }
+  }, [isDateInNextUnloadedQuarter]);
+
   return {
     currentQuarter,
     currentWeekStart,
@@ -403,5 +452,7 @@ export const usePlanningNavigation = (): UsePlanningNavigationReturn => {
     getQuarterFromDate,
     generateQuarterWeeks,
     updatePersistedQuarters,
+    isDateInNextUnloadedQuarter,
+    autoAppendNextQuarterIfNeeded,
   };
 };

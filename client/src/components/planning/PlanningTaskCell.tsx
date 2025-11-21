@@ -52,6 +52,7 @@ interface PlanningTaskCellProps {
 
   // Helpers
   getQuarterFromDate: (date: Date) => number;
+  isDateInNextUnloadedQuarter: (date: Date) => boolean;
 
   // Colors
   currentColors: any;
@@ -154,6 +155,7 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
   handleMobileLongPressEnd,
   handleMobileCellTap,
   getQuarterFromDate,
+  isDateInNextUnloadedQuarter,
   currentColors,
   cellBorderColor,
   teamMemberBorderColor,
@@ -205,6 +207,9 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
   const dayOfWeek = date.getDay();
   const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
 
+  // Check if date is in next unloaded quarter
+  const isInNextUnloadedQuarter = isDateInNextUnloadedQuarter(date);
+
   // Edge expansion logic
   const blockAbove = blockIndex - 1;
   const hasEmptyCellAbove = blockAbove >= 0 && !blockAssignments[`${userId}-${dateString}-${blockAbove}`];
@@ -242,7 +247,7 @@ const PlanningTaskCell: React.FC<PlanningTaskCellProps> = ({
   // Determine cell background color
   const cellBgColor = isToday
     ? todayCellBg
-    : isWeekend
+    : (isWeekend || isInNextUnloadedQuarter)
       ? weekendCellBg
       : weekdayCellBg;
 

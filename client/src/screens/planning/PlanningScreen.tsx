@@ -62,6 +62,8 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
     getQuarterFromDate: hookGetQuarterFromDate,
     generateQuarterWeeks: hookGenerateQuarterWeeks,
     updatePersistedQuarters: hookUpdatePersistedQuarters,
+    isDateInNextUnloadedQuarter: hookIsDateInNextUnloadedQuarter,
+    autoAppendNextQuarterIfNeeded: hookAutoAppendNextQuarterIfNeeded,
   } = navigationHook;
 
   // Data from hook
@@ -1206,6 +1208,11 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
 
       const newAssignments = { ...blockAssignments };
 
+      // Auto-append next quarter if any task is being added to it
+      datesToCreate.forEach(date => {
+        hookAutoAppendNextQuarterIfNeeded(date);
+      });
+
       // Create planning tasks for all dates
       for (const date of datesToCreate) {
         const dateString = date.toISOString().split('T')[0];
@@ -1365,6 +1372,9 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
     if (!selectedDeadlineSlot) return;
 
     try {
+      // Auto-append next quarter if task is being added to it
+      hookAutoAppendNextQuarterIfNeeded(selectedDeadlineSlot.date);
+
       if (editingDeadlineTask) {
         // Update existing task
         const response = await deadlineTasksAPI.update(editingDeadlineTask.id, data);
@@ -1925,6 +1935,9 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
                       // Check if this day is a weekend
                       const isWeekend = day.getDay() === 0 || day.getDay() === 6;
 
+                      // Check if this day is in next unloaded quarter
+                      const isInNextUnloadedQuarter = hookIsDateInNextUnloadedQuarter(day);
+
                       // Get colors if task exists
                       const colors = deadlineTask ? getDeadlineTaskColors(deadlineTask.deadlineType) : null;
 
@@ -1969,6 +1982,8 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
                               ? currentColors.primary + '40' // Highlight when dragging over
                               : deadlineTask
                               ? colors?.bg
+                              : (isWeekend || isInNextUnloadedQuarter)
+                              ? weekendDeadlineCellBg
                               : emptyDeadlineCellBg,
                             cursor: deadlineTask ? 'move' : 'pointer',
                             padding: '4px',
@@ -2087,6 +2102,7 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
                                 handleMobileLongPressEnd={handleMobileLongPressEnd}
                                 handleMobileCellTap={handleMobileCellTap}
                                 getQuarterFromDate={getQuarterFromDate}
+                                isDateInNextUnloadedQuarter={hookIsDateInNextUnloadedQuarter}
                                 currentColors={currentColors}
                                 cellBorderColor={cellBorderColor}
                                 teamMemberBorderColor={teamMemberBorderColor}
