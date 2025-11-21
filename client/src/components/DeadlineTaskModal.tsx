@@ -66,7 +66,6 @@ const DeadlineTaskModal: React.FC<DeadlineTaskModalProps> = ({
   const [description, setDescription] = useState('');
   const [deadlineType, setDeadlineType] = useState<'DEADLINE' | 'INTERNAL_DEADLINE' | 'MILESTONE'>('DEADLINE');
   const [loading, setLoading] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Dialog state
   const [dialogVisible, setDialogVisible] = useState(false);
@@ -78,7 +77,6 @@ const DeadlineTaskModal: React.FC<DeadlineTaskModalProps> = ({
     if (visible) {
       // Reset loading state when modal opens
       setLoading(false);
-      setShowDeleteConfirm(false);
 
       loadProjects();
       loadClients();
@@ -218,19 +216,30 @@ const DeadlineTaskModal: React.FC<DeadlineTaskModalProps> = ({
   };
 
   const handleDeleteClick = () => {
-
-    setShowDeleteConfirm(true);
+    // Show dialog instead of inline confirmation
+    setDialogTitle('Delete Deadline Task');
+    setDialogMessage('Are you sure you want to delete this deadline/milestone?');
+    setDialogButtons([
+      {
+        text: 'Cancel',
+        onPress: () => setDialogVisible(false)
+      },
+      {
+        text: 'Delete',
+        onPress: () => handleDeleteConfirm()
+      }
+    ]);
+    setDialogVisible(true);
   };
 
   const handleDeleteConfirm = async () => {
-
     if (onDelete) {
       try {
         setLoading(true);
+        setDialogVisible(false);
 
         // Close modal immediately - don't wait for Outlook sync (8 second timeout)
         // The delete operation will complete in the background
-        setShowDeleteConfirm(false);
         onDismiss();
 
         // Execute delete in background (non-blocking for UI)
@@ -241,16 +250,10 @@ const DeadlineTaskModal: React.FC<DeadlineTaskModalProps> = ({
       } catch (error) {
         console.error('[DeadlineTaskModal] Delete failed:', error);
         setLoading(false);
-        setShowDeleteConfirm(false);
       }
     } else {
       console.error('[DeadlineTaskModal] onDelete is not defined!');
-      setShowDeleteConfirm(false);
     }
-  };
-
-  const handleDeleteCancel = () => {
-    setShowDeleteConfirm(false);
   };
 
   return (
@@ -378,38 +381,9 @@ const DeadlineTaskModal: React.FC<DeadlineTaskModalProps> = ({
                 outlineStyle={{ borderWidth: 1 }}
               />
 
-              {/* Delete Confirmation */}
-              {showDeleteConfirm && (
-                <View style={[styles.confirmContainer, { backgroundColor: currentColors.background.bg500, borderColor: currentColors.secondary }]}>
-                  <Text style={[styles.confirmText, { color: currentColors.text }]}>
-                    Are you sure you want to delete this deadline/milestone?
-                  </Text>
-                  <View style={styles.confirmButtons}>
-                    <Button
-                      mode="outlined"
-                      onPress={handleDeleteCancel}
-                      disabled={loading}
-                      style={styles.confirmButton}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      mode="contained"
-                      onPress={handleDeleteConfirm}
-                      loading={loading}
-                      disabled={loading}
-                      style={styles.confirmButton}
-                      buttonColor={currentColors.secondary}
-                    >
-                      Delete
-                    </Button>
-                  </View>
-                </View>
-              )}
-
               {/* Action Buttons */}
               <View style={styles.buttonContainer}>
-                {existingTask && onDelete && !showDeleteConfirm && (
+                {existingTask && onDelete && (
                   <Button
                     mode="outlined"
                     onPress={handleDeleteClick}
@@ -426,7 +400,7 @@ const DeadlineTaskModal: React.FC<DeadlineTaskModalProps> = ({
                     mode="outlined"
                     onPress={onDismiss}
                     style={styles.button}
-                    disabled={loading || showDeleteConfirm}
+                    disabled={loading}
                   >
                     Cancel
                   </Button>
@@ -435,7 +409,7 @@ const DeadlineTaskModal: React.FC<DeadlineTaskModalProps> = ({
                     mode="contained"
                     onPress={handleSubmit}
                     loading={loading}
-                    disabled={loading || showDeleteConfirm}
+                    disabled={loading}
                     style={styles.button}
                   >
                     {existingTask ? 'Save' : 'Create'}
@@ -551,25 +525,6 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   button: {
-    minWidth: 100,
-  },
-  confirmContainer: {
-    padding: 16,
-    marginVertical: 10,
-    borderRadius: 8,
-    borderWidth: 2,
-  },
-  confirmText: {
-    fontSize: 14,
-    marginBottom: 12,
-    textAlign: 'center',
-  },
-  confirmButtons: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    gap: 10,
-  },
-  confirmButton: {
     minWidth: 100,
   },
 });
