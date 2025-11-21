@@ -383,6 +383,15 @@ const DeadlineTaskModal: React.FC<DeadlineTaskModalProps> = ({
 
               {/* Action Buttons */}
               <View style={styles.buttonContainer}>
+                <Button
+                  mode="text"
+                  onPress={onDismiss}
+                  style={styles.button}
+                  disabled={loading}
+                >
+                  Cancel
+                </Button>
+
                 {existingTask && onDelete && (
                   <Button
                     mode="outlined"
@@ -395,26 +404,15 @@ const DeadlineTaskModal: React.FC<DeadlineTaskModalProps> = ({
                   </Button>
                 )}
 
-                <View style={styles.rightButtonGroup}>
-                  <Button
-                    mode="text"
-                    onPress={onDismiss}
-                    style={styles.button}
-                    disabled={loading}
-                  >
-                    Cancel
-                  </Button>
-
-                  <Button
-                    mode="contained"
-                    onPress={handleSubmit}
-                    loading={loading}
-                    disabled={loading}
-                    style={styles.button}
-                  >
-                    {existingTask ? 'Save' : 'Create'}
-                  </Button>
-                </View>
+                <Button
+                  mode="contained"
+                  onPress={handleSubmit}
+                  loading={loading}
+                  disabled={loading}
+                  style={styles.button}
+                >
+                  {existingTask ? 'Save' : 'Create'}
+                </Button>
               </View>
                     </Card.Content>
                   </Card>
@@ -514,21 +512,15 @@ const styles = StyleSheet.create({
     marginTop: 15,
     marginBottom: 20,
     flexDirection: 'row',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-end',
     alignItems: 'center',
-  },
-  deleteButton: {
-    minWidth: 100,
-  },
-  rightButtonGroup: {
-    flexDirection: 'row',
     gap: 10,
   },
-  button: {
+  deleteButton: {
     minWidth: 100,
     borderRadius: 5,
   },
-  deleteButton: {
+  button: {
     minWidth: 100,
     borderRadius: 5,
   },
