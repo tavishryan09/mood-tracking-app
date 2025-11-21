@@ -1099,7 +1099,13 @@ const ProfileScreen = React.memo(({ navigation, route }: ProfileScreenProps) => 
           <View style={[styles.modalContainer, { backgroundColor: currentColors.background.bg700 }]}>
             <Card style={{ backgroundColor: currentColors.background.bg600, borderRadius: 8 }}>
               <Card.Content>
-                <Title style={{ color: currentColors.text, marginBottom: 20 }}>Edit Profile</Title>
+                <View style={styles.modalHeader}>
+                  <Title style={{ color: currentColors.text, flex: 1 }}>Edit Profile</Title>
+                  <IconButton
+                    icon={() => <HugeiconsIcon icon={Cancel01Icon} size={24} color={currentColors.text} />}
+                    onPress={() => setShowEditProfileModal(false)}
+                  />
+                </View>
 
                 <TextInput
                   label="First Name"
@@ -1163,7 +1169,18 @@ const ProfileScreen = React.memo(({ navigation, route }: ProfileScreenProps) => 
           <View style={[styles.modalContainer, { backgroundColor: currentColors.background.bg700 }]}>
             <Card style={{ backgroundColor: currentColors.background.bg600, borderRadius: 8 }}>
               <Card.Content>
-                <Title style={{ color: currentColors.text, marginBottom: 20 }}>Change Password</Title>
+                <View style={styles.modalHeader}>
+                  <Title style={{ color: currentColors.text, flex: 1 }}>Change Password</Title>
+                  <IconButton
+                    icon={() => <HugeiconsIcon icon={Cancel01Icon} size={24} color={currentColors.text} />}
+                    onPress={() => {
+                      setShowChangePasswordModal(false);
+                      setCurrentPassword('');
+                      setNewPassword('');
+                      setConfirmPassword('');
+                    }}
+                  />
+                </View>
 
                 <TextInput
                   label="Current Password"
@@ -1329,9 +1346,15 @@ const ProfileScreen = React.memo(({ navigation, route }: ProfileScreenProps) => 
           <View style={[styles.modalContainer, { backgroundColor: currentColors.background.bg700 }]}>
             <Card style={{ backgroundColor: currentColors.background.bg600, borderRadius: 8 }}>
               <Card.Content>
-                <Paragraph style={[styles.modalTitle, { color: currentColors.text }]}>
-                  Delete User
-                </Paragraph>
+                <View style={styles.modalHeader}>
+                  <Paragraph style={[styles.modalTitle, { color: currentColors.text, flex: 1 }]}>
+                    Delete User
+                  </Paragraph>
+                  <IconButton
+                    icon={() => <HugeiconsIcon icon={Cancel01Icon} size={24} color={currentColors.text} />}
+                    onPress={handleDeleteCancel}
+                  />
+                </View>
                 <Paragraph style={[styles.modalMessage, { color: currentColors.textSecondary }]}>
                   Are you sure you want to delete {deletingUserId ? users.find(u => u.id === deletingUserId)?.firstName : ''} {deletingUserId ? users.find(u => u.id === deletingUserId)?.lastName : ''}?
                 </Paragraph>
@@ -1815,7 +1838,7 @@ const styles = StyleSheet.create({
   fullModalContainer: {
     width: '95%',
     maxWidth: 900,
-    height: '90%',
+    height: 'auto',
     borderRadius: 8,
   },
   modalHeader: {

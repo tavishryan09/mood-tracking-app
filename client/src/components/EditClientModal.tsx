@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, ScrollView, Platform, Modal, KeyboardAvoidingView, TouchableWithoutFeedback, Keyboard } from 'react-native';
 import { TextInput, Button, Title, Card, IconButton, Divider, Paragraph, ActivityIndicator } from 'react-native-paper';
 import { HugeiconsIcon } from '@hugeicons/react-native';
-import { UserAdd02Icon } from '@hugeicons/core-free-icons';
+import { UserAdd02Icon, Cancel01Icon } from '@hugeicons/core-free-icons';
 import { clientsAPI } from '../services/api';
 import { useTheme } from '../contexts/ThemeContext';
 import { useCustomColorTheme } from '../contexts/CustomColorThemeContext';
@@ -269,7 +269,13 @@ const EditClientModal: React.FC<EditClientModalProps> = ({
                 >
                   <Card style={{ backgroundColor: currentColors.background.bg600, borderRadius: 8, elevation: 0, borderWidth: 0 }}>
                     <Card.Content style={{ paddingBottom: 0 }}>
-                      <Title style={{ color: currentColors.text }}>Edit Client</Title>
+                      <View style={styles.modalHeader}>
+                        <Title style={{ color: currentColors.text, flex: 1 }}>Edit Client</Title>
+                        <IconButton
+                          icon={() => <HugeiconsIcon icon={Cancel01Icon} size={24} color={currentColors.text} />}
+                          onPress={onClose}
+                        />
+                      </View>
 
                       {loading ? (
                         <View style={styles.loadingContainer}>
@@ -598,6 +604,12 @@ const styles = StyleSheet.create({
   },
   button: {
     minWidth: 100,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 10,
   },
 });
 

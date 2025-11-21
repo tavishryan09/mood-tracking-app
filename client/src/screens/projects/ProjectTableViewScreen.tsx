@@ -1270,7 +1270,13 @@ const ProjectTableViewScreen = React.memo(() => {
       >
         <View style={styles.modalOverlay}>
           <View style={[styles.modalContent, { backgroundColor: currentColors.background.bg300 }]}>
-            <Text style={[styles.modalTitle, { color: currentColors.text }]}>Table Column Settings</Text>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: currentColors.text, flex: 1 }]}>Table Column Settings</Text>
+              <IconButton
+                icon={() => <HugeiconsIcon icon={Cancel01Icon} size={24} color={currentColors.text} />}
+                onPress={() => setShowSettingsModal(false)}
+              />
+            </View>
 
             <ScrollView style={styles.settingsScroll}>
               {Object.entries({
@@ -1357,9 +1363,15 @@ const ProjectTableViewScreen = React.memo(() => {
         >
           <View style={styles.confirmationOverlay}>
             <View style={[styles.confirmationCard, { backgroundColor: currentColors.background.bg300 }]}>
-              <Text style={[styles.confirmationTitle, { color: currentColors.text }]}>
-                Delete Project
-              </Text>
+              <View style={styles.modalHeader}>
+                <Text style={[styles.confirmationTitle, { color: currentColors.text, flex: 1 }]}>
+                  Delete Project
+                </Text>
+                <IconButton
+                  icon={() => <HugeiconsIcon icon={Cancel01Icon} size={24} color={currentColors.text} />}
+                  onPress={handleDeleteCancel}
+                />
+              </View>
 
               {(() => {
                 const project = projects.find(p => p.id === deletingProjectId);
@@ -1631,10 +1643,15 @@ const getStyles = (currentColors: any) => StyleSheet.create({
     padding: 24,
     maxHeight: '80%',
   },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 10,
+  },
   modalTitle: {
     fontSize: 20,
     fontWeight: '700',
-    marginBottom: 20,
     textAlign: 'center',
   },
   settingsScroll: {
