@@ -10,6 +10,7 @@ interface ThemeContextType {
   currentColors: ColorPalette;
   customPalettes: Record<string, ColorPalette>;
   loadCustomPalettes: () => Promise<void>;
+  isThemeLoading: boolean;
   // Internal use only - allow injecting custom color resolver
   setCustomColorResolver?: (resolver: ((section: string, element: string) => string) | null) => void;
   setIsUsingCustomTheme?: (isUsing: boolean) => void;
@@ -29,9 +30,11 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const [customColorResolver, setCustomColorResolver] = useState<((section: string, element: string) => string) | null>(null);
   const [isUsingCustomTheme, setIsUsingCustomTheme] = useState<boolean>(false);
   const [userLoaded, setUserLoaded] = useState(false);
+  const [isThemeLoading, setIsThemeLoading] = useState(true);
 
   // Load app-level default theme immediately on mount (no auth required)
   const loadAppDefaultTheme = useCallback(async () => {
+    setIsThemeLoading(true);
     try {
       // Load the actual default color palette (not just a theme ID reference)
       const defaultPaletteResponse = await settingsAPI.app.get('default_color_palette');
@@ -52,6 +55,8 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       } else {
 
       }
+    } finally {
+      setIsThemeLoading(false);
     }
   }, []);
 
@@ -225,9 +230,10 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     currentColors,
     customPalettes,
     loadCustomPalettes: loadCustomPalettesData,
+    isThemeLoading,
     setCustomColorResolver: setCustomColorResolverWrapper,
     setIsUsingCustomTheme: setIsUsingCustomThemeWrapper,
-  }), [selectedPalette, setSelectedPalette, currentColors, customPalettes, loadCustomPalettesData, setCustomColorResolverWrapper, setIsUsingCustomThemeWrapper]);
+  }), [selectedPalette, setSelectedPalette, currentColors, customPalettes, loadCustomPalettesData, isThemeLoading, setCustomColorResolverWrapper, setIsUsingCustomThemeWrapper]);
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 };

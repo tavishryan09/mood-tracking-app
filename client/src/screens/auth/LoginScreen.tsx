@@ -5,14 +5,14 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  TouchableOpacity,
+  ActivityIndicator,
+  Image,
 } from 'react-native';
 import { TextInput, Button, Title, Text, HelperText } from 'react-native-paper';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { ViewIcon, ViewOffIcon, UserIcon, LockPasswordIcon } from '@hugeicons/core-free-icons';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
-import { CustomDialog } from '../../components/CustomDialog';
 import { LoginScreenProps } from '../../types/navigation';
 import { logger } from '../../utils/logger';
 import { validateAndSanitize, ValidationPatterns } from '../../utils/sanitize';
@@ -24,13 +24,7 @@ const LoginScreen = React.memo(({ navigation }: LoginScreenProps) => {
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const { login } = useAuth();
-  const { currentColors } = useTheme();
-
-  // Dialog state
-  const [dialogVisible, setDialogVisible] = useState(false);
-  const [dialogTitle, setDialogTitle] = useState('');
-  const [dialogMessage, setDialogMessage] = useState('');
-  const [dialogButtons, setDialogButtons] = useState<any[]>([]);
+  const { currentColors, isThemeLoading } = useTheme();
 
   const handleLogin = async () => {
     setErrorMessage('');
@@ -78,33 +72,16 @@ const LoginScreen = React.memo(({ navigation }: LoginScreenProps) => {
     }
   };
 
-  const handleForgotPassword = () => {
-    if (!email) {
-      setDialogTitle('Email Required');
-      setDialogMessage('Please enter your email address first, then tap "Forgot Password?" again.');
-      setDialogButtons([{ text: 'OK', onPress: () => {} }]);
-      setDialogVisible(true);
-      return;
-    }
-
-    setDialogTitle('Request Password Reset');
-    setDialogMessage(`A password reset request will be sent to your administrator for the email: ${email}`);
-    setDialogButtons([
-      { text: 'Cancel', onPress: () => {}, style: 'cancel' },
-      {
-        text: 'Request Reset',
-        onPress: () => {
-          setDialogTitle('Request Sent');
-          setDialogMessage('Your password reset request has been noted. Please contact your administrator to reset your password.');
-          setDialogButtons([{ text: 'OK', onPress: () => {} }]);
-          setDialogVisible(true);
-        },
-      },
-    ]);
-    setDialogVisible(true);
-  };
-
   const dynamicStyles = createStyles(currentColors);
+
+  // Show loading screen while theme is being loaded
+  if (isThemeLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF' }}>
+        <ActivityIndicator size="large" color="#dd3e7f" />
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView
@@ -116,7 +93,12 @@ const LoginScreen = React.memo(({ navigation }: LoginScreenProps) => {
         keyboardShouldPersistTaps="handled"
       >
         <View style={dynamicStyles.content}>
-          <Title style={[dynamicStyles.title]}>Time Tracking App</Title>
+          <Image
+            source={require('../../../assets/logos/mood-logofull.svg')}
+            style={dynamicStyles.logo}
+            resizeMode="contain"
+          />
+          <Title style={[dynamicStyles.title]}>Project Planning App</Title>
           <Text style={[dynamicStyles.subtitle]}>Sign in to continue</Text>
 
           <TextInput
@@ -188,26 +170,8 @@ const LoginScreen = React.memo(({ navigation }: LoginScreenProps) => {
           >
             Sign In
           </Button>
-
-          <Button
-            mode="text"
-            onPress={handleForgotPassword}
-            disabled={loading}
-            style={dynamicStyles.forgotButton}
-            textColor={currentColors.primary}
-          >
-            Forgot Password?
-          </Button>
         </View>
       </ScrollView>
-
-      <CustomDialog
-        visible={dialogVisible}
-        title={dialogTitle}
-        message={dialogMessage}
-        buttons={dialogButtons}
-        onDismiss={() => setDialogVisible(false)}
-      />
     </KeyboardAvoidingView>
   );
 });
@@ -225,6 +189,12 @@ const createStyles = (currentColors: any) => StyleSheet.create({
   },
   content: {
     padding: 20,
+  },
+  logo: {
+    width: 500,
+    height: 133,
+    marginBottom: 30,
+    alignSelf: 'center',
   },
   title: {
     fontSize: 28,
@@ -249,9 +219,6 @@ const createStyles = (currentColors: any) => StyleSheet.create({
   button: {
     marginTop: 10,
     paddingVertical: 5,
-  },
-  forgotButton: {
-    marginTop: 10,
   },
 });
 
