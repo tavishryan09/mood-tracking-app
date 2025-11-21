@@ -558,39 +558,41 @@ const EditProjectModal: React.FC<EditProjectModalProps> = ({
                                       title={`${user.firstName} ${user.lastName}`}
                                       description={user.email}
                                       right={() => (
-                                        <Switch
-                                          value={isMember}
-                                          onValueChange={(value) => {
-                                            if (value) {
-                                              handleAddMember(user.id);
-                                            } else {
-                                              handleRemoveMember(user.id);
-                                            }
-                                          }}
-                                        />
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                                          {isMember && !useStandardRate && (
+                                            <View style={{ width: 180 }}>
+                                              <TextInput
+                                                label={`Rate ($)`}
+                                                value={memberRates[user.id] || ''}
+                                                onChangeText={(text) => {
+                                                  setMemberRates({
+                                                    ...memberRates,
+                                                    [user.id]: text,
+                                                  });
+                                                }}
+                                                mode="outlined"
+                                                keyboardType="decimal-pad"
+                                                placeholder="Hourly rate"
+                                                error={!hasRate}
+                                                dense
+                                              />
+                                            </View>
+                                          )}
+                                          <Switch
+                                            value={isMember}
+                                            onValueChange={(value) => {
+                                              if (value) {
+                                                handleAddMember(user.id);
+                                              } else {
+                                                handleRemoveMember(user.id);
+                                              }
+                                            }}
+                                          />
+                                        </View>
                                       )}
                                       style={{ backgroundColor: currentColors.background.bg500 }}
                                     />
                                   </View>
-                                  {isMember && !useStandardRate && (
-                                    <View style={{ width: 200, paddingRight: 16, justifyContent: 'center' }}>
-                                      <TextInput
-                                        label={`Rate ($)`}
-                                        value={memberRates[user.id] || ''}
-                                        onChangeText={(text) => {
-                                          setMemberRates({
-                                            ...memberRates,
-                                            [user.id]: text,
-                                          });
-                                        }}
-                                        mode="outlined"
-                                        keyboardType="decimal-pad"
-                                        placeholder="Hourly rate"
-                                        error={!hasRate}
-                                        dense
-                                      />
-                                    </View>
-                                  )}
                                 </View>
                               );
                             })}
