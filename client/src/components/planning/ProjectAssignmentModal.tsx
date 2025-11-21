@@ -415,30 +415,33 @@ const ProjectAssignmentModal = React.memo(({
           </ScrollView>
 
           <View style={styles.modalButtons}>
-            <Button
-              mode="text"
-              onPress={handleCancel}
-              style={styles.modalButton}
-            >
-              Cancel
-            </Button>
             {selectedBlock && blockAssignments[`${selectedBlock.userId}-${selectedBlock.date}-${selectedBlock.blockIndex}`]?.id && (
               <Button
                 mode="outlined"
                 onPress={() => setShowDeletePlanningDialog(true)}
-                style={styles.modalButton}
+                style={styles.deleteButton}
                 textColor={currentColors.secondary}
               >
                 Delete
               </Button>
             )}
-            <Button
-              mode="contained"
-              onPress={onSaveProjectAssignment}
-              style={styles.modalButton}
-            >
-              Save
-            </Button>
+
+            <View style={styles.rightButtonGroup}>
+              <Button
+                mode="text"
+                onPress={handleCancel}
+                style={styles.modalButton}
+              >
+                Cancel
+              </Button>
+              <Button
+                mode="contained"
+                onPress={onSaveProjectAssignment}
+                style={styles.modalButton}
+              >
+                Save
+              </Button>
+            </View>
           </View>
         </View>
       </View>
@@ -597,10 +600,19 @@ const styles = StyleSheet.create({
   },
   modalButtons: {
     flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  deleteButton: {
+    minWidth: 100,
+    borderRadius: 5,
+  },
+  rightButtonGroup: {
+    flexDirection: 'row',
     gap: 10,
-    justifyContent: 'flex-end',
   },
   modalButton: {
+    minWidth: 100,
     borderRadius: 5,
   },
 });

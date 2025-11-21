@@ -281,7 +281,7 @@ const DeadlineTaskModal: React.FC<DeadlineTaskModalProps> = ({
                   keyboardShouldPersistTaps="handled"
                   showsVerticalScrollIndicator={true}
                 >
-                  <Card style={{ backgroundColor: currentColors.background.bg600, borderRadius: 8, elevation: 0, borderWidth: 0 }}>
+                  <Card style={{ backgroundColor: currentColors.background.bg500, borderRadius: 8, elevation: 0, borderWidth: 0 }}>
                     <Card.Content style={{ paddingBottom: 0 }}>
               <View style={styles.modalHeader}>
                 <View style={{ flex: 1 }}>
@@ -383,15 +383,6 @@ const DeadlineTaskModal: React.FC<DeadlineTaskModalProps> = ({
 
               {/* Action Buttons */}
               <View style={styles.buttonContainer}>
-                <Button
-                  mode="text"
-                  onPress={onDismiss}
-                  style={styles.button}
-                  disabled={loading}
-                >
-                  Cancel
-                </Button>
-
                 {existingTask && onDelete && (
                   <Button
                     mode="outlined"
@@ -404,15 +395,26 @@ const DeadlineTaskModal: React.FC<DeadlineTaskModalProps> = ({
                   </Button>
                 )}
 
-                <Button
-                  mode="contained"
-                  onPress={handleSubmit}
-                  loading={loading}
-                  disabled={loading}
-                  style={styles.button}
-                >
-                  {existingTask ? 'Save' : 'Create'}
-                </Button>
+                <View style={styles.rightButtonGroup}>
+                  <Button
+                    mode="text"
+                    onPress={onDismiss}
+                    style={styles.button}
+                    disabled={loading}
+                  >
+                    Cancel
+                  </Button>
+
+                  <Button
+                    mode="contained"
+                    onPress={handleSubmit}
+                    loading={loading}
+                    disabled={loading}
+                    style={styles.button}
+                  >
+                    {existingTask ? 'Save' : 'Create'}
+                  </Button>
+                </View>
               </View>
                     </Card.Content>
                   </Card>
@@ -512,13 +514,16 @@ const styles = StyleSheet.create({
     marginTop: 15,
     marginBottom: 20,
     flexDirection: 'row',
-    justifyContent: 'flex-end',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 10,
   },
   deleteButton: {
     minWidth: 100,
     borderRadius: 5,
+  },
+  rightButtonGroup: {
+    flexDirection: 'row',
+    gap: 10,
   },
   button: {
     minWidth: 100,
