@@ -1879,7 +1879,7 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
             <tbody>
               {/* Deadlines & Milestones Row - Two slots per day */}
               {[0, 1].map((slotIndex) => (
-                <tr key={`deadline-row-${slotIndex}`} style={{ height: `${TIME_BLOCK_HEIGHT / 2}px` }}>
+                <tr key={`deadline-row-${slotIndex}`} style={{ height: '50px' }}>
                   {/* Label cell - only render on first slot */}
                   {slotIndex === 0 && (
                     <td
