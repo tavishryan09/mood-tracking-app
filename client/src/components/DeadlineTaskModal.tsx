@@ -383,17 +383,19 @@ const DeadlineTaskModal: React.FC<DeadlineTaskModalProps> = ({
 
               {/* Action Buttons */}
               <View style={styles.buttonContainer}>
-                {existingTask && onDelete && (
-                  <Button
-                    mode="outlined"
-                    onPress={handleDeleteClick}
-                    disabled={loading}
-                    style={styles.deleteButton}
-                    textColor={currentColors.secondary}
-                  >
-                    Delete
-                  </Button>
-                )}
+                <View style={styles.leftButtonGroup}>
+                  {existingTask && onDelete && (
+                    <Button
+                      mode="outlined"
+                      onPress={handleDeleteClick}
+                      disabled={loading}
+                      style={styles.deleteButton}
+                      textColor={currentColors.secondary}
+                    >
+                      Delete
+                    </Button>
+                  )}
+                </View>
 
                 <View style={styles.rightButtonGroup}>
                   <Button
@@ -516,6 +518,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  leftButtonGroup: {
+    flexDirection: 'row',
   },
   deleteButton: {
     minWidth: 100,

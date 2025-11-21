@@ -415,16 +415,18 @@ const ProjectAssignmentModal = React.memo(({
           </ScrollView>
 
           <View style={styles.modalButtons}>
-            {selectedBlock && blockAssignments[`${selectedBlock.userId}-${selectedBlock.date}-${selectedBlock.blockIndex}`]?.id && (
-              <Button
-                mode="outlined"
-                onPress={() => setShowDeletePlanningDialog(true)}
-                style={styles.deleteButton}
-                textColor={currentColors.secondary}
-              >
-                Delete
-              </Button>
-            )}
+            <View style={styles.leftButtonGroup}>
+              {selectedBlock && blockAssignments[`${selectedBlock.userId}-${selectedBlock.date}-${selectedBlock.blockIndex}`]?.id && (
+                <Button
+                  mode="outlined"
+                  onPress={() => setShowDeletePlanningDialog(true)}
+                  style={styles.deleteButton}
+                  textColor={currentColors.secondary}
+                >
+                  Delete
+                </Button>
+              )}
+            </View>
 
             <View style={styles.rightButtonGroup}>
               <Button
@@ -602,6 +604,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+  },
+  leftButtonGroup: {
+    flexDirection: 'row',
   },
   deleteButton: {
     minWidth: 100,
