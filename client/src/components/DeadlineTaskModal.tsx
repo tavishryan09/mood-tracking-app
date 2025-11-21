@@ -66,6 +66,7 @@ const DeadlineTaskModal: React.FC<DeadlineTaskModalProps> = ({
   const [description, setDescription] = useState('');
   const [deadlineType, setDeadlineType] = useState<'DEADLINE' | 'INTERNAL_DEADLINE' | 'MILESTONE'>('DEADLINE');
   const [loading, setLoading] = useState(false);
+  const [projectSearchFocused, setProjectSearchFocused] = useState(false);
 
   // Dialog state
   const [dialogVisible, setDialogVisible] = useState(false);
@@ -339,10 +340,15 @@ const DeadlineTaskModal: React.FC<DeadlineTaskModalProps> = ({
                     placeholderTextColor={currentColors.textTertiary}
                     value={projectSearch}
                     onChangeText={handleProjectSearch}
+                    onFocus={() => setProjectSearchFocused(true)}
+                    onBlur={() => {
+                      // Delay to allow selection to happen
+                      setTimeout(() => setProjectSearchFocused(false), 200);
+                    }}
                   />
                 </View>
 
-                {filteredProjects.length > 0 && projectSearch.trim() !== '' && (
+                {filteredProjects.length > 0 && projectSearch.trim() !== '' && projectSearchFocused && (
                   <ScrollView
                     style={[
                       styles.projectList,
