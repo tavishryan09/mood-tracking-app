@@ -412,7 +412,7 @@ export const usePlanningNavigation = (): UsePlanningNavigationReturn => {
   }, [loadedQuarters]);
 
   // Auto-append next quarter if a date is in it
-  const autoAppendNextQuarterIfNeeded = useCallback((date: Date) => {
+  const autoAppendNextQuarterIfNeeded = useCallback(async (date: Date) => {
     if (isDateInNextUnloadedQuarter(date)) {
       const dateQuarter = Math.floor(date.getMonth() / 3) + 1;
       const dateYear = date.getFullYear();
@@ -422,6 +422,12 @@ export const usePlanningNavigation = (): UsePlanningNavigationReturn => {
       setLoadedQuarters(prev => {
         const newQuarters = [...prev, { year: dateYear, quarter: dateQuarter }];
         console.log('[usePlanningNavigation] Updated quarters:', newQuarters);
+
+        // Persist to AsyncStorage
+        AsyncStorage.setItem('planning_loaded_quarters', JSON.stringify(newQuarters)).catch(error => {
+          console.error('[usePlanningNavigation] Error persisting auto-appended quarter:', error);
+        });
+
         return newQuarters;
       });
     }
