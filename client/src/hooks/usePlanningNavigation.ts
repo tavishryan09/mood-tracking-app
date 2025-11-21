@@ -300,7 +300,7 @@ export const usePlanningNavigation = (): UsePlanningNavigationReturn => {
     if (nextQuarterInfo) {
       // Append the next quarter to loaded quarters
       setLoadedQuarters(prev => [...prev, nextQuarterInfo]);
-      setCurrentQuarter(nextQuarterInfo);
+      // Don't change currentQuarter - we want to keep all loaded quarters visible
       setShowQuarterPrompt(false);
       setNextQuarterInfo(null);
 
@@ -314,7 +314,7 @@ export const usePlanningNavigation = (): UsePlanningNavigationReturn => {
     if (previousQuarterInfo) {
       // Prepend the previous quarter to loaded quarters
       setLoadedQuarters(prev => [previousQuarterInfo, ...prev]);
-      setCurrentQuarter(previousQuarterInfo);
+      // Don't change currentQuarter - we want to keep all loaded quarters visible
       setShowQuarterPrompt(false);
       setPreviousQuarterInfo(null);
 

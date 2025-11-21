@@ -51,6 +51,7 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
     showQuarterPrompt: hookShowQuarterPrompt,
     nextQuarterInfo: hookNextQuarterInfo,
     previousQuarterInfo: hookPreviousQuarterInfo,
+    loadedQuarters: hookLoadedQuarters,
     setVisibleWeekIndex: hookSetVisibleWeekIndex,
     loadNextWeek: hookLoadNextWeek,
     loadPreviousWeek: hookLoadPreviousWeek,
@@ -473,10 +474,10 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
 
   }, [planningColors]);
 
-  // Initial data load on mount
+  // Initial data load on mount and when loaded quarters change
   useEffect(() => {
-    hookLoadData(currentQuarter);
-  }, [hookLoadData, currentQuarter]);
+    hookLoadData(hookLoadedQuarters);
+  }, [hookLoadData, hookLoadedQuarters]);
 
 
   // Note: Removed useFocusEffect data reload - it was causing:

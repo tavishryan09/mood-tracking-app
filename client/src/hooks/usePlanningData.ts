@@ -51,7 +51,7 @@ interface UsePlanningDataReturn {
   setBlockAssignments: (assignments: { [key: string]: BlockAssignment }) => void;
   setDeadlineTasks: (tasks: DeadlineTask[]) => void;
   setVisibleUserIds: (ids: string[]) => void;
-  loadData: (currentQuarter: QuarterInfo) => Promise<void>;
+  loadData: (loadedQuarters: QuarterInfo[]) => Promise<void>;
   loadGlobalDefaults: () => Promise<any>;
 }
 
@@ -76,30 +76,52 @@ export const usePlanningData = (): UsePlanningDataReturn => {
     return null;
   }, []);
 
-  const loadData = useCallback(async (currentQuarter: QuarterInfo) => {
+  const loadData = useCallback(async (loadedQuarters: QuarterInfo[]) => {
     try {
       setLoading(true);
 
-      // Calculate quarter range for loading planning tasks
-      const { year, quarter } = currentQuarter;
-      const startMonth = (quarter - 1) * 3;
-      const quarterStart = new Date(year, startMonth, 1);
-      quarterStart.setHours(0, 0, 0, 0);
+      // Calculate date range spanning all loaded quarters
+      if (loadedQuarters.length === 0) {
+        setLoading(false);
+        return;
+      }
 
-      const quarterEnd = new Date(year, startMonth + 3, 0);
-      quarterEnd.setHours(23, 59, 59, 999);
+      // Find the earliest quarter start and latest quarter end
+      let earliestStart: Date | null = null;
+      let latestEnd: Date | null = null;
 
-      // Load users, projects, planning tasks, and deadline tasks for the entire quarter
+      loadedQuarters.forEach(({ year, quarter }) => {
+        const startMonth = (quarter - 1) * 3;
+        const quarterStart = new Date(year, startMonth, 1);
+        quarterStart.setHours(0, 0, 0, 0);
+
+        const quarterEnd = new Date(year, startMonth + 3, 0);
+        quarterEnd.setHours(23, 59, 59, 999);
+
+        if (!earliestStart || quarterStart < earliestStart) {
+          earliestStart = quarterStart;
+        }
+        if (!latestEnd || quarterEnd > latestEnd) {
+          latestEnd = quarterEnd;
+        }
+      });
+
+      if (!earliestStart || !latestEnd) {
+        setLoading(false);
+        return;
+      }
+
+      // Load users, projects, planning tasks, and deadline tasks for all loaded quarters
       const [usersResponse, projectsResponse, planningTasksResponse, deadlineTasksResponse] = await Promise.all([
         usersAPI.getAll(),
         projectsAPI.getAll(),
         planningTasksAPI.getAll({
-          startDate: quarterStart.toISOString(),
-          endDate: quarterEnd.toISOString(),
+          startDate: earliestStart.toISOString(),
+          endDate: latestEnd.toISOString(),
         }),
         deadlineTasksAPI.getAll({
-          startDate: quarterStart.toISOString(),
-          endDate: quarterEnd.toISOString(),
+          startDate: earliestStart.toISOString(),
+          endDate: latestEnd.toISOString(),
         }),
       ]);
 
