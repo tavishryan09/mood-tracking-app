@@ -1524,8 +1524,8 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
 
   // Auto-scroll to the current week when component mounts
   useEffect(() => {
-    console.log('[PlanningScreen] Auto-scroll useEffect triggered', { hasScrolled, quarterWeeksLength: quarterWeeks.length, loading });
-    if (!hasScrolled && quarterWeeks.length > 0 && Platform.OS === 'web') {
+    console.log('[PlanningScreen] Auto-scroll useEffect triggered', { hasScrolled, hasFocusScrolled: hasFocusScrolledRef.current, quarterWeeksLength: quarterWeeks.length, loading });
+    if (!hasScrolled && !hasFocusScrolledRef.current && quarterWeeks.length > 0 && Platform.OS === 'web') {
       const attemptScroll = () => {
         const scrollContainer = document.querySelector('[data-planning-scroll]') as HTMLDivElement;
         if (!scrollContainer) {
