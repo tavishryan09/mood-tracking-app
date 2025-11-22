@@ -1504,29 +1504,58 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
   const year = visibleWeekStart.getFullYear();
   const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-  // Reset hasScrolled and force scroll when navigating to screen from a different screen
+  // Force scroll to current week when navigating to screen
   useFocusEffect(
     useCallback(() => {
-      console.log('[PlanningScreen] Screen focused - resetting scroll flags');
-      // Always reset both flags when screen comes into focus
-      // This allows the scroll to happen once per navigation
-      hasFocusScrolledRef.current = false;
-      setHasScrolled(false);
+      console.log('[PlanningScreen] Screen focused - will scroll after delay');
 
-      // Force scroll position to 0 first to prevent browser scroll restoration
+      // Do the scroll directly in useFocusEffect with a delay to ensure DOM is ready
       if (Platform.OS === 'web') {
-        const scrollContainer = document.querySelector('[data-planning-scroll]') as HTMLDivElement;
-        if (scrollContainer) {
-          console.log('[PlanningScreen] Resetting scroll position to 0 before auto-scroll');
-          scrollContainer.scrollLeft = 0;
-        }
+        const scrollTimeout = setTimeout(() => {
+          if (quarterWeeks.length === 0) {
+            console.log('[PlanningScreen] Weeks not loaded yet, skipping scroll');
+            return;
+          }
+
+          const scrollContainer = document.querySelector('[data-planning-scroll]') as HTMLDivElement;
+          if (!scrollContainer) {
+            console.log('[PlanningScreen] Scroll container not found');
+            return;
+          }
+
+          // Find current week
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+
+          const targetWeekIndex = quarterWeeks.findIndex((weekStart) => {
+            const weekEnd = new Date(weekStart);
+            weekEnd.setDate(weekStart.getDate() + 6);
+            return today >= weekStart && today <= weekEnd;
+          });
+
+          if (targetWeekIndex !== -1) {
+            const mondayPosition = targetWeekIndex * 7 * DAY_CELL_WIDTH;
+            console.log('[PlanningScreen] useFocusEffect direct scroll to week:', targetWeekIndex, 'position:', mondayPosition);
+            scrollContainer.scrollLeft = mondayPosition;
+            scrollContainerRef.current = scrollContainer;
+            setVisibleWeekIndex(targetWeekIndex);
+            setHasScrolled(true);
+            hasFocusScrolledRef.current = true;
+          } else {
+            console.log('[PlanningScreen] Current week not found in quarter weeks');
+          }
+        }, 200); // Increased delay to ensure everything is rendered
+
+        return () => {
+          console.log('[PlanningScreen] Screen blurred - clearing scroll timeout');
+          clearTimeout(scrollTimeout);
+        };
       }
 
-      // Reset the flag when leaving the screen (cleanup runs before next focus)
       return () => {
         console.log('[PlanningScreen] Screen blurred - cleanup');
       };
-    }, [])
+    }, [quarterWeeks])
   );
 
   // Auto-scroll to the current week when component mounts
