@@ -168,6 +168,7 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
   const scrollContainerRef = navigationHook.scrollContainerRef;
   const currentWeekRef = useRef<HTMLElement>(null);
   const [hasScrolled, setHasScrolled] = useState(false);
+  const hasFocusScrolledRef = useRef(false); // Track if we've scrolled on this focus session
   const [showManageModal, setShowManageModal] = useState(false);
 
   // View preferences
@@ -1503,63 +1504,22 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
   const year = visibleWeekStart.getFullYear();
   const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-  // Reset hasScrolled and force scroll when screen comes into focus
+  // Reset hasScrolled and force scroll when navigating to screen from a different screen
   useFocusEffect(
     useCallback(() => {
-      console.log('[PlanningScreen] Screen focused - forcing scroll to current week');
-      setHasScrolled(false);
-
-      // Force scroll directly in focus callback to ensure it happens every time
-      if (Platform.OS === 'web' && quarterWeeks.length > 0) {
-        setTimeout(() => {
-          const scrollContainer = document.querySelector('[data-planning-scroll]') as HTMLDivElement;
-          if (!scrollContainer) {
-            console.log('[PlanningScreen] Scroll container not found in focus callback');
-            return;
-          }
-
-          // Determine which week to scroll to
-          let targetWeekIndex = -1;
-
-          // Try using the ref
-          if (currentWeekRef.current) {
-            targetWeekIndex = parseInt(currentWeekRef.current.id.replace('week-', ''), 10);
-          }
-
-          // Try finding by data attribute
-          if (targetWeekIndex === -1) {
-            const currentWeekElement = document.querySelector('[data-current-week="true"]') as HTMLElement;
-            if (currentWeekElement) {
-              targetWeekIndex = parseInt(currentWeekElement.id.replace('week-', ''), 10);
-            }
-          }
-
-          // Calculate manually as fallback
-          if (targetWeekIndex === -1) {
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-
-            targetWeekIndex = quarterWeeks.findIndex((weekStart) => {
-              const weekEnd = new Date(weekStart);
-              weekEnd.setDate(weekStart.getDate() + 6);
-              return today >= weekStart && today <= weekEnd;
-            });
-          }
-
-          // Scroll to the target week
-          if (targetWeekIndex !== -1) {
-            const mondayPosition = targetWeekIndex * 7 * DAY_CELL_WIDTH;
-            console.log('[PlanningScreen] Focus callback scrolling to week index:', targetWeekIndex, 'position:', mondayPosition);
-            scrollContainer.scrollLeft = mondayPosition;
-            scrollContainerRef.current = scrollContainer;
-            setVisibleWeekIndex(targetWeekIndex);
-            setHasScrolled(true);
-          } else {
-            console.log('[PlanningScreen] No target week found in focus callback');
-          }
-        }, 100);
+      console.log('[PlanningScreen] Screen focused - resetting hasFocusScrolledRef');
+      // Reset the flag when screen comes into focus (from a different screen)
+      // This allows the scroll to happen once per navigation
+      if (!hasFocusScrolledRef.current) {
+        setHasScrolled(false);
       }
-    }, [quarterWeeks])
+
+      // Reset the flag when leaving the screen
+      return () => {
+        console.log('[PlanningScreen] Screen blurred - will allow scroll on next focus');
+        hasFocusScrolledRef.current = false;
+      };
+    }, [])
   );
 
   // Auto-scroll to the current week when component mounts
@@ -1609,6 +1569,7 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
           scrollContainerRef.current = scrollContainer;
           setVisibleWeekIndex(targetWeekIndex);
           setHasScrolled(true);
+          hasFocusScrolledRef.current = true; // Mark that we've scrolled on this focus
           return true;
         }
 
