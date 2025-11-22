@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Platform, ScrollView } from 'react-native';
 import { createStackNavigator } from '@react-navigation/stack';
-import { createDrawerNavigator, DrawerContentScrollView, DrawerItem } from '@react-navigation/drawer';
+import { createDrawerNavigator } from '@react-navigation/drawer';
 import { useNavigation } from '@react-navigation/native';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { Home09Icon, Folder01Icon, UserCircleIcon, UserGroupIcon, MultiplicationSignIcon, Calendar04Icon } from '@hugeicons/core-free-icons';
@@ -196,7 +196,7 @@ function CustomDrawerContent(props: any) {
   const mobileInactiveIcon = getColorForElement('navigation', 'tabBarInactiveIcon');
 
   return (
-    <DrawerContentScrollView {...props} contentContainerStyle={[styles.drawerContent, { backgroundColor: drawerBg }]}>
+    <View style={[styles.drawerContainer, { backgroundColor: drawerBg }]}>
       <TouchableOpacity
         style={[styles.sidebarHeader, { backgroundColor: drawerHeaderBg, borderBottomColor: drawerDivider }]}
         onPress={() => setIsCollapsed(!isCollapsed)}
@@ -218,6 +218,7 @@ function CustomDrawerContent(props: any) {
           </Svg>
         )}
       </TouchableOpacity>
+      <ScrollView style={styles.menuScrollView}>
       {visibleMenuItems.map((item) => {
         // Check if current route matches this item or if it's a sub-route
         // e.g., Projects should be active when on ProjectTableView
@@ -268,7 +269,8 @@ function CustomDrawerContent(props: any) {
           </TouchableOpacity>
         );
       })}
-    </DrawerContentScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
@@ -680,9 +682,16 @@ const DesktopNavigator = () => {
 };
 
 const styles = StyleSheet.create({
+  drawerContainer: {
+    flex: 1,
+    height: '100%',
+  },
   drawerContent: {
     flex: 1,
     paddingTop: 0,
+  },
+  menuScrollView: {
+    flex: 1,
   },
   sidebarHeader: {
     padding: 20,
