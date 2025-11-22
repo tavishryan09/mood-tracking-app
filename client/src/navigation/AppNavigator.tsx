@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, Suspense, lazy } from 'react';
 import { Platform, useWindowDimensions, View, ActivityIndicator, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { NavigationContainer, useNavigationState, useNavigation } from '@react-navigation/native';
+import { NavigationContainer, useNavigationState, useNavigation, useNavigationContainerRef } from '@react-navigation/native';
 import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/stack';
 import { HugeiconsIcon } from '@hugeicons/react-native';
 import { Home09Icon, Folder01Icon, UserCircleIcon, Calendar04Icon, UserGroupIcon } from '@hugeicons/core-free-icons';
@@ -237,12 +237,12 @@ const MobileTabBar = () => {
   const navigation = useNavigation();
   const [visibleScreens, setVisibleScreens] = useState<string[]>([]);
 
-  // Get current route
+  // Get current route - with safety check for navigation state
   const currentRoute = useNavigationState(state => {
-    if (!state) return 'Dashboard';
+    if (!state || !state.routes || state.routes.length === 0) return 'Dashboard';
     const route = state.routes[state.index];
-    return route.name;
-  });
+    return route?.name || 'Dashboard';
+  }) || 'Dashboard';
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -326,12 +326,12 @@ const DesktopDrawer = () => {
     return false;
   });
 
-  // Get current route name using navigation state
+  // Get current route name using navigation state - with safety check
   const currentRoute = useNavigationState(state => {
-    if (!state) return 'Dashboard';
+    if (!state || !state.routes || state.routes.length === 0) return 'Dashboard';
     const route = state.routes[state.index];
-    return route.name;
-  });
+    return route?.name || 'Dashboard';
+  }) || 'Dashboard';
 
   useEffect(() => {
     if (Platform.OS === 'web') {
@@ -465,7 +465,17 @@ const UnifiedMainNavigator = () => {
   const { user } = useAuth();
   const [initialRoute, setInitialRoute] = useState<string>('Dashboard');
   const [settingsLoaded, setSettingsLoaded] = useState(false);
+  const [navUIReady, setNavUIReady] = useState(false);
   const isDesktop = Platform.OS === 'web' && width >= 768;
+
+  // Delay navigation UI rendering until after Stack.Navigator is mounted
+  useEffect(() => {
+    // Small delay to ensure Stack.Navigator is fully initialized
+    const timer = setTimeout(() => {
+      setNavUIReady(true);
+    }, 100);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Load initial route based on team settings
   useEffect(() => {
@@ -511,7 +521,7 @@ const UnifiedMainNavigator = () => {
 
   return (
     <View style={{ flex: 1, flexDirection: 'row' }}>
-      {isDesktop && <DesktopDrawer />}
+      {isDesktop && navUIReady && <DesktopDrawer />}
       <View style={{ flex: 1 }}>
         <Stack.Navigator
           initialRouteName={initialRoute}
@@ -722,7 +732,7 @@ const UnifiedMainNavigator = () => {
             {(props) => <SuspenseWrapper component={ManageCustomThemesScreen} {...props} />}
           </Stack.Screen>
         </Stack.Navigator>
-        {!isDesktop && <MobileTabBar />}
+        {!isDesktop && navUIReady && <MobileTabBar />}
       </View>
     </View>
   );
@@ -731,6 +741,8 @@ const UnifiedMainNavigator = () => {
 const AppNavigator = () => {
   const authContext = useAuth();
   const { width } = useWindowDimensions();
+  const navigationRef = useNavigationContainerRef();
+  const [isNavigationReady, setIsNavigationReady] = useState(false);
 
   // Explicitly convert to booleans to avoid type issues
   // Also directly check token and user to ensure we react to state changes
@@ -804,10 +816,14 @@ const AppNavigator = () => {
 
   return (
     <NavigationContainer
+      ref={navigationRef}
       linking={linking}
       independent={true}
       documentTitle={{
         enabled: false
+      }}
+      onReady={() => {
+        setIsNavigationReady(true);
       }}
     >
       {!loading && isAuthenticated ? (
