@@ -519,26 +519,22 @@ const UnifiedMainNavigator = () => {
     return <LoadingFallback />;
   }
 
-  // Create a layout wrapper that only renders after navigation is ready
-  const NavigationLayout = ({ children }: { children: React.ReactNode }) => {
-    if (!navUIReady) {
-      return <View style={{ flex: 1 }}>{children}</View>;
-    }
+  // Memoize navigation UI to prevent rendering before ready
+  const desktopDrawer = useMemo(() => {
+    if (!navUIReady || !isDesktop) return null;
+    return <DesktopDrawer />;
+  }, [navUIReady, isDesktop]);
 
-    return (
-      <View style={{ flex: 1, flexDirection: 'row' }}>
-        {isDesktop && <DesktopDrawer />}
-        <View style={{ flex: 1 }}>
-          {children}
-          {!isDesktop && <MobileTabBar />}
-        </View>
-      </View>
-    );
-  };
+  const mobileTabBar = useMemo(() => {
+    if (!navUIReady || isDesktop) return null;
+    return <MobileTabBar />;
+  }, [navUIReady, isDesktop]);
 
   return (
-    <NavigationLayout>
-      <Stack.Navigator
+    <View style={{ flex: 1, flexDirection: 'row' }}>
+      {desktopDrawer}
+      <View style={{ flex: 1 }}>
+        <Stack.Navigator
         initialRouteName={initialRoute}
         screenOptions={{
           headerShown: false,
@@ -747,7 +743,9 @@ const UnifiedMainNavigator = () => {
             {(props) => <SuspenseWrapper component={ManageCustomThemesScreen} {...props} />}
           </Stack.Screen>
         </Stack.Navigator>
-      </NavigationLayout>
+        {mobileTabBar}
+      </View>
+    </View>
   );
 };
 
