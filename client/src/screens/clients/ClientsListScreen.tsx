@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, StyleSheet, FlatList, TouchableOpacity, Modal, Text } from 'react-native';
+import { View, StyleSheet, FlatList, TouchableOpacity, Modal, Text, useWindowDimensions } from 'react-native';
 import { Card, Title, Paragraph, FAB, ActivityIndicator, Searchbar, IconButton, Menu, Divider } from 'react-native-paper';
 import { useFocusEffect } from '@react-navigation/native';
 import { HugeiconsIcon } from '@hugeicons/react-native';
@@ -16,6 +16,8 @@ import CreateClientModal from '../../components/CreateClientModal';
 const ClientsListScreen = React.memo(({ navigation, route }: ClientsListScreenProps) => {
   const { currentColors } = useTheme();
   const { getColorForElement } = useCustomColorTheme();
+  const { width } = useWindowDimensions();
+  const isMobile = width < 768;
 
   // Memoize clients theme colors to prevent recalculation on every render
   const themeColors = useMemo(() => ({
@@ -212,7 +214,7 @@ const ClientsListScreen = React.memo(({ navigation, route }: ClientsListScreenPr
             </View>
 
             {columnsToShow > 0 && (
-              <View style={styles.threeColumnLayout}>
+              <View style={[styles.threeColumnLayout, isMobile && styles.mobileColumnLayout]}>
                 {/* Column 1: Business Information */}
                 {hasBusinessInfo && (
                   <View style={styles.column}>
@@ -469,6 +471,9 @@ const styles = StyleSheet.create({
   threeColumnLayout: {
     flexDirection: 'row',
     gap: 15,
+  },
+  mobileColumnLayout: {
+    flexDirection: 'column',
   },
   column: {
     flex: 1,
