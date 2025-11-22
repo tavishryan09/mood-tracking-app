@@ -535,15 +535,15 @@ const UnifiedMainNavigator = () => {
       {desktopDrawer}
       <View style={{ flex: 1 }}>
         <Stack.Navigator
-        initialRouteName={initialRoute}
-        screenOptions={{
-          headerShown: false,
-          animationEnabled: true,
-          ...(Platform.OS === 'web' && {
-            cardStyleInterpolator: CardStyleInterpolators.forFadeFromCenter,
-          }),
-        }}
-      >
+          initialRouteName={initialRoute}
+          screenOptions={{
+            headerShown: false,
+            animationEnabled: true,
+            ...(Platform.OS === 'web' && {
+              cardStyleInterpolator: CardStyleInterpolators.forFadeFromCenter,
+            }),
+          }}
+        >
           {/* Main screens */}
           <Stack.Screen name="Dashboard">
             {(props) => <SuspenseWrapper component={DashboardScreen} {...props} />}
