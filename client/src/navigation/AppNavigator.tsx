@@ -458,22 +458,6 @@ const DesktopDrawer = () => {
   );
 };
 
-// Wrapper component that provides navigation UI
-const NavigationWrapper = ({ children }: { children: React.ReactNode }) => {
-  const { width } = useWindowDimensions();
-  const isDesktop = Platform.OS === 'web' && width >= 768;
-
-  return (
-    <View style={{ flex: 1, flexDirection: 'row' }}>
-      {isDesktop && <DesktopDrawer />}
-      <View style={{ flex: 1 }}>
-        {children}
-        {!isDesktop && <MobileTabBar />}
-      </View>
-    </View>
-  );
-};
-
 // Unified main navigator with responsive UI
 const UnifiedMainNavigator = () => {
   const { width } = useWindowDimensions();
@@ -526,16 +510,19 @@ const UnifiedMainNavigator = () => {
   }
 
   return (
-    <Stack.Navigator
-      initialRouteName={initialRoute}
-      screenOptions={{
-        headerShown: false,
-        animationEnabled: true,
-        ...(Platform.OS === 'web' && {
-          cardStyleInterpolator: CardStyleInterpolators.forFadeFromCenter,
-        }),
-      }}
-    >
+    <View style={{ flex: 1, flexDirection: 'row' }}>
+      {isDesktop && <DesktopDrawer />}
+      <View style={{ flex: 1 }}>
+        <Stack.Navigator
+          initialRouteName={initialRoute}
+          screenOptions={{
+            headerShown: false,
+            animationEnabled: true,
+            ...(Platform.OS === 'web' && {
+              cardStyleInterpolator: CardStyleInterpolators.forFadeFromCenter,
+            }),
+          }}
+        >
           {/* Main screens */}
           <Stack.Screen name="Dashboard">
             {(props) => <SuspenseWrapper component={DashboardScreen} {...props} />}
@@ -735,15 +722,9 @@ const UnifiedMainNavigator = () => {
             {(props) => <SuspenseWrapper component={ManageCustomThemesScreen} {...props} />}
           </Stack.Screen>
         </Stack.Navigator>
-  );
-};
-
-// Wrap the navigator with responsive UI
-const UnifiedMainNavigatorWithUI = () => {
-  return (
-    <NavigationWrapper>
-      <UnifiedMainNavigator />
-    </NavigationWrapper>
+        {!isDesktop && <MobileTabBar />}
+      </View>
+    </View>
   );
 };
 
@@ -830,7 +811,7 @@ const AppNavigator = () => {
       }}
     >
       {!loading && isAuthenticated ? (
-        <UnifiedMainNavigatorWithUI />
+        <UnifiedMainNavigator />
       ) : (
         <AuthNavigator />
       )}
