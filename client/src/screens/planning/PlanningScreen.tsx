@@ -1513,6 +1513,15 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
       hasFocusScrolledRef.current = false;
       setHasScrolled(false);
 
+      // Force scroll position to 0 first to prevent browser scroll restoration
+      if (Platform.OS === 'web') {
+        const scrollContainer = document.querySelector('[data-planning-scroll]') as HTMLDivElement;
+        if (scrollContainer) {
+          console.log('[PlanningScreen] Resetting scroll position to 0 before auto-scroll');
+          scrollContainer.scrollLeft = 0;
+        }
+      }
+
       // Reset the flag when leaving the screen (cleanup runs before next focus)
       return () => {
         console.log('[PlanningScreen] Screen blurred - cleanup');
