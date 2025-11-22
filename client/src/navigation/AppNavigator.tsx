@@ -458,6 +458,22 @@ const DesktopDrawer = () => {
   );
 };
 
+// Screen wrapper that adds navigation UI (drawer or tabs)
+const ScreenWithNavigation = ({ children }: { children: React.ReactNode }) => {
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width >= 768;
+
+  return (
+    <View style={{ flex: 1, flexDirection: 'row' }}>
+      {isDesktop && <DesktopDrawer />}
+      <View style={{ flex: 1 }}>
+        {children}
+        {!isDesktop && <MobileTabBar />}
+      </View>
+    </View>
+  );
+};
+
 // Unified main navigator with responsive UI
 const UnifiedMainNavigator = () => {
   const { width } = useWindowDimensions();
@@ -465,17 +481,7 @@ const UnifiedMainNavigator = () => {
   const { user } = useAuth();
   const [initialRoute, setInitialRoute] = useState<string>('Dashboard');
   const [settingsLoaded, setSettingsLoaded] = useState(false);
-  const [navUIReady, setNavUIReady] = useState(false);
   const isDesktop = Platform.OS === 'web' && width >= 768;
-
-  // Delay navigation UI rendering until after Stack.Navigator is mounted
-  useEffect(() => {
-    // Small delay to ensure Stack.Navigator is fully initialized
-    const timer = setTimeout(() => {
-      setNavUIReady(true);
-    }, 100);
-    return () => clearTimeout(timer);
-  }, []);
 
   // Load initial route based on team settings
   useEffect(() => {
@@ -520,39 +526,60 @@ const UnifiedMainNavigator = () => {
   }
 
   return (
-    <View style={{ flex: 1, flexDirection: 'row' }}>
-      {navUIReady && isDesktop && <DesktopDrawer />}
-      <View style={{ flex: 1 }}>
-        <Stack.Navigator
-          initialRouteName={initialRoute}
-          screenOptions={{
-            headerShown: false,
-            animationEnabled: true,
-            ...(Platform.OS === 'web' && {
-              cardStyleInterpolator: CardStyleInterpolators.forFadeFromCenter,
-            }),
-          }}
-        >
+    <Stack.Navigator
+      initialRouteName={initialRoute}
+      screenOptions={{
+        headerShown: false,
+        animationEnabled: true,
+        ...(Platform.OS === 'web' && {
+          cardStyleInterpolator: CardStyleInterpolators.forFadeFromCenter,
+        }),
+      }}
+    >
           {/* Main screens */}
           <Stack.Screen name="Dashboard">
-            {(props) => <SuspenseWrapper component={DashboardScreen} {...props} />}
+            {(props) => (
+              <ScreenWithNavigation>
+                <SuspenseWrapper component={DashboardScreen} {...props} />
+              </ScreenWithNavigation>
+            )}
           </Stack.Screen>
           <Stack.Screen name="Planning">
-            {(props) => <SuspenseWrapper component={PlanningScreen} {...props} />}
+            {(props) => (
+              <ScreenWithNavigation>
+                <SuspenseWrapper component={PlanningScreen} {...props} />
+              </ScreenWithNavigation>
+            )}
           </Stack.Screen>
           <Stack.Screen name="Projects">
-            {(props) => <SmartProjectsScreen {...props} />}
+            {(props) => (
+              <ScreenWithNavigation>
+                <SmartProjectsScreen {...props} />
+              </ScreenWithNavigation>
+            )}
           </Stack.Screen>
           <Stack.Screen name="Clients">
-            {(props) => <SuspenseWrapper component={ClientsListScreen} {...props} />}
+            {(props) => (
+              <ScreenWithNavigation>
+                <SuspenseWrapper component={ClientsListScreen} {...props} />
+              </ScreenWithNavigation>
+            )}
           </Stack.Screen>
           <Stack.Screen name="Profile">
-            {(props) => <SuspenseWrapper component={ProfileScreen} {...props} />}
+            {(props) => (
+              <ScreenWithNavigation>
+                <SuspenseWrapper component={ProfileScreen} {...props} />
+              </ScreenWithNavigation>
+            )}
           </Stack.Screen>
 
           {/* Project Table View (desktop only, hidden from menu) */}
           <Stack.Screen name="ProjectTableView">
-            {(props) => <SuspenseWrapper component={ProjectTableViewScreen} {...props} />}
+            {(props) => (
+              <ScreenWithNavigation>
+                <SuspenseWrapper component={ProjectTableViewScreen} {...props} />
+              </ScreenWithNavigation>
+            )}
           </Stack.Screen>
 
           {/* Modal/Detail screens */}
@@ -732,9 +759,6 @@ const UnifiedMainNavigator = () => {
             {(props) => <SuspenseWrapper component={ManageCustomThemesScreen} {...props} />}
           </Stack.Screen>
         </Stack.Navigator>
-        {navUIReady && !isDesktop && <MobileTabBar />}
-      </View>
-    </View>
   );
 };
 
