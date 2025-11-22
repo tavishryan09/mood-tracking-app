@@ -1506,16 +1506,19 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
   // Reset hasScrolled when screen comes into focus so it auto-scrolls to current week
   useFocusEffect(
     useCallback(() => {
+      console.log('[PlanningScreen] Screen focused - resetting hasScrolled to trigger auto-scroll');
       setHasScrolled(false);
     }, [])
   );
 
   // Auto-scroll to the current week when component mounts
   useEffect(() => {
+    console.log('[PlanningScreen] Auto-scroll useEffect triggered', { hasScrolled, quarterWeeksLength: quarterWeeks.length, loading });
     if (!hasScrolled && quarterWeeks.length > 0 && Platform.OS === 'web') {
       const attemptScroll = () => {
         const scrollContainer = document.querySelector('[data-planning-scroll]') as HTMLDivElement;
         if (!scrollContainer) {
+          console.log('[PlanningScreen] Scroll container not found');
           return false;
         }
 
@@ -1550,6 +1553,7 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
         // Scroll to the target week
         if (targetWeekIndex !== -1) {
           const mondayPosition = targetWeekIndex * 7 * DAY_CELL_WIDTH;
+          console.log('[PlanningScreen] Scrolling to week index:', targetWeekIndex, 'position:', mondayPosition);
           scrollContainer.scrollLeft = mondayPosition;
           scrollContainerRef.current = scrollContainer;
           setVisibleWeekIndex(targetWeekIndex);
@@ -1557,11 +1561,13 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
           return true;
         }
 
+        console.log('[PlanningScreen] No target week found');
         return false;
       };
 
       // Try immediately, with fallback after delay
       if (!attemptScroll()) {
+        console.log('[PlanningScreen] Initial scroll attempt failed, trying again in 500ms');
         setTimeout(attemptScroll, 500);
       }
     }
