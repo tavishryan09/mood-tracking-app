@@ -519,20 +519,9 @@ const UnifiedMainNavigator = () => {
     return <LoadingFallback />;
   }
 
-  // Memoize navigation UI to prevent rendering before ready
-  const desktopDrawer = useMemo(() => {
-    if (!navUIReady || !isDesktop) return null;
-    return <DesktopDrawer />;
-  }, [navUIReady, isDesktop]);
-
-  const mobileTabBar = useMemo(() => {
-    if (!navUIReady || isDesktop) return null;
-    return <MobileTabBar />;
-  }, [navUIReady, isDesktop]);
-
   return (
     <View style={{ flex: 1, flexDirection: 'row' }}>
-      {desktopDrawer}
+      {navUIReady && isDesktop && <DesktopDrawer />}
       <View style={{ flex: 1 }}>
         <Stack.Navigator
           initialRouteName={initialRoute}
@@ -743,7 +732,7 @@ const UnifiedMainNavigator = () => {
             {(props) => <SuspenseWrapper component={ManageCustomThemesScreen} {...props} />}
           </Stack.Screen>
         </Stack.Navigator>
-        {mobileTabBar}
+        {navUIReady && !isDesktop && <MobileTabBar />}
       </View>
     </View>
   );
