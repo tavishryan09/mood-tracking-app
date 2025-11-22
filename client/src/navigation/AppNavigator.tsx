@@ -474,7 +474,7 @@ const ScreenWithNavigation = ({ children }: { children: React.ReactNode }) => {
     );
   }
 
-  // Mobile: Use absolute positioning for tab bar to keep it fixed at bottom
+  // Mobile: Use fixed positioning for tab bar to keep it at bottom of viewport
   // Add padding to content to prevent tab bar from covering it
   const tabBarHeight = Platform.OS === 'web' ? 85 : Platform.OS === 'ios' ? 108 : 80;
 
@@ -483,7 +483,7 @@ const ScreenWithNavigation = ({ children }: { children: React.ReactNode }) => {
       <View style={{ flex: 1, paddingBottom: tabBarHeight }}>
         {children}
       </View>
-      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0 }}>
+      <View style={{ position: 'fixed' as any, bottom: 0, left: 0, right: 0, zIndex: 1000 }}>
         <MobileTabBar />
       </View>
     </View>
