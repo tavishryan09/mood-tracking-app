@@ -196,6 +196,7 @@ export const exportAPI = {
   timeReport: (params?: any) => api.get('/export/time-report', { params, responseType: 'blob' }),
   projectSummary: () => api.get('/export/project-summary', { responseType: 'blob' }),
   travelReport: (params?: any) => api.get('/export/travel-report', { params, responseType: 'blob' }),
+  plannerSummary: (quarter: string) => api.get(`/export/planner-summary/${quarter}`, { responseType: 'blob' }),
 };
 
 // Planning Tasks API

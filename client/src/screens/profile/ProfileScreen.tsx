@@ -76,6 +76,10 @@ const ProfileScreen = React.memo(({ navigation, route }: ProfileScreenProps) => 
   const [loadingEditUser, setLoadingEditUser] = useState(false);
   const [savingEditUser, setSavingEditUser] = useState(false);
 
+  // Export Planner Summary state
+  const [selectedQuarter, setSelectedQuarter] = useState('');
+  const [quarterMenuVisible, setQuarterMenuVisible] = useState(false);
+
   // Team View Settings modal state
   const [adminPageAccess, setAdminPageAccess] = useState<{ [key: string]: boolean }>({
     Dashboard: true,
@@ -276,6 +280,59 @@ const ProfileScreen = React.memo(({ navigation, route }: ProfileScreenProps) => 
     } catch (error: any) {
       logger.error('Error exporting project summary:', error, 'ProfileScreen');
       setErrorMessage(error.response?.data?.error || 'Failed to export project summary');
+      setShowErrorDialog(true);
+    }
+  };
+
+  // Generate list of available quarters (current quarter and up to 3 years back)
+  const getAvailableQuarters = () => {
+    const quarters = [];
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth(); // 0-indexed
+    const currentQuarter = Math.floor(currentMonth / 3) + 1;
+
+    // Generate quarters going back 3 years from current
+    for (let yearOffset = 0; yearOffset <= 3; yearOffset++) {
+      const year = currentYear - yearOffset;
+      const maxQuarter = yearOffset === 0 ? currentQuarter : 4;
+
+      for (let q = maxQuarter; q >= 1; q--) {
+        quarters.push({
+          value: `${year}-Q${q}`,
+          label: `Q${q} ${year}`,
+        });
+      }
+    }
+
+    return quarters;
+  };
+
+  const handleExportPlannerSummary = async () => {
+    if (!selectedQuarter) {
+      setErrorMessage('Please select a quarter to export');
+      setShowErrorDialog(true);
+      return;
+    }
+
+    try {
+      const response = await exportAPI.plannerSummary(selectedQuarter);
+      const blob = new Blob([response.data], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+      });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `planner-summary-${selectedQuarter}-${Date.now()}.xlsx`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      setSuccessMessage(`Planner summary for ${selectedQuarter} exported successfully`);
+      setShowSuccessDialog(true);
+    } catch (error: any) {
+      logger.error('Error exporting planner summary:', error, 'ProfileScreen');
+      setErrorMessage(error.response?.data?.error || 'Failed to export planner summary');
       setShowErrorDialog(true);
     }
   };
@@ -1073,6 +1130,66 @@ const ProfileScreen = React.memo(({ navigation, route }: ProfileScreenProps) => 
           right={(props) => <HugeiconsIcon icon={DownloadSquare02Icon} size={24} color={currentColors.icon} />}
           onPress={handleExportProjectSummary}
         />
+
+        {/* Export Planner Summary */}
+        <View style={{ paddingHorizontal: 16, paddingVertical: 12 }}>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+            <View style={{ flex: 1 }}>
+              <Paragraph style={{ fontSize: 16, fontWeight: '500', color: currentColors.text }}>
+                Export Planner Summary
+              </Paragraph>
+              <Paragraph style={{ fontSize: 14, color: currentColors.textSecondary, marginTop: 2 }}>
+                Download planning data as Excel spreadsheet
+              </Paragraph>
+            </View>
+            <HugeiconsIcon icon={DownloadSquare02Icon} size={24} color={currentColors.icon} />
+          </View>
+
+          <View style={{ flexDirection: 'row', gap: 10, marginTop: 8, alignItems: 'center' }}>
+            <View style={{ flex: 1 }}>
+              <Button
+                mode="outlined"
+                onPress={() => setQuarterMenuVisible(!quarterMenuVisible)}
+                style={{ justifyContent: 'flex-start' }}
+                textColor={currentColors.text}
+              >
+                {selectedQuarter || 'Select Quarter'}
+              </Button>
+              {quarterMenuVisible && (
+                <ScrollView style={{
+                  maxHeight: 200,
+                  marginTop: 4,
+                  borderWidth: 1,
+                  borderColor: currentColors.border,
+                  borderRadius: 4,
+                  backgroundColor: currentColors.background.bg300
+                }}>
+                  {getAvailableQuarters().map((quarter) => (
+                    <List.Item
+                      key={quarter.value}
+                      title={quarter.label}
+                      onPress={() => {
+                        setSelectedQuarter(quarter.value);
+                        setQuarterMenuVisible(false);
+                      }}
+                      titleStyle={{ color: currentColors.text }}
+                      left={() => quarter.value === selectedQuarter ? <List.Icon icon="check" color={currentColors.primary} /> : null}
+                    />
+                  ))}
+                </ScrollView>
+              )}
+            </View>
+
+            <Button
+              mode="contained"
+              onPress={handleExportPlannerSummary}
+              disabled={!selectedQuarter}
+              style={{ minWidth: 100 }}
+            >
+              Export
+            </Button>
+          </View>
+        </View>
       </List.Section>
 
       <Divider style={styles.divider} />

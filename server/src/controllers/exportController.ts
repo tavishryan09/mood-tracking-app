@@ -2,6 +2,7 @@
 import { Response } from 'express';
 import { AuthRequest } from '../middleware/auth';
 import prisma from '../config/database';
+import ExcelJS from 'exceljs';
 
 // Helper function to convert data to CSV
 function convertToCSV(data: any[]): string {
@@ -202,6 +203,133 @@ export const exportTravelReport = async (req: AuthRequest, res: Response) => {
     res.send(csv);
   } catch (error) {
     console.error('Export travel report error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+export const exportPlannerSummary = async (req: AuthRequest, res: Response) => {
+  try {
+    const { quarter } = req.params; // e.g., "2024-Q1"
+
+    // Parse quarter string
+    const [year, quarterStr] = quarter.split('-');
+    const quarterNum = parseInt(quarterStr.replace('Q', ''));
+
+    // Calculate start and end dates for the quarter
+    const quarterStartMonth = (quarterNum - 1) * 3;
+    const startDate = new Date(parseInt(year), quarterStartMonth, 1);
+    const endDate = new Date(parseInt(year), quarterStartMonth + 3, 0, 23, 59, 59);
+
+    // Fetch planning tasks for the quarter
+    const planningTasks = await prisma.planningTask.findMany({
+      where: {
+        date: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      include: {
+        user: {
+          select: {
+            firstName: true,
+            lastName: true,
+          },
+        },
+        project: {
+          select: {
+            name: true,
+            client: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: [
+        { date: 'asc' },
+        { user: { firstName: 'asc' } },
+      ],
+    });
+
+    // Create workbook and worksheet
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet(`Planning ${quarter}`);
+
+    // Set column widths
+    worksheet.columns = [
+      { header: 'Date', key: 'date', width: 12 },
+      { header: 'User', key: 'user', width: 20 },
+      { header: 'Client', key: 'client', width: 20 },
+      { header: 'Project', key: 'project', width: 25 },
+      { header: 'Hours', key: 'hours', width: 10 },
+      { header: 'Description', key: 'description', width: 40 },
+    ];
+
+    // Style header row
+    worksheet.getRow(1).font = { bold: true };
+    worksheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFD3D3D3' },
+    };
+
+    // Add data rows
+    planningTasks.forEach((task) => {
+      worksheet.addRow({
+        date: task.date.toLocaleDateString(),
+        user: `${task.user.firstName} ${task.user.lastName}`,
+        client: task.project?.client?.name || 'N/A',
+        project: task.project?.name || 'N/A',
+        hours: task.hours || 0,
+        description: task.description || '',
+      });
+    });
+
+    // Add summary row
+    const totalHours = planningTasks.reduce((sum, task) => sum + (task.hours || 0), 0);
+    const summaryRow = worksheet.addRow({
+      date: '',
+      user: '',
+      client: '',
+      project: 'TOTAL',
+      hours: totalHours,
+      description: '',
+    });
+    summaryRow.font = { bold: true };
+    summaryRow.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFFFEB9C' },
+    };
+
+    // Set borders for all cells
+    worksheet.eachRow((row) => {
+      row.eachCell((cell) => {
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' },
+        };
+      });
+    });
+
+    // Generate buffer
+    const buffer = await workbook.xlsx.writeBuffer();
+
+    res.setHeader(
+      'Content-Type',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    );
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename=planner-summary-${quarter}-${Date.now()}.xlsx`
+    );
+
+    res.send(buffer);
+  } catch (error) {
+    console.error('Export planner summary error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 };
