@@ -382,17 +382,29 @@ function MainDrawer() {
   // This allows deep linking to work while menu visibility is being determined
   const screenList = drawerLoaded ? visibleMenuItems : allMenuItems;
 
+  // Create drawer style with web-specific fixed positioning
+  const drawerStyle: any = Platform.OS === 'web' ? {
+    width: isCollapsed ? 80 : 250,
+    backgroundColor: currentColors.background.bg300,
+    borderRightWidth: 0,
+    position: 'fixed',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    height: '100vh',
+  } : {
+    width: isCollapsed ? 80 : 250,
+    backgroundColor: currentColors.background.bg300,
+    borderRightWidth: 0,
+  };
+
   return (
     <Drawer.Navigator
       key={currentColors.primary} // Force re-render when theme changes
       drawerContent={(props) => <CustomDrawerContent {...props} isCollapsed={isCollapsed} setIsCollapsed={setIsCollapsed} />}
       screenOptions={{
         drawerType: 'permanent',
-        drawerStyle: {
-          width: isCollapsed ? 80 : 250,
-          backgroundColor: currentColors.background.bg300,
-          borderRightWidth: 0,
-        },
+        drawerStyle,
         headerStyle: {
           backgroundColor: currentColors.primary,
           borderBottomColor: currentColors.border,

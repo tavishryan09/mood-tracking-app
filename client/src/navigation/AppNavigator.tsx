@@ -385,8 +385,23 @@ const DesktopDrawer = () => {
 
   const menuItems = mainScreens.filter(screen => visibleScreens.includes(screen.name));
 
+  const drawerContainerStyle: any = Platform.OS === 'web' ? {
+    position: 'fixed',
+    left: 0,
+    top: 0,
+    bottom: 0,
+    height: '100vh',
+    width: isCollapsed ? 80 : 250,
+    backgroundColor: drawerBg,
+    borderRightWidth: 0,
+  } : {
+    width: isCollapsed ? 80 : 250,
+    backgroundColor: drawerBg,
+    borderRightWidth: 0,
+  };
+
   return (
-    <View style={[navStyles.desktopDrawer, { width: isCollapsed ? 80 : 250, backgroundColor: drawerBg }]}>
+    <View style={drawerContainerStyle}>
       <TouchableOpacity
         style={[navStyles.drawerHeader, { backgroundColor: drawerHeaderBg, borderBottomColor: drawerDivider }]}
         onPress={() => setIsCollapsed(!isCollapsed)}
@@ -462,12 +477,37 @@ const DesktopDrawer = () => {
 const ScreenWithNavigation = ({ children }: { children: React.ReactNode }) => {
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= 768;
+  const [isCollapsed, setIsCollapsed] = useState(() => {
+    if (Platform.OS === 'web') {
+      const saved = localStorage.getItem('desktopNav_isCollapsed');
+      return saved === 'true';
+    }
+    return false;
+  });
+
+  // Listen for changes to collapsed state
+  useEffect(() => {
+    if (Platform.OS === 'web') {
+      const handleStorage = () => {
+        const saved = localStorage.getItem('desktopNav_isCollapsed');
+        setIsCollapsed(saved === 'true');
+      };
+      window.addEventListener('storage', handleStorage);
+      // Also poll for changes since localStorage events don't fire in the same window
+      const interval = setInterval(handleStorage, 100);
+      return () => {
+        window.removeEventListener('storage', handleStorage);
+        clearInterval(interval);
+      };
+    }
+  }, []);
 
   if (isDesktop) {
+    const drawerWidth = isCollapsed ? 80 : 250;
     return (
       <View style={{ flex: 1, flexDirection: 'row' }}>
         <DesktopDrawer />
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, marginLeft: drawerWidth }}>
           {children}
         </View>
       </View>
