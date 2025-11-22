@@ -463,12 +463,25 @@ const ScreenWithNavigation = ({ children }: { children: React.ReactNode }) => {
   const { width } = useWindowDimensions();
   const isDesktop = Platform.OS === 'web' && width >= 768;
 
+  if (isDesktop) {
+    return (
+      <View style={{ flex: 1, flexDirection: 'row' }}>
+        <DesktopDrawer />
+        <View style={{ flex: 1 }}>
+          {children}
+        </View>
+      </View>
+    );
+  }
+
+  // Mobile: Use absolute positioning for tab bar to keep it fixed at bottom
   return (
-    <View style={{ flex: 1, flexDirection: 'row' }}>
-      {isDesktop && <DesktopDrawer />}
+    <View style={{ flex: 1 }}>
       <View style={{ flex: 1 }}>
         {children}
-        {!isDesktop && <MobileTabBar />}
+      </View>
+      <View style={{ position: 'absolute', bottom: 0, left: 0, right: 0 }}>
+        <MobileTabBar />
       </View>
     </View>
   );
