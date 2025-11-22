@@ -1507,17 +1507,15 @@ const PlanningScreen = React.memo(({ navigation, route }: PlanningScreenProps) =
   // Reset hasScrolled and force scroll when navigating to screen from a different screen
   useFocusEffect(
     useCallback(() => {
-      console.log('[PlanningScreen] Screen focused - resetting hasFocusScrolledRef');
-      // Reset the flag when screen comes into focus (from a different screen)
+      console.log('[PlanningScreen] Screen focused - resetting scroll flags');
+      // Always reset both flags when screen comes into focus
       // This allows the scroll to happen once per navigation
-      if (!hasFocusScrolledRef.current) {
-        setHasScrolled(false);
-      }
+      hasFocusScrolledRef.current = false;
+      setHasScrolled(false);
 
-      // Reset the flag when leaving the screen
+      // Reset the flag when leaving the screen (cleanup runs before next focus)
       return () => {
-        console.log('[PlanningScreen] Screen blurred - will allow scroll on next focus');
-        hasFocusScrolledRef.current = false;
+        console.log('[PlanningScreen] Screen blurred - cleanup');
       };
     }, [])
   );
